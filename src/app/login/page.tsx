@@ -5,19 +5,41 @@ import CheckboxComponent from "@/components/common/CheckboxComponent";
 import ImageComponent from "@/components/common/ImageComponent";
 import InputComponent from "@/components/common/InputComponent";
 import ButtonComponent from "@/components/common/ButtonComponent";
-import axiosClient from "@/apis/axiosClient";
+import DeviceLimitModal from "@/components/common/DeviceLimitModal";
+import axiosClient, { ApiError } from "@/apis/axiosClient";
+import { kickoutDevice } from "@/apis/devices";
 import { getDeviceInfo, type DeviceInfo } from "@/lib/device";
+import type { DeviceSessionsData } from "@/types/device";
 import Image from "next/image";
 import * as React from "react";
+import { useLocale } from "@/components/layout/locale-provider";
 
-interface LoginResponse {
-  code: number;
-  message: string;
+interface InputError {
+  username?: string;
+  password?: string;
 }
 
 export default function LoginPage() {
+  const { t } = useLocale();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [inputError, setInputError] = React.useState<InputError>({});
   const [messageError, setMessageError] = React.useState("");
+  const [deviceLimitData, setDeviceLimitData] = React.useState<DeviceSessionsData | null>(null);
+  const [refreshingDevices, setRefreshingDevices] = React.useState(false);
+  const [kickingOut, setKickingOut] = React.useState(false);
+  const pendingCredentials = React.useRef<{ username: string; password: string } | null>(null);
+
+  const login = async (username: string, password: string) => {
+    const deviceInfo = getDeviceInfo();
+
+    await axiosClient.post("/auth/token", {
+      username,
+      password,
+      deviceId: deviceInfo.deviceId,
+    });
+    await axiosClient.get("/users/profile");
+    await axiosClient.patch<DeviceInfo, DeviceInfo>("/devices", deviceInfo);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,36 +56,95 @@ export default function LoginPage() {
       setIsSubmitting(true);
       setMessageError("");
 
-      const deviceInfo = getDeviceInfo();
-
-      const resLogin = await axiosClient.post<LoginResponse, LoginResponse>("/auth/token", {
-        username,
-        password,
-        deviceId: deviceInfo.deviceId,
-      });
-
-      if (resLogin.code === 401) {
-        setMessageError(resLogin.message);
+      await login(username, password);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 411) {
+        pendingCredentials.current = { username, password };
+        setDeviceLimitData(error.data as DeviceSessionsData);
         return;
       }
 
-      const resProfile = await axiosClient.get("/users/profile");
-
-      const resUpdateDevice = await axiosClient.post<DeviceInfo, DeviceInfo>("/devices", deviceInfo);
-
-      console.log("Login success", resLogin);
-      console.log("Profile", resProfile);
-      console.log("Device updated", resUpdateDevice);
-    } catch (error) {
-      console.error("Login failed", error);
+      setMessageError(error instanceof Error ? error.message : "Đăng nhập thất bại, vui lòng thử lại");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleRefreshDevices = async () => {
+    if (!pendingCredentials.current) {
+      return;
+    }
+
+    try {
+      setRefreshingDevices(true);
+      const { username, password } = pendingCredentials.current;
+      await login(username, password);
+
+      setDeviceLimitData(null);
+      pendingCredentials.current = null;
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 411) {
+        setDeviceLimitData(error.data as DeviceSessionsData);
+      }
+    } finally {
+      setRefreshingDevices(false);
+    }
+  };
+
+  const handleConfirmKickout = async (selectedDeviceIds: string[]) => {
+    if (!deviceLimitData || !pendingCredentials.current) {
+      return;
+    }
+
+    try {
+      setKickingOut(true);
+
+      await Promise.all(
+        selectedDeviceIds.map((deviceId) =>
+          kickoutDevice(deviceId, deviceLimitData.deviceLimitToken)
+        )
+      );
+
+      const { username, password } = pendingCredentials.current;
+      await login(username, password);
+
+      setDeviceLimitData(null);
+      pendingCredentials.current = null;
+    } catch (error) {
+      setMessageError(error instanceof Error ? error.message : "Đăng xuất thiết bị thất bại, vui lòng thử lại");
+    } finally {
+      setKickingOut(false);
+    }
+  };
+
   const isValidForm = (username: string, password: string) => {
-    return username.trim() !== "" && password.trim() !== "";
-  }
+    const errors: InputError = {};
+
+    if (username.trim() === "") {
+      errors.username = "Tên đăng nhập không được để trống";
+    }
+
+    if (password.trim() === "") {
+      errors.password = "Mật khẩu không được để trống";
+    }
+
+    setInputError(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  const clearInputError = (field: keyof InputError) => {
+    setInputError((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+    setMessageError("");
+  };
 
   return (
     <div>
@@ -91,7 +172,7 @@ export default function LoginPage() {
               fontWeight: "700",
               color: "#232323",
             }}>
-            Một tài khoản, mở khóa mọi trải nghiệm
+            {t("auth.txt_subtitle")}
           </p>
         </div>
 
@@ -114,20 +195,24 @@ export default function LoginPage() {
             id="username"
             name="username"
             type="text"
-            placeholder="Tên đăng nhập"
+            placeholder={t("auth.txt_hint_username")}
             prefix={
               <Image src="/icons/ic_user.svg" alt="Google" width={20} height={20} />
             }
+            onChange={() => clearInputError("username")}
+            messageError={inputError.username}
             allowClear />
           <InputComponent
             id="password"
             name="password"
             style={{ marginTop: "16px" }}
             type="password"
-            placeholder="Nhập mật khẩu"
+            placeholder={t("auth.txt_hint_password")}
             prefix={
               <Image src="/icons/ic_lock.svg" alt="Lock" width={20} height={20} />
             }
+            onChange={() => clearInputError("password")}
+            messageError={inputError.password}
             allowClear />
 
           <div
@@ -138,11 +223,11 @@ export default function LoginPage() {
               width="auto"
               containerClassName="w-auto flex-none"
               labelClassName="font-normal text-[#232323]"
-              label="Ghi nhớ tài khoản"
+              label={t("auth.txt_remember_account")}
             />
 
             <p className="shrink-0 whitespace-nowrap text-sm font-medium text-[#0065FF]">
-              Quên mật khẩu
+              {t("auth.txt_forgot_password")}
             </p>
           </div>
           <ButtonComponent
@@ -152,10 +237,27 @@ export default function LoginPage() {
             loading={isSubmitting}
             className="mt-5"
           >
-            Đăng nhập
+            {t("auth.txt_login_button")}
           </ButtonComponent>
         </form>
       </CardComponent>
+
+      {deviceLimitData && (
+        <DeviceLimitModal
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeviceLimitData(null);
+              pendingCredentials.current = null;
+            }
+          }}
+          data={deviceLimitData}
+          onRefresh={handleRefreshDevices}
+          onConfirm={handleConfirmKickout}
+          refreshing={refreshingDevices}
+          submitting={kickingOut}
+        />
+      )}
     </div>
   );
 }

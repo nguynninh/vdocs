@@ -11,6 +11,7 @@ interface Props extends Omit<React.ComponentProps<typeof Input>, "prefix"> {
   allowClear?: boolean;
   containerClassName?: string;
   status?: "default" | "error";
+  messageError?: string;
   width?: React.CSSProperties["width"];
   height?: React.CSSProperties["height"];
 }
@@ -27,6 +28,7 @@ const InputComponent = ({
   style,
   value,
   defaultValue,
+  messageError,
   onChange,
   ...props
 }: Props) => {
@@ -78,11 +80,14 @@ const InputComponent = ({
     input.focus();
   };
 
+  const hasError = status === "error" || Boolean(messageError);
+
   return (
+    <div className="flex flex-col gap-1">
     <div
       className={cn(
         "group relative flex w-full items-center rounded-lg border bg-background transition-colors",
-        status === "error"
+        hasError
           ? "border-[#FF3D00] focus-within:border-[#FF3D00] focus-within:ring-3 focus-within:ring-[#FF3D00]/15"
           : "border-input focus-within:border-[#0065FF] focus-within:ring-3 focus-within:ring-[#0065FF]/15 hover:border-foreground/20",
         containerClassName,
@@ -109,7 +114,7 @@ const InputComponent = ({
           rightActionCount === 1 && "pr-14",
           rightActionCount === 2 && "pr-24",
         )}
-        aria-invalid={status === "error" || props["aria-invalid"] ? true : undefined}
+        aria-invalid={hasError || props["aria-invalid"] ? true : undefined}
         {...props}
       />
 
@@ -165,6 +170,10 @@ const InputComponent = ({
           )}
         </div>
       )}
+    </div>
+    {messageError && (
+      <p className="text-sm text-[#FF3D00]">{messageError}</p>
+    )}
     </div>
   );
 };

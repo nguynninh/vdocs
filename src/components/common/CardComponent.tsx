@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 type CardSize = "default" | "small";
 
-interface CardComponentProps extends React.ComponentProps<"div"> {
+interface CardComponentProps extends Omit<React.ComponentProps<"div">, "title"> {
   width?: React.CSSProperties["width"];
   height?: React.CSSProperties["height"];
   title?: React.ReactNode;

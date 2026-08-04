@@ -124,6 +124,7 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
     const [turnIntoMenu, setTurnIntoMenu] = React.useState<TurnIntoMenuState | null>(null);
     const [reorderInsertIndex, setReorderInsertIndex] = React.useState<number | null>(null);
     const [draggingIndex, setDraggingIndex] = React.useState<number | null>(null);
+    const [dragGhostPos, setDragGhostPos] = React.useState<{ x: number; y: number } | null>(null);
     const [highlightWidths, setHighlightWidths] = React.useState<Record<string, number>>({});
     const [focusedBlockId, setFocusedBlockId] = React.useState<string | null>(null);
     const [highlightSelection, setHighlightSelection] =
@@ -274,6 +275,7 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
       setSelection(null);
       setHighlightSelection(null);
       setDraggingIndex(null);
+      setDragGhostPos(null);
       reorderInsertIndexRef.current = null;
       setReorderInsertIndex(null);
       const blockId = slashMenu.blockId;
@@ -341,6 +343,7 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
 
       if (drag.mode === "reorder") {
         setDraggingIndex(drag.startIndex);
+        setDragGhostPos({ x: event.clientX, y: event.clientY });
         const insertIndex = findInsertIndexAtY(event.clientY);
         reorderInsertIndexRef.current = insertIndex;
         setReorderInsertIndex(insertIndex);
@@ -392,6 +395,7 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
         Math.abs(event.clientY - gutterDown.y) > GUTTER_CLICK_MOVE_THRESHOLD;
 
       setDraggingIndex(null);
+      setDragGhostPos(null);
       reorderInsertIndexRef.current = null;
       setReorderInsertIndex(null);
 
@@ -440,6 +444,7 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
       setHighlightSelection(null);
       setTurnIntoMenu(null);
       setDraggingIndex(null);
+      setDragGhostPos(null);
       reorderInsertIndexRef.current = null;
       setReorderInsertIndex(null);
 
@@ -917,6 +922,15 @@ const DocumentBlockEditor = React.forwardRef<HTMLTextAreaElement, DocumentBlockE
               onActiveIndexChange={handleTurnIntoActiveIndexChange}
               onSelect={(type) => handleTurnInto(turnIntoMenu.blockId, type)}
             />
+          </div>
+        )}
+
+        {draggingIndex !== null && dragGhostPos && blocks[draggingIndex] && (
+          <div
+            className="pointer-events-none fixed z-50 max-w-sm truncate rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 shadow-lg dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+            style={{ left: dragGhostPos.x + 12, top: dragGhostPos.y + 8 }}
+          >
+            {blocks[draggingIndex].text || "Empty block"}
           </div>
         )}
       </div>

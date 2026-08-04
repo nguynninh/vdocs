@@ -2,6 +2,10 @@
   width: 100%;
 }
 
+.root {
+  position: relative;
+}
+
 .leafRow {
   align-items: center;
   border-radius: 4px;
@@ -85,4 +89,52 @@
 .action:hover {
   background: #d4d4d4;
   color: #374151;
+}
+
+.dragging > .leafCollapse :global(.ant-collapse-header) {
+  opacity: 0.55;
+}
+
+.dropLine {
+  background: #1677ff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(22 119 255 / 16%);
+  height: 2px;
+  left: 28px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  top: 0;
+  z-index: 2;
+}
+
+.dropChildLine {
+  background: #1677ff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(22 119 255 / 16%);
+  height: 2px;
+  left: 52px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  top: 28px;
+  z-index: 2;
+}
+
+.dragPreview {
+  background: white;
+  border: 1px solid #1677ff;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+  color: #111827;
+  font-size: 12px;
+  line-height: 24px;
+  max-width: 360px;
+  overflow: hidden;
+  padding: 4px 12px;
+  pointer-events: none;
+  position: fixed;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 1000;
 }

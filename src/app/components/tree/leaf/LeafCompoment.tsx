@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Collapse, type CollapseProps } from "antd";
 import { RightOutlined, PlusOutlined, EllipsisOutlined, FileOutlined } from "@ant-design/icons";
 import css from "./LeafCompoment.module.css";
 
 type LeafItem = NonNullable<CollapseProps["items"]>[number];
+type DropMode = "before" | "child";
 
 type LeafComponentProps = {
     id: React.Key;
@@ -17,14 +18,77 @@ type LeafComponentProps = {
     onClick?: (id: React.Key) => void;
     onMore?: (id: React.Key) => void;
     onAdd?: (id: React.Key) => void;
+    onMove?: (dragId: React.Key, targetId: React.Key, mode: DropMode) => void;
 };
 
+const DRAG_START_DISTANCE = 4;
+let activeDragId: React.Key | null = null;
+let activeDrop: { id: React.Key; mode: DropMode } | null = null;
+
 const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) => {
-    const { id, label, children, items, styles, onClick, onMore, onAdd, onExpandChange } = props;
+    const { id, label, children, items, styles, onClick, onMore, onAdd, onMove, onExpandChange } = props;
     const collapseItem = items ?? { key: id ?? String(label), label, children };
     const itemKey = collapseItem.key ?? id;
 
     const [hover, setHover] = useState(false);
+    const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+    const [dropActive, setDropActive] = useState(false);
+    const [dropMode, setDropMode] = useState<DropMode>("before");
+    const rootRef = useRef<HTMLDivElement>(null);
+    const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+    const isDraggingRef = useRef(false);
+    const suppressClickRef = useRef(false);
+
+    useEffect(() => {
+        let previousUserSelect = "";
+
+        function handleMouseMove(event: MouseEvent) {
+            const start = dragStartRef.current;
+            if (!start) return;
+            const hasMoved =
+                Math.abs(event.clientX - start.x) > DRAG_START_DISTANCE ||
+                Math.abs(event.clientY - start.y) > DRAG_START_DISTANCE;
+            if (hasMoved) {
+                event.preventDefault();
+                if (!isDraggingRef.current) {
+                    previousUserSelect = document.body.style.userSelect;
+                    document.body.style.userSelect = "none";
+                    activeDragId = id;
+                }
+                isDraggingRef.current = true;
+                setDragPosition({ x: event.clientX, y: event.clientY });
+            }
+        }
+
+        function handleMouseUp() {
+            if (!dragStartRef.current && !isDraggingRef.current) return;
+
+            if (isDraggingRef.current) {
+                document.body.style.userSelect = previousUserSelect;
+                if (activeDrop && activeDrop.id !== id) {
+                    onMove?.(id, activeDrop.id, activeDrop.mode);
+                }
+                suppressClickRef.current = true;
+                window.setTimeout(() => {
+                    suppressClickRef.current = false;
+                }, 0);
+            }
+            dragStartRef.current = null;
+            isDraggingRef.current = false;
+            activeDragId = null;
+            activeDrop = null;
+            setDragPosition(null);
+            setDropActive(false);
+            setDropMode("before");
+        }
+
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", handleMouseUp);
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [id, onMove]);
     const handleMore: React.MouseEventHandler<HTMLSpanElement> = (event) => {
         event.stopPropagation();
         onMore?.(id);
@@ -34,8 +98,31 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
         onAdd?.(id);
     };
     const handleClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+        if (suppressClickRef.current) {
+            event.stopPropagation();
+            return;
+        }
         event.stopPropagation();
         onClick?.(id);
+    };
+    const handleMouseDown: React.MouseEventHandler<HTMLDivElement> = (event) => {
+        if (event.button !== 0 || (event.target as HTMLElement).closest(`.${css.action}`)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragStartRef.current = { x: event.clientX, y: event.clientY };
+        isDraggingRef.current = false;
+    };
+    const handleMouseMove: React.MouseEventHandler<HTMLDivElement> = (event) => {
+        const currentHeader = rootRef.current?.querySelector(".ant-collapse-header");
+        const isCurrentHeader = Boolean(currentHeader?.contains(event.target as Node));
+        const isDropTarget = activeDragId !== null && activeDragId !== id && isCurrentHeader;
+        const headerRect = currentHeader?.getBoundingClientRect();
+        const mode: DropMode =
+            headerRect && event.clientY > headerRect.top + headerRect.height / 2 ? "child" : "before";
+        setHover(isCurrentHeader);
+        setDropActive(isDropTarget);
+        setDropMode(mode);
+        if (isDropTarget) activeDrop = { id, mode };
     };
     const handleExpandChange: CollapseProps["onChange"] = (activeKey) => {
         const activeKeys = Array.isArray(activeKey) ? activeKey : [activeKey];
@@ -44,14 +131,24 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
 
     return (
         <div
+            ref={rootRef}
+            className={`${css.root} ${dragPosition ? css.dragging : ""}`}
             style={styles}
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => {
+                setHover(false);
+                setDropActive(false);
+                setDropMode("before");
+                if (activeDrop?.id === id) activeDrop = null;
+            }}
+            onMouseDown={handleMouseDown}
             onClick={handleClick}>
+            {dropActive && <div className={dropMode === "child" ? css.dropChildLine : css.dropLine} />}
             <Collapse
                 className={css.leafCollapse}
                 ghost
                 collapsible="icon"
+                style={{ cursor: "pointer" }}
                 onChange={handleExpandChange}
                 expandIcon={({ isActive }) => (
                     hover && React.Children.count(collapseItem.children) > 0 ? (
@@ -83,6 +180,13 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
                     },
                 ]}
             />
+            {dragPosition && (
+                <div
+                    className={css.dragPreview}
+                    style={{ left: dragPosition.x + 12, top: dragPosition.y + 8 }}>
+                    {label}
+                </div>
+            )}
         </div>
     );
 };

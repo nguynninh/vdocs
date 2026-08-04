@@ -98,7 +98,10 @@ const App: React.FC = () => {
                 width: "100%",
                 margin: "10px 5px",
             }}>
-            <TreeComponent treeData={treeData} />
+            <TreeComponent
+                treeData={treeData}
+                onParentChange={(id, parentId) => console.log(id, "changed parent to", parentId)}
+            />
         </div>
     );
 };

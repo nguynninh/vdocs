@@ -7,20 +7,43 @@ import InputComponent from "@/components/common/InputComponent";
 import ButtonComponent from "@/components/common/ButtonComponent";
 import DeviceLimitModal from "@/components/common/DeviceLimitModal";
 import axiosClient, { ApiError } from "@/apis/axiosClient";
+import type { ApiResponse } from "@/apis/ApiResponse";
 import { kickoutDevice } from "@/apis/devices";
 import { getDeviceInfo, type DeviceInfo } from "@/lib/device";
 import type { DeviceSessionsData } from "@/types/device";
+import type { User } from "@/types/user";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useLocale } from "@/components/layout/locale-provider";
+import { useAuth } from "@/components/layout/auth-provider";
 
 interface InputError {
   username?: string;
   password?: string;
 }
 
+function resolveNextPath(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/";
+  }
+  return next;
+}
+
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <LoginForm />
+    </React.Suspense>
+  );
+}
+
+function LoginForm() {
   const { t } = useLocale();
+  const { setUser } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = resolveNextPath(searchParams.get("next"));
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [inputError, setInputError] = React.useState<InputError>({});
   const [messageError, setMessageError] = React.useState("");
@@ -37,8 +60,9 @@ export default function LoginPage() {
       password,
       deviceId: deviceInfo.deviceId,
     });
-    await axiosClient.get("/users/profile");
+    const profile = await axiosClient.get<User, ApiResponse<User>>("/users/profile");
     await axiosClient.patch<DeviceInfo, DeviceInfo>("/devices", deviceInfo);
+    setUser(profile.data);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -57,6 +81,7 @@ export default function LoginPage() {
       setMessageError("");
 
       await login(username, password);
+      router.push(nextPath);
     } catch (error) {
       if (error instanceof ApiError && error.code === 411) {
         pendingCredentials.current = { username, password };
@@ -82,6 +107,7 @@ export default function LoginPage() {
 
       setDeviceLimitData(null);
       pendingCredentials.current = null;
+      router.push(nextPath);
     } catch (error) {
       if (error instanceof ApiError && error.code === 411) {
         setDeviceLimitData(error.data as DeviceSessionsData);
@@ -110,6 +136,7 @@ export default function LoginPage() {
 
       setDeviceLimitData(null);
       pendingCredentials.current = null;
+      router.push(nextPath);
     } catch (error) {
       setMessageError(error instanceof Error ? error.message : "Đăng xuất thiết bị thất bại, vui lòng thử lại");
     } finally {

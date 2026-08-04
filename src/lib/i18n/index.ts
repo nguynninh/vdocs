@@ -1,9 +1,21 @@
 import enAuth from "./locates/en/auth.json";
+import enDocument from "./locates/en/document.json";
 import enHeader from "./locates/en/header.json";
+import enHome from "./locates/en/home.json";
+import enRoles from "./locates/en/roles.json";
+import enUsers from "./locates/en/users.json";
 import viAuth from "./locates/vi/auth.json";
+import viDocument from "./locates/vi/document.json";
 import viHeader from "./locates/vi/header.json";
+import viHome from "./locates/vi/home.json";
+import viRoles from "./locates/vi/roles.json";
+import viUsers from "./locates/vi/users.json";
 import zhAuth from "./locates/zh/auth.json";
+import zhDocument from "./locates/zh/document.json";
 import zhHeader from "./locates/zh/header.json";
+import zhHome from "./locates/zh/home.json";
+import zhRoles from "./locates/zh/roles.json";
+import zhUsers from "./locates/zh/users.json";
 
 export type Locale = "vi" | "en" | "zh";
 export const locales: Locale[] = ["vi", "en", "zh"];
@@ -12,9 +24,9 @@ export const defaultLocale: Locale = "vi";
 // To add a namespace: create locates/<locale>/<file>.json for every locale, import it above,
 // and add it to `modules` below. The file name becomes the namespace used in t("file.key").
 const modules: Record<Locale, Record<string, Record<string, unknown>>> = {
-  vi: { auth: viAuth, header: viHeader },
-  en: { auth: enAuth, header: enHeader },
-  zh: { auth: zhAuth, header: zhHeader },
+  vi: { auth: viAuth, header: viHeader, document: viDocument, home: viHome, users: viUsers, roles: viRoles },
+  en: { auth: enAuth, header: enHeader, document: enDocument, home: enHome, users: enUsers, roles: enRoles },
+  zh: { auth: zhAuth, header: zhHeader, document: zhDocument, home: zhHome, users: zhUsers, roles: zhRoles },
 };
 
 function flatten(prefix: string, source: Record<string, unknown>, out: Record<string, string>) {

@@ -1,0 +1,70 @@
+{
+  "title": "Vai trò",
+  "subtitle": "Quản lý vai trò và phân quyền hệ thống cho người dùng.",
+  "exportData": "Xuất dữ liệu",
+  "addRole": "Thêm vai trò",
+  "stats": {
+    "total": "Tổng vai trò",
+    "totalDelta": "+1 vai trò mới",
+    "inUse": "Đang sử dụng",
+    "inUsePercent": "vai trò đang hoạt động",
+    "assigned": "Đã gán",
+    "assignedSuffix": "người dùng",
+    "permissions": "Quyền hạn",
+    "permissionsDelta": "+5 quyền mới"
+  },
+  "filters": {
+    "searchPlaceholder": "Tìm kiếm vai trò...",
+    "status": "Trạng thái",
+    "all": "Tất cả",
+    "filterButton": "Bộ lọc"
+  },
+  "table": {
+    "role": "Vai trò",
+    "description": "Mô tả",
+    "users": "Người dùng",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác"
+  },
+  "systemBadge": "Hệ thống",
+  "loading": "Đang tải...",
+  "loadError": "Không thể tải danh sách vai trò.",
+  "status": {
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động"
+  },
+  "pagination": {
+    "showing": "Hiển thị {from} - {to} của {total} vai trò",
+    "perPage": "{count} / trang"
+  },
+  "detail": {
+    "title": "Chi tiết vai trò",
+    "description": "Mô tả",
+    "info": "Thông tin",
+    "infoUsers": "Người dùng",
+    "infoStatus": "Trạng thái",
+    "infoCreatedAt": "Ngày tạo",
+    "infoUpdatedAt": "Cập nhật lần cuối",
+    "permissions": "Quyền hạn",
+    "permissionUnit": "quyền",
+    "viewAll": "Xem tất cả quyền",
+    "close": "Đóng"
+  },
+  "list": {
+    "admin": { "name": "Quản trị viên", "description": "Toàn quyền truy cập và quản lý hệ thống." },
+    "manager": { "name": "Quản lý", "description": "Quản lý người dùng, dự án và tài liệu trong hệ thống." },
+    "member": { "name": "Thành viên", "description": "Tạo và quản lý tài liệu, tham gia dự án." },
+    "viewer": { "name": "Người xem", "description": "Xem tài liệu và dữ liệu được chia sẻ." },
+    "editor": { "name": "Biên tập viên", "description": "Chỉnh sửa nội dung tài liệu và bình luận." },
+    "guest": { "name": "Khách", "description": "Truy cập tạm thời, quyền hạn chế." },
+    "developer": { "name": "Developer", "description": "Quyền truy cập API và công cụ dành cho lập trình viên." },
+    "support": { "name": "Hỗ trợ", "description": "Hỗ trợ người dùng và giải quyết vấn đề." }
+  },
+  "permissionGroups": {
+    "users": "Quản lý người dùng",
+    "projects": "Quản lý dự án",
+    "documents": "Quản lý tài liệu",
+    "system": "Cài đặt hệ thống"
+  }
+}

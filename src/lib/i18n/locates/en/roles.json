@@ -1,0 +1,70 @@
+{
+  "title": "Roles",
+  "subtitle": "Manage roles and system permissions for users.",
+  "exportData": "Export data",
+  "addRole": "Add role",
+  "stats": {
+    "total": "Total roles",
+    "totalDelta": "+1 new role",
+    "inUse": "In use",
+    "inUsePercent": "of roles active",
+    "assigned": "Assigned",
+    "assignedSuffix": "users",
+    "permissions": "Permissions",
+    "permissionsDelta": "+5 new permissions"
+  },
+  "filters": {
+    "searchPlaceholder": "Search roles...",
+    "status": "Status",
+    "all": "All",
+    "filterButton": "Filter"
+  },
+  "table": {
+    "role": "Role",
+    "description": "Description",
+    "users": "Users",
+    "status": "Status",
+    "createdAt": "Created at",
+    "actions": "Actions"
+  },
+  "systemBadge": "System",
+  "loading": "Loading...",
+  "loadError": "Could not load roles.",
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "pagination": {
+    "showing": "Showing {from} - {to} of {total} roles",
+    "perPage": "{count} / page"
+  },
+  "detail": {
+    "title": "Role details",
+    "description": "Description",
+    "info": "Information",
+    "infoUsers": "Users",
+    "infoStatus": "Status",
+    "infoCreatedAt": "Created at",
+    "infoUpdatedAt": "Last updated",
+    "permissions": "Permissions",
+    "permissionUnit": "permissions",
+    "viewAll": "View all permissions",
+    "close": "Close"
+  },
+  "list": {
+    "admin": { "name": "Administrator", "description": "Full access and control over the system." },
+    "manager": { "name": "Manager", "description": "Manage users, projects and documents in the system." },
+    "member": { "name": "Member", "description": "Create and manage documents, participate in projects." },
+    "viewer": { "name": "Viewer", "description": "View documents and shared data." },
+    "editor": { "name": "Editor", "description": "Edit document content and comments." },
+    "guest": { "name": "Guest", "description": "Temporary access with limited permissions." },
+    "developer": { "name": "Developer", "description": "API access and tools for developers." },
+    "support": { "name": "Support", "description": "Support users and resolve issues." }
+  },
+  "permissionGroups": {
+    "users": "User management",
+    "projects": "Project management",
+    "documents": "Document management",
+    "system": "System settings"
+  }
+}

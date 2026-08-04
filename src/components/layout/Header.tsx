@@ -3,8 +3,10 @@
 import { ChevronDown, Globe, Menu, Moon, Search, Sun, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import axiosClient from "@/apis/axiosClient";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { locales, type Locale } from "@/lib/i18n";
 import type { ProjectNavItem } from "@/lib/project-nav";
+import { useAuth } from "./auth-provider";
 import { useLocale } from "./locale-provider";
 
 const NAV_HREFS = ["#", "#", "#", "#", "#"];
@@ -69,6 +72,8 @@ function NavItemMeasure({ item }: { item: ProjectNavItem }) {
 
 export default function Header() {
   const { locale, setLocale, t } = useLocale();
+  const { user, isLoading, setUser } = useAuth();
+  const router = useRouter();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -169,6 +174,15 @@ export default function Header() {
       localStorage.setItem("theme", next ? "dark" : "light");
       return next;
     });
+  }
+
+  async function handleLogout() {
+    try {
+      await axiosClient.post("/auth/logout");
+    } finally {
+      setUser(null);
+      router.push("/");
+    }
   }
 
   function toggleMobileSearch() {
@@ -310,10 +324,22 @@ export default function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {!isMobileSearchOpen && (
-            <Link href="/login" className="shrink-0 text-blue-600 hover:underline dark:text-blue-400">
-              {t("header.signIn")}
-            </Link>
+          {!isMobileSearchOpen && !isLoading && (
+            user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 text-foreground outline-none hover:text-muted-foreground [&[data-popup-open]_svg]:rotate-180">
+                  {user.displayName || user.username}
+                  <ChevronDown className="h-4 w-4 transition-transform" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={handleLogout}>{t("header.signOut")}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login" className="shrink-0 text-blue-600 hover:underline dark:text-blue-400">
+                {t("header.signIn")}
+              </Link>
+            )
           )}
         </div>
       </div>

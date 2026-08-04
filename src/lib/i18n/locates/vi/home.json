@@ -1,0 +1,77 @@
+{
+  "welcomePrefix": "Chào mừng trở lại, ",
+  "welcomeSubtitle": "Đây là những gì đang diễn ra với không gian làm việc của bạn hôm nay.",
+  "nav": {
+    "home": "Trang chủ",
+    "documents": "Tài liệu",
+    "projects": "Dự án",
+    "favorites": "Yêu thích",
+    "recent": "Gần đây",
+    "shared": "Được chia sẻ",
+    "trash": "Thùng rác",
+    "adminSection": "Quản trị",
+    "users": "Người dùng",
+    "roles": "Vai trò",
+    "settings": "Cài đặt"
+  },
+  "spaces": {
+    "title": "Không gian",
+    "sectionTitle": "Mục lục",
+    "expandAll": "Mở rộng tất cả",
+    "collapseAll": "Thu gọn tất cả",
+    "add": "Thêm không gian mới",
+    "addPage": "Thêm trang",
+    "empty": "Chưa có không gian nào",
+    "emptyChildren": "Chưa có trang nào",
+    "untitled": "Không có tiêu đề",
+    "createTitle": "Tạo không gian mới",
+    "createDescription": "Không gian giúp bạn nhóm các tài liệu liên quan lại với nhau.",
+    "namePlaceholder": "VD: Kỹ thuật, Marketing...",
+    "cancel": "Hủy",
+    "create": "Tạo"
+  },
+  "sidebar": {
+    "workspace": "Workspace",
+    "newDocument": "Tạo mới",
+    "collapse": "Thu gọn thanh bên",
+    "expand": "Mở rộng thanh bên",
+    "moreOptions": "Tuỳ chọn khác"
+  },
+  "storage": {
+    "title": "Dung lượng",
+    "used": "đã dùng"
+  },
+  "upgrade": {
+    "title": "Nâng cấp gói",
+    "subtitle": "Mở rộng dung lượng và tận hưởng các tính năng nâng cao.",
+    "cta": "Nâng cấp ngay"
+  },
+  "stats": {
+    "documents": "Tài liệu",
+    "projects": "Dự án",
+    "members": "Thành viên",
+    "shared": "Đã chia sẻ",
+    "thisWeek": "tuần này"
+  },
+  "recentDocuments": {
+    "title": "Tài liệu gần đây",
+    "viewAll": "Xem tất cả",
+    "updatedBy": "Cập nhật {time} bởi {name}",
+    "empty": "Chưa có tài liệu nào"
+  },
+  "yourProjects": {
+    "title": "Dự án của bạn",
+    "viewAll": "Xem tất cả",
+    "documentsSuffix": "tài liệu"
+  },
+  "activity": {
+    "title": "Hoạt động gần đây"
+  },
+  "shortcuts": {
+    "title": "Lối tắt",
+    "newDocument": "Tạo tài liệu mới",
+    "newFolder": "Tạo thư mục mới",
+    "uploadFile": "Tải lên tệp",
+    "favorites": "Yêu thích"
+  }
+}

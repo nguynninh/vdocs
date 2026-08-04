@@ -1,0 +1,77 @@
+{
+  "welcomePrefix": "欢迎回来，",
+  "welcomeSubtitle": "这是您工作区今天的最新动态。",
+  "nav": {
+    "home": "首页",
+    "documents": "文档",
+    "projects": "项目",
+    "favorites": "收藏",
+    "recent": "最近",
+    "shared": "已共享",
+    "trash": "回收站",
+    "adminSection": "管理",
+    "users": "用户",
+    "roles": "角色",
+    "settings": "设置"
+  },
+  "spaces": {
+    "title": "空间",
+    "sectionTitle": "目录",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起",
+    "add": "添加新空间",
+    "addPage": "添加页面",
+    "empty": "暂无空间",
+    "emptyChildren": "暂无页面",
+    "untitled": "无标题",
+    "createTitle": "创建新空间",
+    "createDescription": "空间可以帮助您将相关文档归类在一起。",
+    "namePlaceholder": "例如：技术、市场营销...",
+    "cancel": "取消",
+    "create": "创建"
+  },
+  "sidebar": {
+    "workspace": "工作区",
+    "newDocument": "新建",
+    "collapse": "收起侧边栏",
+    "expand": "展开侧边栏",
+    "moreOptions": "更多选项"
+  },
+  "storage": {
+    "title": "存储空间",
+    "used": "已使用"
+  },
+  "upgrade": {
+    "title": "升级套餐",
+    "subtitle": "扩展存储空间并解锁高级功能。",
+    "cta": "立即升级"
+  },
+  "stats": {
+    "documents": "文档",
+    "projects": "项目",
+    "members": "成员",
+    "shared": "已共享",
+    "thisWeek": "本周"
+  },
+  "recentDocuments": {
+    "title": "最近文档",
+    "viewAll": "查看全部",
+    "updatedBy": "由 {name} 于 {time} 更新",
+    "empty": "暂无文档"
+  },
+  "yourProjects": {
+    "title": "您的项目",
+    "viewAll": "查看全部",
+    "documentsSuffix": "个文档"
+  },
+  "activity": {
+    "title": "最近动态"
+  },
+  "shortcuts": {
+    "title": "快捷方式",
+    "newDocument": "新建文档",
+    "newFolder": "新建文件夹",
+    "uploadFile": "上传文件",
+    "favorites": "收藏"
+  }
+}

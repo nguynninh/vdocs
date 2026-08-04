@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { LocaleProvider } from "@/components/layout/locale-provider";
+import { AuthProvider } from "@/components/layout/auth-provider";
+import { SpacesProvider } from "@/components/layout/spaces-provider";
 
 const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
 
@@ -32,7 +34,11 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, jetbrainsMono.variable, "font-sans")}
     >
       <body className="min-h-full flex flex-col">
-        <LocaleProvider>{children}</LocaleProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <SpacesProvider>{children}</SpacesProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

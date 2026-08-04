@@ -4,6 +4,13 @@ import queryString from "query-string";
 import { appInfo } from "../constants/appInfos";
 import type { ApiResponse } from "./ApiResponse";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    /** Skip the 401 refresh/forceLogout flow — for optimistic "am I logged in?" checks. */
+    _skipAuthRefresh?: boolean;
+  }
+}
+
 export class ApiError extends Error {
   code?: number;
   status?: number;
@@ -63,7 +70,9 @@ function forceLogout() {
     return;
   }
   axiosClient.post("/auth/logout").catch(() => undefined);
-  window.location.href = "/login";
+  const { pathname, search } = window.location;
+  const next = pathname === "/login" ? "" : encodeURIComponent(pathname + search);
+  window.location.href = next ? `/login?next=${next}` : "/login";
 }
 
 axiosClient.interceptors.response.use(
@@ -75,14 +84,21 @@ axiosClient.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
+      !originalRequest._skipAuthRefresh &&
       !isAuthExempt(originalRequest.url)
     ) {
       originalRequest._retry = true;
       try {
         await refreshAccessToken();
         return axiosClient(originalRequest);
-      } catch {
-        forceLogout();
+      } catch (refreshError) {
+        // Only a definitive auth failure (refresh token invalid/expired) should force a
+        // logout. A network blip or transient server error on the refresh call itself
+        // must not nuke an otherwise-valid session.
+        if (refreshError instanceof ApiError && (refreshError.status === 401 || refreshError.status === 403)) {
+          forceLogout();
+        }
+        return Promise.reject(refreshError);
       }
     }
 

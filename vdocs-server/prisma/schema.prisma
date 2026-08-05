@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// "prisma-client" (the v7 default) emits raw .ts source with .js-extension
+// relative imports, which only resolves after a tsc build step. This project
+// runs TypeScript directly via `node --experimental-strip-types` with no
+// build step, so we use the classic compiled-JS generator instead.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String   @id @default(uuid())
+  provider       String
+  providerUserId String
+  name           String
+  email          String?
+  avatar         String?
+  mobile         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  ownedWorkspaces   Workspace[]       @relation("WorkspaceOwner")
+  workspaceMembers  WorkspaceMember[]
+  ownedDocuments    Document[]        @relation("DocumentOwner")
+  documentMembers   DocumentMember[]
+  createdShareLinks ShareLink[]
+
+  @@unique([provider, providerUserId])
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members   WorkspaceMember[]
+  documents Document[]
+}
+
+model WorkspaceMember {
+  id          String @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String @default("MEMBER") // OWNER | MEMBER
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+model Document {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  ownerId        String
+  title          String    @default("Untitled")
+  icon           String?
+  ydocState      Bytes?
+  contentVersion Int       @default(0)
+  linkAccess     String    @default("NONE") // NONE | VIEWER | EDITOR
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner      User             @relation("DocumentOwner", fields: [ownerId], references: [id])
+  members    DocumentMember[]
+  shareLinks ShareLink[]
+}
+
+// The public, revocable stand-in for a document's real UUID. Copying a
+// share link hands out `token`, never `documentId` — so revoking access
+// just means flipping `isActive`, and the real ID never has to be rotated.
+model ShareLink {
+  id         String    @id @default(uuid())
+  token      String    @unique
+  documentId String
+  isActive   Boolean   @default(true)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [createdBy], references: [id])
+}
+
+model DocumentMember {
+  id         String @id @default(uuid())
+  documentId String
+  userId     String
+  role       String // EDITOR | VIEWER
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId])
+}

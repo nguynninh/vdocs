@@ -1,0 +1,13 @@
+{
+  "aiSuggestion": {
+    "title": "Ask AI",
+    "closeMenu": "Close menu",
+    "items": {
+      "continueWriting": "Continue writing",
+      "writeOutline": "Write an outline",
+      "brainstormIdeas": "Brainstorm ideas",
+      "summarize": "Summarize",
+      "fixSpellingGrammar": "Fix spelling & grammar"
+    }
+  }
+}

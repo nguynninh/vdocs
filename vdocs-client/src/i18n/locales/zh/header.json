@@ -1,0 +1,17 @@
+{
+  "header": {
+    "openMenu": "打开菜单",
+    "closeMenu": "关闭菜单",
+    "search": "搜索",
+    "themeToLight": "切换到浅色模式",
+    "themeToDark": "切换到深色模式",
+    "language": "语言",
+    "signIn": "登录",
+    "languageNames": {
+      "vi": "越南语",
+      "en": "英语",
+      "zh": "中文"
+    },
+    "signOut": "登出"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "header": {
+    "openMenu": "Mở menu",
+    "closeMenu": "Đóng menu",
+    "search": "Tìm kiếm",
+    "themeToLight": "Chuyển sang chế độ sáng",
+    "themeToDark": "Chuyển sang chế độ tối",
+    "language": "Ngôn ngữ",
+    "signIn": "Đăng nhập",
+    "languageNames": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh",
+      "zh": "Tiếng Trung"
+    },
+    "signOut": "Đăng xuất"
+  }
+}

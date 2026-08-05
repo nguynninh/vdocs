@@ -1,0 +1,17 @@
+{
+  "header": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "search": "Search",
+    "themeToLight": "Switch to light mode",
+    "themeToDark": "Switch to dark mode",
+    "language": "Language",
+    "signIn": "Sign in",
+    "languageNames": {
+      "vi": "Vietnamese",
+      "en": "English",
+      "zh": "Chinese"
+    },
+    "signOut": "Sign out"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "iconPicker": {
+    "emoji": "Emoji",
+    "icons": "Icons",
+    "upload": "Upload",
+    "remove": "Remove",
+    "filterPlaceholder": "Filter...",
+    "shuffle": "Shuffle",
+    "recent": "Recent",
+    "more": "More",
+    "uploadHint": "Click to choose an image from your computer",
+    "categoryPeople": "People",
+    "categoryNature": "Nature",
+    "categoryFood": "Food & Drink",
+    "categoryActivity": "Activity",
+    "categoryTravel": "Travel & Places",
+    "categoryObjects": "Objects",
+    "categorySymbols": "Symbols",
+    "categoryFlags": "Flags"
+  }
+}

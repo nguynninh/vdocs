@@ -1,0 +1,10 @@
+{
+  "sidebar": {
+    "home": "Home",
+    "documents": "Documents",
+    "shared": "Shared with me",
+    "trash": "Trash",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "aiSuggestion": {
+    "title": "询问 AI",
+    "closeMenu": "关闭菜单",
+    "items": {
+      "continueWriting": "继续写作",
+      "writeOutline": "写大纲",
+      "brainstormIdeas": "头脑风暴",
+      "summarize": "总结",
+      "fixSpellingGrammar": "修正拼写和语法"
+    }
+  }
+}

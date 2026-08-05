@@ -1,0 +1,86 @@
+import { api } from "@/src/services/axios";
+import type { DocumentPermission } from "../../collaboration/collaboration.types";
+
+export type LinkAccess = "NONE" | "VIEWER" | "COMMENTER" | "EDITOR";
+
+export interface DocumentApiResponse {
+  id: string;
+  title: string;
+  icon: string | null;
+  permission: DocumentPermission;
+  linkAccess: LinkAccess;
+  contentVersion: number;
+  content: string | null;
+}
+
+export interface DocumentSummaryApiResponse {
+  id: string;
+  title: string;
+  icon: string | null;
+  updatedAt: string;
+}
+
+export interface UpdateDocumentPayload {
+  title?: string;
+  icon?: string;
+}
+
+export type MemberRole = "FULL_ACCESS" | "EDITOR" | "COMMENTER" | "VIEWER";
+
+export interface DocumentMemberApiResponse {
+  userId: string;
+  name: string;
+  email: string | null;
+  avatar: string | null;
+  role: MemberRole;
+}
+
+export const documentApi = {
+  create: (title?: string) => api.post<{ id: string }>("/api/documents", { title }),
+
+  list: () => api.get<DocumentSummaryApiResponse[]>("/api/documents"),
+
+  get: (documentId: string) =>
+    api.get<DocumentApiResponse>(`/api/documents/${documentId}`),
+
+  update: (documentId: string, payload: UpdateDocumentPayload) =>
+    api.patch<{ id: string; title: string; icon: string | null }>(
+      `/api/documents/${documentId}`,
+      payload,
+    ),
+
+  updateAccess: (documentId: string, linkAccess: LinkAccess) =>
+    api.patch<{ id: string; linkAccess: LinkAccess }>(
+      `/api/documents/${documentId}/access`,
+      { linkAccess },
+    ),
+
+  listMembers: (documentId: string) =>
+    api.get<DocumentMemberApiResponse[]>(`/api/documents/${documentId}/members`),
+
+  inviteMember: (documentId: string, email: string, role: MemberRole) =>
+    api.post<DocumentMemberApiResponse>(`/api/documents/${documentId}/members`, {
+      email,
+      role,
+    }),
+
+  updateMemberRole: (documentId: string, memberUserId: string, role: MemberRole) =>
+    api.patch<DocumentMemberApiResponse>(
+      `/api/documents/${documentId}/members/${memberUserId}`,
+      { role },
+    ),
+
+  removeMember: (documentId: string, memberUserId: string) =>
+    api.delete<{ removed: boolean }>(
+      `/api/documents/${documentId}/members/${memberUserId}`,
+    ),
+
+  createShareLink: (documentId: string) =>
+    api.post<{ token: string }>(`/api/documents/${documentId}/share`),
+
+  revokeShareLink: (documentId: string) =>
+    api.delete<{ revoked: boolean }>(`/api/documents/${documentId}/share`),
+
+  getByShareToken: (token: string) =>
+    api.get<DocumentApiResponse>(`/api/documents/share/${token}`),
+};

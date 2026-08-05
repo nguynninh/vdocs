@@ -1,0 +1,10 @@
+{
+  "sidebar": {
+    "home": "首页",
+    "documents": "文档",
+    "shared": "共享给我",
+    "trash": "回收站",
+    "settings": "设置",
+    "signOut": "登出"
+  }
+}

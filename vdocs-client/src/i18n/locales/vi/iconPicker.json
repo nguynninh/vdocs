@@ -1,0 +1,21 @@
+{
+  "iconPicker": {
+    "emoji": "Emoji",
+    "icons": "Biểu tượng",
+    "upload": "Tải lên",
+    "remove": "Xoá",
+    "filterPlaceholder": "Lọc...",
+    "shuffle": "Ngẫu nhiên",
+    "recent": "Gần đây",
+    "more": "Thêm",
+    "uploadHint": "Nhấn để chọn ảnh từ máy tính",
+    "categoryPeople": "Con người",
+    "categoryNature": "Thiên nhiên",
+    "categoryFood": "Đồ ăn & thức uống",
+    "categoryActivity": "Hoạt động",
+    "categoryTravel": "Du lịch & địa điểm",
+    "categoryObjects": "Đồ vật",
+    "categorySymbols": "Ký hiệu",
+    "categoryFlags": "Cờ"
+  }
+}

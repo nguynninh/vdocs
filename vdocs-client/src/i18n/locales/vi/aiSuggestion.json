@@ -1,0 +1,13 @@
+{
+  "aiSuggestion": {
+    "title": "Hỏi AI",
+    "closeMenu": "Đóng menu",
+    "items": {
+      "continueWriting": "Viết tiếp",
+      "writeOutline": "Viết dàn ý",
+      "brainstormIdeas": "Gợi ý ý tưởng",
+      "summarize": "Tóm tắt",
+      "fixSpellingGrammar": "Sửa lỗi chính tả & ngữ pháp"
+    }
+  }
+}

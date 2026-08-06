@@ -15,6 +15,7 @@ import {
 import { documentRouter } from "./routers/document.router.ts";
 import { workspaceRouter } from "./routers/workspace.router.ts";
 import { createRealtimeServer } from "./realtime/createRealtimeServer.ts";
+import { scheduleDailyVersionJob } from "./jobs/dailyVersionJob.ts";
 import { sendError, sendSuccess } from "./utils/apiResponse.ts";
 
 dotenv.config({ path: ".env.local" });
@@ -95,6 +96,7 @@ app.use((_req: Request, res: Response) => {
 const httpServer = http.createServer(app);
 
 createRealtimeServer(httpServer);
+scheduleDailyVersionJob();
 
 httpServer.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);

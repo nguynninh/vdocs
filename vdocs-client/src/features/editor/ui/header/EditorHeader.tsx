@@ -80,6 +80,7 @@ export function EditorHeader(props: EditorHeaderProps) {
   const t = useTranslations("editorHeader");
   const [starred, setStarred] = useState(isStarred);
   const [updatesSidebarOpen, setUpdatesSidebarOpen] = useState(false);
+  const [updatesSidebarTab, setUpdatesSidebarTab] = useState<"updates" | "analytics">("updates");
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number | null>(null);
 
@@ -156,7 +157,6 @@ export function EditorHeader(props: EditorHeaderProps) {
           <PopoverTrigger
             openOnHover
             delay={300}
-            onClick={() => setUpdatesSidebarOpen(true)}
             render={
               <button
                 type="button"
@@ -248,8 +248,14 @@ export function EditorHeader(props: EditorHeaderProps) {
               onRename={onRename}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
-              onOpenUpdates={() => setUpdatesSidebarOpen(true)}
-              onOpenVersionHistory={() => setUpdatesSidebarOpen(true)}
+              onOpenUpdates={() => {
+                setUpdatesSidebarTab("analytics");
+                setUpdatesSidebarOpen(true);
+              }}
+              onOpenVersionHistory={() => {
+                setUpdatesSidebarTab("updates");
+                setUpdatesSidebarOpen(true);
+              }}
               wordCount={wordCount}
               canEdit={canEdit}
             />
@@ -267,6 +273,9 @@ export function EditorHeader(props: EditorHeaderProps) {
         <UpdatesPanel
           documentId={documentId}
           documentTitle={title}
+          editedBy={editedBy}
+          createdBy={createdBy}
+          initialTab={updatesSidebarTab}
           onClose={() => setUpdatesSidebarOpen(false)}
         />
       </div>

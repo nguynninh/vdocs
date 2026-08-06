@@ -1,5 +1,6 @@
 "use client";
 
+import { CodeBlock } from "../../blocks/code-block/CodeBlock";
 import { DividerView } from "../../blocks/divider/DividerView";
 import { TableView } from "../../blocks/table/TableView";
 import type { BlockNode } from "../../engine/block/block.types";
@@ -19,8 +20,9 @@ export function BlockRenderer({ block, isFirst }: BlockRendererProps) {
     case "bulletedListItem":
     case "numberedListItem":
     case "quote":
-    case "codeBlock":
       return <TextBlockView block={block} isFirst={isFirst} />;
+    case "codeBlock":
+      return <CodeBlock block={block} isFirst={isFirst} />;
     case "divider":
       return <DividerView block={block} isFirst={isFirst} />;
     case "table":

@@ -3,6 +3,9 @@
 import { useEffect, useRef } from "react";
 
 import type { BlockNode } from "../../engine/block/block.types";
+import type { MarkRange } from "../../engine/mark/mark.types";
+import { matchInlineCode } from "../../features/markdown-shortcuts/inlineCode";
+import { renderMarkedText } from "../../react/editable/renderMarkedText";
 import { useEditor } from "../../react/EditorProvider";
 import { ColumnResizeHandle, RowResizeHandle } from "./TableResizeHandle";
 
@@ -19,6 +22,7 @@ interface TableCellEditableProps {
   row: number;
   col: number;
   text: string;
+  marks?: MarkRange[];
   canEdit: boolean;
   onChange: (row: number, col: number, text: string) => void;
   onExit: () => void;
@@ -28,15 +32,30 @@ interface TableCellEditableProps {
 // in sync via textContent, rather than a controlled React input) so cell
 // editing behaves the same way as every other in-place text edit in the
 // editor, just scoped to a single cell instead of a whole block.
-function TableCellEditable({ blockId, row, col, text, canEdit, onChange, onExit }: TableCellEditableProps) {
+function TableCellEditable({ blockId, row, col, text, marks, canEdit, onChange, onExit }: TableCellEditableProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const marksSignatureRef = useRef<string>("");
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    if (node.textContent === text) return;
-    node.textContent = text;
-  }, [text]);
+
+    const marksSignature = JSON.stringify(marks ?? []);
+    if (node.textContent === text && marksSignatureRef.current === marksSignature) return;
+    marksSignatureRef.current = marksSignature;
+
+    renderMarkedText(node, text, marks);
+
+    if (window.document.activeElement !== node) return;
+
+    const range = window.document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, [text, marks]);
 
   return (
     <div
@@ -57,9 +76,16 @@ function TableCellEditable({ blockId, row, col, text, canEdit, onChange, onExit 
 }
 
 export function TableView({ block }: TableViewProps) {
-  const { updateTableCell, updateTableColumnWidth, updateTableRowHeight, insertBlockAfterFocused, canEdit } =
-    useEditor();
+  const {
+    updateTableCell,
+    toggleTableCellMark,
+    updateTableColumnWidth,
+    updateTableRowHeight,
+    insertBlockAfterFocused,
+    canEdit,
+  } = useEditor();
   const rows = block.table?.rows ?? [];
+  const cellMarks = block.table?.cellMarks ?? [];
   const columnWidths = block.table?.columnWidths ?? [];
   const rowHeights = block.table?.rowHeights ?? [];
 
@@ -68,6 +94,18 @@ export function TableView({ block }: TableViewProps) {
   }
 
   const columnCount = rows[0]?.length ?? 0;
+
+  const onCellChange = (row: number, col: number, text: string) => {
+    const inlineCode = matchInlineCode(text);
+    if (inlineCode) {
+      const { start, matchLength, content } = inlineCode;
+      const nextText = text.slice(0, start) + content + text.slice(start + matchLength);
+      updateTableCell(block.id, row, col, nextText);
+      toggleTableCellMark(block.id, row, col, start, start + content.length, "code");
+      return;
+    }
+    updateTableCell(block.id, row, col, text);
+  };
 
   return (
     <div className="my-1 overflow-x-auto">
@@ -89,8 +127,9 @@ export function TableView({ block }: TableViewProps) {
                       row={rowIndex}
                       col={colIndex}
                       text={cellText}
+                      marks={cellMarks[rowIndex]?.[colIndex]}
                       canEdit={canEdit}
-                      onChange={(r, c, nextText) => updateTableCell(block.id, r, c, nextText)}
+                      onChange={onCellChange}
                       onExit={() => insertBlockAfterFocused(block.id, "paragraph")}
                     />
                     {canEdit && rowIndex === 0 && (

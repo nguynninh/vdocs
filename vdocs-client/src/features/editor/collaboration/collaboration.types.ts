@@ -54,6 +54,9 @@ export interface CollaborativeDocument {
   moveBlock(blockId: string, targetIndex: number): void;
   setBlockType(blockId: string, type: BlockType): void;
 
+  /** Sets a `codeBlock`'s selected language (e.g. "java", "sql"). */
+  setCodeLanguage(blockId: string, language: string): void;
+
   /** Replaces a block's full set of inline mark ranges (e.g. bold spans). */
   setMarks(blockId: string, marks: MarkRange[]): void;
 
@@ -72,6 +75,9 @@ export interface CollaborativeDocument {
 
   /** Updates a single cell's text within a table block's grid. */
   setTableCell(blockId: string, row: number, col: number, text: string): void;
+
+  /** Replaces a single cell's inline mark ranges (e.g. an inline-code span). */
+  setTableCellMarks(blockId: string, row: number, col: number, marks: MarkRange[]): void;
 
   /** Sets one column's pixel width (drag-resize), leaving others untouched. */
   setTableColumnWidth(blockId: string, col: number, width: number): void;

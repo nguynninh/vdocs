@@ -51,12 +51,21 @@
       "edited": "đã sửa",
       "updatedPermission": "đã cập nhật quyền của",
       "viewMore": "Xem thêm {count} thay đổi",
-      "analyticsEmpty": "Chưa có dữ liệu phân tích",
       "close": "Đóng",
+      "analytics": {
+        "empty": "Chưa có dữ liệu phân tích",
+        "viewsTotal": "{count} lượt xem",
+        "viewsCount": "{count} lượt xem",
+        "uniqueCount": "{count} người xem",
+        "viewers": "Người xem",
+        "noViewers": "Chưa có ai xem trang này",
+        "editors": "Người chỉnh sửa"
+      },
       "versions": {
         "empty": "Chưa có phiên bản nào được lưu",
         "auto": "Tự động lưu",
         "manual": "Đã lưu thủ công",
+        "daily": "Lưu cuối ngày",
         "saveVersion": "Lưu phiên bản hiện tại",
         "restore": "Khôi phục phiên bản này",
         "restoring": "Đang khôi phục...",

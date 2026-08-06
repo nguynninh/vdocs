@@ -24,6 +24,7 @@ import type {
   ConnectionState,
   DocumentPermission,
 } from "../collaboration/collaboration.types";
+import { DEFAULT_CODE_LANGUAGE } from "../blocks/code-block/codeBlock.languages";
 
 function createDefaultTableRows(rowCount = 3, colCount = 3): string[][] {
   return Array.from({ length: rowCount }, () => Array.from({ length: colCount }, () => ""));
@@ -56,12 +57,14 @@ interface EditorContextValue {
   updateBlockText: (blockId: string, text: string) => void;
   toggleMark: (blockId: string, start: number, end: number, type: MarkType) => void;
   updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
+  toggleTableCellMark: (blockId: string, row: number, col: number, start: number, end: number, type: MarkType) => void;
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
   insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
   mergeBlockIntoPrevious: (blockId: string) => void;
   convertBlockType: (blockId: string, blockType: BlockType, text?: string) => void;
+  setBlockCodeLanguage: (blockId: string, language: string) => void;
   convertBlockTypeForBlocks: (blockIds: string[], blockType: BlockType) => void;
   deleteBlockRange: (startIndex: number, endIndex: number) => void;
   splitPasteIntoBlocks: (blockId: string, before: string, lines: string[], after: string) => void;
@@ -180,6 +183,18 @@ export function EditorProvider({
     [],
   );
 
+  const toggleTableCellMark = useCallback(
+    (blockId: string, row: number, col: number, start: number, end: number, type: MarkType) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      const cellMarks = block?.table?.cellMarks?.[row]?.[col] ?? [];
+
+      const nextMarks = toggleMarkRange(cellMarks, type, start, end);
+      documentRef.current?.setTableCellMarks(blockId, row, col, nextMarks);
+    },
+    [state.document],
+  );
+
   const updateTableColumnWidth = useCallback((blockId: string, col: number, width: number) => {
     documentRef.current?.setTableColumnWidth(blockId, col, width);
   }, []);
@@ -247,12 +262,23 @@ export function EditorProvider({
         }
       }
 
+      if (blockType === "codeBlock") {
+        const existing = state.document.blocks.find((block) => block.id === blockId);
+        if (!existing?.codeLanguage) {
+          documentRef.current?.setCodeLanguage(blockId, DEFAULT_CODE_LANGUAGE);
+        }
+      }
+
       // Changing a block's type swaps which view renders it, remounting its
       // contentEditable node and dropping DOM focus — refocus so typing can continue.
       setState((current) => ({ ...current, focusBlockId: blockId }));
     },
     [state.document],
   );
+
+  const setBlockCodeLanguage = useCallback((blockId: string, language: string) => {
+    documentRef.current?.setCodeLanguage(blockId, language);
+  }, []);
 
   const convertBlockTypeForBlocks = useCallback((blockIds: string[], blockType: BlockType) => {
     blockIds.forEach((id) => documentRef.current?.setBlockType(id, blockType));
@@ -448,12 +474,14 @@ export function EditorProvider({
       updateBlockText,
       toggleMark,
       updateTableCell,
+      toggleTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
+      setBlockCodeLanguage,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,
@@ -476,12 +504,14 @@ export function EditorProvider({
       updateBlockText,
       toggleMark,
       updateTableCell,
+      toggleTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
+      setBlockCodeLanguage,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,

@@ -72,7 +72,7 @@ async function listVersions(documentId: string, userId: string | null) {
 
   return versions.map((version) => ({
     id: version.id,
-    trigger: version.trigger as "auto" | "manual",
+    trigger: version.trigger as "auto" | "manual" | "daily",
     label: version.label,
     contentVersion: version.contentVersion,
     createdAt: version.createdAt,
@@ -93,7 +93,7 @@ async function getVersion(documentId: string, versionId: string, userId: string 
 
   return {
     id: version.id,
-    trigger: version.trigger as "auto" | "manual",
+    trigger: version.trigger as "auto" | "manual" | "daily",
     label: version.label,
     contentVersion: version.contentVersion,
     createdAt: version.createdAt,
@@ -135,7 +135,7 @@ async function createManualVersion(
 
   return {
     id: version.id,
-    trigger: version.trigger as "auto" | "manual",
+    trigger: version.trigger as "auto" | "manual" | "daily",
     label: version.label,
     contentVersion: version.contentVersion,
     createdAt: version.createdAt,

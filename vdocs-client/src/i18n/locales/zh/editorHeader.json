@@ -51,12 +51,21 @@
       "edited": "编辑了",
       "updatedPermission": "更新了权限：",
       "viewMore": "查看更多 {count} 项更改",
-      "analyticsEmpty": "暂无分析数据",
       "close": "关闭",
+      "analytics": {
+        "empty": "暂无分析数据",
+        "viewsTotal": "共 {count} 次浏览",
+        "viewsCount": "{count} 次浏览",
+        "uniqueCount": "{count} 位访客",
+        "viewers": "访客",
+        "noViewers": "还没有人查看此页面",
+        "editors": "编辑者"
+      },
       "versions": {
         "empty": "尚未保存任何版本",
         "auto": "自动保存",
         "manual": "手动保存",
+        "daily": "每日存档",
         "saveVersion": "保存当前版本",
         "restore": "恢复此版本",
         "restoring": "正在恢复...",

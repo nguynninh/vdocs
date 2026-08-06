@@ -43,6 +43,36 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  /** Diffs `oldText`/`newText` down to their minimal changed span and shifts
+   * `marks` the same way a delete-then-insert at that span would. Shared by
+   * `replaceText` (block text) and `setTableCell` (cell text) so both keep
+   * mark offsets correct without duplicating the prefix/suffix scan. */
+  private static shiftMarksForReplace(
+    oldText: string,
+    newText: string,
+    marks: MarkRange[] | undefined,
+  ): MarkRange[] | undefined {
+    if (!marks?.length || oldText === newText) return marks;
+
+    let prefixLength = 0;
+    const maxPrefix = Math.min(oldText.length, newText.length);
+    while (prefixLength < maxPrefix && oldText[prefixLength] === newText[prefixLength]) {
+      prefixLength += 1;
+    }
+
+    let oldEnd = oldText.length;
+    let newEnd = newText.length;
+    while (oldEnd > prefixLength && newEnd > prefixLength && oldText[oldEnd - 1] === newText[newEnd - 1]) {
+      oldEnd -= 1;
+      newEnd -= 1;
+    }
+
+    let next = marks;
+    if (oldEnd > prefixLength) next = shiftMarksForDelete(next, prefixLength, oldEnd - prefixLength);
+    if (newEnd > prefixLength) next = shiftMarksForInsert(next, prefixLength, newEnd - prefixLength);
+    return next;
+  }
+
   private findBlockIndex(blockId: string): number {
     for (let index = 0; index < this.blocks.length; index += 1) {
       if (this.blocks.get(index).get("id") === blockId) {
@@ -107,7 +137,11 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         return;
       }
 
-      let marks = block.get("marks") as MarkRange[] | undefined;
+      const marks = YjsCollaborativeDocument.shiftMarksForReplace(
+        oldText,
+        text,
+        block.get("marks") as MarkRange[] | undefined,
+      );
 
       let prefixLength = 0;
       const maxPrefix = Math.min(oldText.length, text.length);
@@ -133,12 +167,10 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
 
       if (oldEnd > prefixLength) {
         ytext.delete(prefixLength, oldEnd - prefixLength);
-        if (marks?.length) marks = shiftMarksForDelete(marks, prefixLength, oldEnd - prefixLength);
       }
 
       if (newEnd > prefixLength) {
         ytext.insert(prefixLength, text.slice(prefixLength, newEnd));
-        if (marks?.length) marks = shiftMarksForInsert(marks, prefixLength, newEnd - prefixLength);
       }
 
       if (marks?.length) {
@@ -165,6 +197,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       }
 
       this.blocks.get(index).set("type", type);
+    });
+  }
+
+  setCodeLanguage(blockId: string, language: string): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      this.blocks.get(index).set("codeLanguage", language);
     });
   }
 
@@ -199,8 +243,40 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         next[row].push("");
       }
 
+      const oldText = next[row][col];
       next[row][col] = text;
       block.set("table", next);
+
+      const tableMarks = (block.get("tableMarks") as MarkRange[][][] | undefined) ?? [];
+      const cellMarks = tableMarks[row]?.[col];
+      const shifted = YjsCollaborativeDocument.shiftMarksForReplace(oldText, text, cellMarks);
+      if (shifted !== cellMarks) {
+        this.writeTableCellMarks(block, row, col, shifted ?? []);
+      }
+    });
+  }
+
+  private writeTableCellMarks(block: Y.Map<unknown>, row: number, col: number, marks: MarkRange[]): void {
+    const current = (block.get("tableMarks") as MarkRange[][][] | undefined) ?? [];
+    const next = current.map((r) => [...r]);
+
+    while (next.length <= row) {
+      next.push([]);
+    }
+    while (next[row].length <= col) {
+      next[row].push([]);
+    }
+
+    next[row][col] = marks;
+    block.set("tableMarks", next);
+  }
+
+  setTableCellMarks(blockId: string, row: number, col: number, marks: MarkRange[]): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      this.writeTableCellMarks(this.blocks.get(index), row, col, marks);
     });
   }
 
@@ -260,16 +336,19 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     for (let index = 0; index < this.blocks.length; index += 1) {
       const block = this.blocks.get(index);
       const table = block.get("table") as string[][] | undefined;
+      const cellMarks = block.get("tableMarks") as MarkRange[][][] | undefined;
       const columnWidths = block.get("columnWidths") as number[] | undefined;
       const rowHeights = block.get("rowHeights") as number[] | undefined;
       const marks = block.get("marks") as MarkRange[] | undefined;
+      const codeLanguage = block.get("codeLanguage") as string | undefined;
 
       blocks.push({
         id: block.get("id") as string,
         type: block.get("type") as BlockType,
         text: (block.get("text") as Y.Text).toString(),
         ...(marks?.length ? { marks } : {}),
-        ...(table ? { table: { rows: table, columnWidths, rowHeights } } : {}),
+        ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights } } : {}),
+        ...(codeLanguage ? { codeLanguage } : {}),
       });
     }
 

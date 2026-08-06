@@ -12,20 +12,31 @@ export interface SlashCommandMenuProps {
   style?: React.CSSProperties;
 }
 
-export const SlashCommandMenu = forwardRef<HTMLDivElement, SlashCommandMenuProps>(
+export interface SlashCommandMenuHandle {
+  element: HTMLDivElement | null;
+  setQuery: (query: string) => void;
+  handleKeyDown: (event: React.KeyboardEvent) => void;
+}
+
+export const SlashCommandMenu = forwardRef<SlashCommandMenuHandle, SlashCommandMenuProps>(
   function SlashCommandMenu({ onSelect, onClose, style }, forwardedRef) {
   const t = useTranslations("slashCommand");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeItemRef = useRef<HTMLButtonElement>(null);
 
-  useImperativeHandle(forwardedRef, () => containerRef.current as HTMLDivElement);
   const { query, setQuery, groups, items, activeIndex, setActiveIndex, handleKeyDown } =
     useSlashCommandManager({ onSelect, onClose });
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      element: containerRef.current,
+      setQuery,
+      handleKeyDown,
+    }),
+    [setQuery, handleKeyDown],
+  );
 
   useEffect(() => {
     activeItemRef.current?.scrollIntoView({ block: "nearest" });
@@ -47,7 +58,8 @@ export const SlashCommandMenu = forwardRef<HTMLDivElement, SlashCommandMenuProps
           <input
             ref={inputRef}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            readOnly
+            tabIndex={-1}
             placeholder={t("searchPlaceholder")}
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />

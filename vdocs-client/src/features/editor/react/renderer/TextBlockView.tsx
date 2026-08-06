@@ -27,7 +27,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   bulletedListItem: "text-base leading-7",
   numberedListItem: "text-base leading-7",
   quote: "text-base leading-7 border-l-2 border-border pl-3 italic text-foreground/90",
-  codeBlock: "text-sm leading-6 rounded-md bg-muted px-3 py-2 font-mono",
+  codeBlock: "",
   divider: "",
   table: "",
 };
@@ -44,7 +44,7 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   bulletedListItem: "text-sm leading-6",
   numberedListItem: "text-sm leading-6",
   quote: "text-sm leading-6 border-l-2 border-border pl-3 italic text-foreground/90",
-  codeBlock: "text-xs leading-5 rounded-md bg-muted px-3 py-2 font-mono",
+  codeBlock: "",
   divider: "",
   table: "",
 };

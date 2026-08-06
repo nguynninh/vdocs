@@ -6,23 +6,39 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
+  analyticsApi,
+  type DailyViewStat,
+  type DocumentAnalyticsApiResponse,
+} from "../../data/api/analyticsApi";
+import {
   revisionApi,
   type VersionApiResponse,
   type VersionSummaryApiResponse,
 } from "../../data/api/revisionApi";
 import { useEditor } from "../../react/EditorProvider";
+import type { ActivityEntry } from "./ActivityPanel";
+
+type Tab = "updates" | "analytics";
 
 export interface UpdatesPanelProps {
   documentId: string;
   documentTitle: string;
+  editedBy?: ActivityEntry;
+  createdBy?: ActivityEntry;
+  initialTab?: Tab;
   onClose?: () => void;
 }
 
-type Tab = "updates" | "analytics";
-
-export function UpdatesPanel({ documentId, documentTitle, onClose }: UpdatesPanelProps) {
+export function UpdatesPanel({
+  documentId,
+  documentTitle,
+  editedBy,
+  createdBy,
+  initialTab,
+  onClose,
+}: UpdatesPanelProps) {
   const t = useTranslations("editorHeader.updatesPanel");
-  const [tab, setTab] = useState<Tab>("updates");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "updates");
 
   return (
     <div className="flex h-full w-full flex-col text-sm">
@@ -34,7 +50,7 @@ export function UpdatesPanel({ documentId, documentTitle, onClose }: UpdatesPane
             aria-label={t("close")}
             className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <ChevronsLeft className="h-4 w-4" />
+            <ChevronsLeft className="h-4 w-4 rotate-180" />
           </button>
         </div>
         <div className="flex items-center gap-1">
@@ -80,11 +96,180 @@ export function UpdatesPanel({ documentId, documentTitle, onClose }: UpdatesPane
         {tab === "updates" ? (
           <VersionsTab documentId={documentId} />
         ) : (
-          <div className="flex h-32 items-center justify-center text-muted-foreground">
-            {t("analyticsEmpty")}
+          <AnalyticsTab documentId={documentId} editedBy={editedBy} createdBy={createdBy} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsTab({
+  documentId,
+  editedBy,
+  createdBy,
+}: {
+  documentId: string;
+  editedBy?: ActivityEntry;
+  createdBy?: ActivityEntry;
+}) {
+  const t = useTranslations("editorHeader.updatesPanel.analytics");
+  const tActivity = useTranslations("editorHeader.activity");
+  const format = useFormatter();
+
+  const [data, setData] = useState<DocumentAnalyticsApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    analyticsApi
+      .get(documentId)
+      .then((response) => setData(response.data))
+      .catch((error) => console.error("Failed to load analytics", error))
+      .finally(() => setLoading(false));
+  }, [documentId]);
+
+  if (loading || !data) {
+    return (
+      <div className="flex h-32 items-center justify-center text-muted-foreground">
+        {loading ? "" : t("empty")}
+      </div>
+    );
+  }
+
+  // The API only returns days that actually had a view — fill in the full
+  // range with zeros so a single real data point renders as one thin bar
+  // among many empty slots, instead of one bar stretched across the whole
+  // chart (which just looked like a solid block).
+  const byDate = new Map(data.daily.map((day) => [day.date, day]));
+  const days: DailyViewStat[] = [];
+  for (let i = data.rangeDays - 1; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const key = date.toISOString().slice(0, 10);
+    days.push(byDate.get(key) ?? { date: key, totalViews: 0, uniqueViewers: 0 });
+  }
+
+  const maxViews = Math.max(1, ...days.map((d) => d.totalViews));
+  const chartWidth = 320;
+  const chartHeight = 90;
+  const barGap = 2;
+  const barWidth = chartWidth / days.length - barGap;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="mb-2 text-sm text-foreground">
+          {t("viewsTotal", { count: data.totalViews })}
+        </p>
+
+        {data.totalViews === 0 ? (
+          <div className="flex h-24 items-center justify-center text-muted-foreground">
+            {t("empty")}
+          </div>
+        ) : (
+          <div className="relative">
+            <svg
+              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              className="w-full"
+              onMouseLeave={() => setHoveredDay(null)}
+            >
+              <line
+                x1={0}
+                y1={chartHeight - 0.5}
+                x2={chartWidth}
+                y2={chartHeight - 0.5}
+                className="stroke-border"
+                strokeWidth={1}
+              />
+              {days.map((day, index) => {
+                const minHeight = day.totalViews > 0 ? 2 : 0;
+                const height = Math.max(
+                  (day.totalViews / maxViews) * (chartHeight - 16),
+                  minHeight
+                );
+                const x = index * (chartWidth / days.length);
+
+                return (
+                  <rect
+                    key={day.date}
+                    x={x}
+                    y={chartHeight - height}
+                    width={Math.max(barWidth, 1)}
+                    height={height}
+                    rx={1}
+                    fill={day.totalViews > 0 ? "#3b82f6" : "var(--border)"}
+                    className={day.totalViews > 0 ? "hover:fill-blue-600" : undefined}
+                    onMouseEnter={() => setHoveredDay(index)}
+                  />
+                );
+              })}
+            </svg>
+
+            {hoveredDay !== null && days[hoveredDay] && (
+              <div className="pointer-events-none absolute top-0 right-0 rounded-md bg-foreground px-2 py-1 text-xs text-background">
+                <p>
+                  {format.dateTime(new Date(days[hoveredDay].date), {
+                    dateStyle: "medium",
+                  })}
+                </p>
+                <p>{t("viewsCount", { count: days[hoveredDay].totalViews })}</p>
+                <p>{t("uniqueCount", { count: days[hoveredDay].uniqueViewers })}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{t("viewers")}</p>
+        {data.viewers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("noViewers")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {data.viewers.map((viewer) => (
+              <li key={viewer.id} className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
+                    {viewer.avatar && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={viewer.avatar} alt="" className="h-full w-full object-cover" />
+                    )}
+                  </div>
+                  <span className="truncate text-foreground">{viewer.name}</span>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {format.relativeTime(new Date(viewer.lastViewedAt))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {(createdBy || editedBy) && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">{t("editors")}</p>
+          <ul className="flex flex-col gap-2">
+            {createdBy && (
+              <li className="flex items-center justify-between gap-2">
+                <span className="truncate text-foreground">
+                  {tActivity("createdBy")} <span className="font-medium">{createdBy.actorName}</span>
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">{createdBy.timeLabel}</span>
+              </li>
+            )}
+            {editedBy && (
+              <li className="flex items-center justify-between gap-2">
+                <span className="truncate text-foreground">
+                  {tActivity("editedBy")} <span className="font-medium">{editedBy.actorName}</span>
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">{editedBy.timeLabel}</span>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,7 +400,11 @@ function VersionsTab({ documentId }: { documentId: string }) {
                       })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {version.trigger === "manual" ? t("manual") : t("auto")}
+                    {version.trigger === "manual"
+                      ? t("manual")
+                      : version.trigger === "daily"
+                        ? t("daily")
+                        : t("auto")}
                     {version.createdBy ? ` · ${version.createdBy.name}` : ""}
                   </p>
                 </div>

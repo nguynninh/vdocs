@@ -4,6 +4,7 @@ import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, 
 import { createPortal } from "react-dom";
 
 import { SlashCommandMenu } from "./SlashCommandMenu";
+import type { SlashCommandMenuHandle } from "./SlashCommandMenu";
 import type { SlashCommandItem } from "./slashCommand.types";
 
 export interface SlashCommandAnchor {
@@ -15,6 +16,9 @@ export interface SlashCommandAnchor {
 export interface SlashCommandPluginHandle {
   open: (anchor: SlashCommandAnchor) => void;
   close: () => void;
+  isOpen: () => boolean;
+  setQuery: (query: string) => void;
+  handleKeyDown: (event: React.KeyboardEvent) => boolean;
 }
 
 export interface SlashCommandPluginProps {
@@ -27,7 +31,7 @@ export const SlashCommandPlugin = forwardRef<SlashCommandPluginHandle, SlashComm
   function SlashCommandPlugin({ onSelectCommand }, ref) {
     const [anchor, setAnchor] = useState<SlashCommandAnchor | null>(null);
     const [style, setStyle] = useState<React.CSSProperties | null>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<SlashCommandMenuHandle>(null);
 
     const close = useCallback(() => {
       setAnchor(null);
@@ -39,14 +43,21 @@ export const SlashCommandPlugin = forwardRef<SlashCommandPluginHandle, SlashComm
       () => ({
         open: (nextAnchor) => setAnchor(nextAnchor),
         close,
+        isOpen: () => anchor !== null,
+        setQuery: (query) => menuRef.current?.setQuery(query),
+        handleKeyDown: (event) => {
+          if (anchor === null) return false;
+          menuRef.current?.handleKeyDown(event);
+          return true;
+        },
       }),
-      [close],
+      [close, anchor],
     );
 
     useLayoutEffect(() => {
-      if (!anchor || !menuRef.current) return;
+      if (!anchor || !menuRef.current?.element) return;
 
-      const menuHeight = menuRef.current.offsetHeight;
+      const menuHeight = menuRef.current.element.offsetHeight;
       const spaceBelow = window.innerHeight - anchor.bottom;
       const shouldFlipUp = spaceBelow < menuHeight + GAP && anchor.top > menuHeight + GAP;
 

@@ -1,6 +1,6 @@
 export interface DocumentVersionSummaryResponse {
   id: string;
-  trigger: "auto" | "manual";
+  trigger: "auto" | "manual" | "daily";
   label: string | null;
   contentVersion: number;
   createdAt: string;

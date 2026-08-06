@@ -19,7 +19,7 @@ function create(input: {
   documentId: string;
   ydocState: Buffer;
   contentVersion: number;
-  trigger: "auto" | "manual";
+  trigger: "auto" | "manual" | "daily";
   label?: string;
   createdBy?: string;
 }) {

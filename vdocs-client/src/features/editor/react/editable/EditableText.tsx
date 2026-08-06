@@ -21,6 +21,9 @@ export interface EditableTextProps {
   onBackspaceAtStart: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
+  /** When true, plain Enter inserts a literal newline instead of leaving the
+   * block — used by codeBlock, where Shift+Enter is what calls `onEnter`. */
+  enterInsertsNewline?: boolean;
 }
 
 export function EditableText({
@@ -32,6 +35,7 @@ export function EditableText({
   onBackspaceAtStart,
   onFocus,
   onBlur,
+  enterInsertsNewline,
 }: EditableTextProps) {
   const ref = useRef<HTMLDivElement>(null);
   const slashCommandRef = useRef<SlashCommandPluginHandle>(null);
@@ -103,8 +107,19 @@ export function EditableText({
   }, [text, marks]);
 
   const syncSlashCommandMenu = (nextText: string) => {
-    if (nextText !== "/") {
+    // The menu stays anchored to the block itself — the user keeps typing
+    // "/code" straight into the block (not into a separate search field), so
+    // everything after the leading "/" is the filter query. A space ends the
+    // command (e.g. "/ hi") the same way Notion-style slash menus behave.
+    if (!nextText.startsWith("/") || nextText.includes(" ")) {
       slashCommandRef.current?.close();
+      return;
+    }
+
+    const query = nextText.slice(1);
+
+    if (slashCommandRef.current?.isOpen()) {
+      slashCommandRef.current.setQuery(query);
       return;
     }
 
@@ -113,6 +128,7 @@ export function EditableText({
     if (!rect) return;
 
     slashCommandRef.current?.open({ top: rect.top, bottom: rect.bottom, left: rect.left });
+    slashCommandRef.current?.setQuery(query);
   };
 
   const openAiSuggestionMenu = () => {
@@ -168,9 +184,35 @@ export function EditableText({
           const before = fullText.slice(0, caretOffset);
           const after = fullText.slice(caretOffset);
 
+          if (enterInsertsNewline) {
+            // codeBlock keeps a multi-line paste as one block (literal
+            // newlines) instead of splitting it into a paragraph per line.
+            const nextText = before + clipboardText + after;
+            pendingSelectionRef.current = {
+              start: before.length + clipboardText.length,
+              end: before.length + clipboardText.length,
+            };
+            onChange(nextText);
+            return;
+          }
+
           splitPasteIntoBlocks(blockId, before, lines, after);
         }}
         onKeyDown={(event) => {
+          // The block itself stays focused while the slash-command menu is open
+          // (the user keeps typing the filter, e.g. "/code", directly into the
+          // block), so navigating/selecting a menu item has to be handled here
+          // instead of relying on the menu's own (unfocused) keydown handler.
+          if (
+            (event.key === "ArrowUp" ||
+              event.key === "ArrowDown" ||
+              event.key === "Enter" ||
+              event.key === "Escape") &&
+            slashCommandRef.current?.handleKeyDown(event)
+          ) {
+            return;
+          }
+
           if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
             event.preventDefault();
             // Sidebar (components/ui/sidebar.tsx) listens for the same
@@ -208,6 +250,21 @@ export function EditableText({
             }
 
             event.preventDefault();
+
+            if (enterInsertsNewline && !event.shiftKey) {
+              const node = ref.current;
+              const domSelection = window.getSelection();
+              if (!node || !domSelection || domSelection.rangeCount === 0) return;
+
+              const offset = getTextOffset(node, domSelection.focusNode!, domSelection.focusOffset);
+              const fullText = node.textContent ?? "";
+              const nextText = fullText.slice(0, offset) + "\n" + fullText.slice(offset);
+
+              pendingSelectionRef.current = { start: offset + 1, end: offset + 1 };
+              onChange(nextText);
+              return;
+            }
+
             onEnter();
             return;
           }

@@ -1,6 +1,6 @@
 import { api } from "@/src/services/axios";
 
-export type VersionTrigger = "auto" | "manual";
+export type VersionTrigger = "auto" | "manual" | "daily";
 
 export interface VersionSummaryApiResponse {
   id: string;

@@ -34,6 +34,8 @@ import {
   VersionNotFoundError,
   versionService,
 } from "../services/version.service.ts";
+import { analyticsService } from "../services/analytics.service.ts";
+import type { DocumentAnalyticsResponse } from "../dtos/response/DocumentAnalyticsResponse.ts";
 import { sendError, sendSuccess } from "../utils/apiResponse.ts";
 
 export const documentRouter = Router();
@@ -211,6 +213,45 @@ documentRouter.get(
           : null,
         createdAt: document.createdAt.toISOString(),
         updatedAt: document.updatedAt.toISOString(),
+      };
+
+      if (userId) {
+        analyticsService.recordView(req.params.documentId, userId).catch((error) => {
+          console.error("Failed to record document view", error);
+        });
+      }
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/:documentId/analytics",
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const rangeDays = req.query.days ? Number(req.query.days) : undefined;
+      const analytics = await analyticsService.getAnalytics(
+        req.params.documentId,
+        userId,
+        rangeDays
+      );
+
+      const response: DocumentAnalyticsResponse = {
+        rangeDays: analytics.rangeDays,
+        totalViews: analytics.totalViews,
+        uniqueViewers: analytics.uniqueViewers,
+        daily: analytics.daily,
+        viewers: analytics.viewers.map((viewer) => ({
+          id: viewer.id,
+          name: viewer.name,
+          avatar: viewer.avatar,
+          lastViewedAt: viewer.lastViewedAt.toISOString(),
+          totalViews: viewer.totalViews,
+        })),
       };
 
       sendSuccess(res, response);

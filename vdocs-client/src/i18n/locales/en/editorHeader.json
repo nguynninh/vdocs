@@ -51,12 +51,21 @@
       "edited": "edited",
       "updatedPermission": "updated permission for",
       "viewMore": "View {count} more",
-      "analyticsEmpty": "No analytics data yet",
       "close": "Close",
+      "analytics": {
+        "empty": "No analytics data yet",
+        "viewsTotal": "{count} total views",
+        "viewsCount": "{count} views",
+        "uniqueCount": "{count} unique views",
+        "viewers": "Viewers",
+        "noViewers": "No one has viewed this page yet",
+        "editors": "Editors"
+      },
       "versions": {
         "empty": "No versions saved yet",
         "auto": "Auto-saved",
         "manual": "Manually saved",
+        "daily": "End-of-day save",
         "saveVersion": "Save current version",
         "restore": "Restore this version",
         "restoring": "Restoring...",

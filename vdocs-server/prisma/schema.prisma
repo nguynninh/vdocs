@@ -31,6 +31,7 @@ model User {
   documentMembers   DocumentMember[]
   createdShareLinks ShareLink[]
   documentVersions  DocumentVersion[]
+  documentViews     DocumentView[]
 
   @@unique([provider, providerUserId])
 }
@@ -78,6 +79,27 @@ model Document {
   members    DocumentMember[]
   shareLinks ShareLink[]
   versions   DocumentVersion[]
+  views      DocumentView[]
+}
+
+// One row per (viewer, day), upserted with an incrementing `count` — repeat
+// page loads within the same day bump `count` on the existing row instead of
+// creating new ones, so the analytics tab can chart both total views
+// (sum of count) and unique viewers (distinct rows) per day without
+// unbounded row growth.
+model DocumentView {
+  id         String   @id @default(uuid())
+  documentId String
+  viewerId   String
+  viewDate   String // "YYYY-MM-DD", server-local — the dedup key
+  count      Int      @default(1)
+  lastViewedAt DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  viewer   User     @relation(fields: [viewerId], references: [id])
+
+  @@unique([documentId, viewerId, viewDate])
+  @@index([documentId, viewDate])
 }
 
 // Periodic checkpoints of a document's Yjs state, so past content can be

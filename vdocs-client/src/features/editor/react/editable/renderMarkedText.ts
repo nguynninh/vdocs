@@ -1,31 +1,42 @@
+import { MARK_REGISTRY } from "../../engine/mark/MarkRegistry";
 import type { MarkRange } from "../../engine/mark/mark.types";
 
-/** Rebuilds `node`'s children as text nodes interleaved with `<strong>` spans for bold ranges. */
+/** Rebuilds `node`'s children as text nodes interleaved with tagged spans for each mark range, nesting overlapping marks. */
 export function renderMarkedText(node: HTMLElement, text: string, marks: MarkRange[] = []): void {
   node.textContent = "";
 
-  const boldRanges = marks
-    .filter((mark) => mark.type === "bold")
-    .sort((a, b) => a.start - b.start);
+  const ranges = marks
+    .map((mark) => ({
+      type: mark.type,
+      start: Math.max(0, Math.min(mark.start, text.length)),
+      end: Math.max(0, Math.min(mark.end, text.length)),
+    }))
+    .filter((mark) => mark.end > mark.start);
 
-  let cursor = 0;
-  for (const range of boldRanges) {
-    const start = Math.max(cursor, Math.min(range.start, text.length));
-    const end = Math.max(start, Math.min(range.end, text.length));
+  const boundaries = Array.from(new Set([0, text.length, ...ranges.flatMap((r) => [r.start, r.end])])).sort(
+    (a, b) => a - b,
+  );
 
-    if (start > cursor) {
-      node.appendChild(document.createTextNode(text.slice(cursor, start)));
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const start = boundaries[i];
+    const end = boundaries[i + 1];
+    if (start >= end) continue;
+
+    const activeTypes = ranges.filter((r) => r.start <= start && r.end >= end).map((r) => r.type);
+
+    let container: HTMLElement | null = null;
+    for (const type of activeTypes) {
+      const tag = MARK_REGISTRY[type]?.tag;
+      if (!tag) continue;
+      const el = document.createElement(tag);
+      if (tag === "code") {
+        el.className = "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]";
+      }
+      (container ?? node).appendChild(el);
+      container = el;
     }
-    if (end > start) {
-      const strong = document.createElement("strong");
-      strong.textContent = text.slice(start, end);
-      node.appendChild(strong);
-    }
-    cursor = end;
-  }
 
-  if (cursor < text.length) {
-    node.appendChild(document.createTextNode(text.slice(cursor)));
+    (container ?? node).appendChild(document.createTextNode(text.slice(start, end)));
   }
 }
 

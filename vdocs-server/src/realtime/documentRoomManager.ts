@@ -14,11 +14,12 @@ interface RoomState {
 // writes to Postgres.
 const SAVE_DEBOUNCE_MS = 2_500;
 const EVICT_GRACE_MS = 5_000;
-// Auto-snapshots are throttled to this interval so editing sessions produce
-// a handful of checkpoints, not a row per debounced save. A checkpoint is
-// only ever attempted on the trailing edge of the save debounce (i.e. once
-// you stop typing) — this just caps how often that can produce a new row.
-const AUTO_SNAPSHOT_INTERVAL_MS = 30 * 1000;
+// Auto-snapshots are throttled to this interval so a burst of edits within
+// the same window collapses into a single checkpoint rather than one row
+// per debounced save. A checkpoint is only ever attempted on the trailing
+// edge of the save debounce (i.e. once you stop typing) — this just caps
+// how often that can produce a new row.
+const AUTO_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
 
 const rooms = new Map<string, RoomState>();
 

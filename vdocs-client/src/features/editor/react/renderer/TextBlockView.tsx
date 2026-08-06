@@ -63,6 +63,7 @@ export function TextBlockView({ block }: TextBlockViewProps) {
       <EditableText
         blockId={block.id}
         text={block.text}
+        marks={block.marks}
         onChange={onChange}
         onEnter={onEnter}
         onBackspaceAtStart={onBackspaceAtStart}

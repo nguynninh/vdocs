@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useEditor } from "../../react/EditorProvider";
 import { IconPickerPopover } from "../icon-picker/IconPickerPopover";
 import { PageIconGlyph } from "../icon-picker/PageIconGlyph";
@@ -34,18 +35,31 @@ export function PageHeader({
   onTitleChange,
 }: PageHeaderProps) {
   const t = useTranslations("editorContent");
-  const { canEdit } = useEditor();
+  const { canEdit, fullWidth } = useEditor();
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   // Title is a freeform textarea now (line breaks allowed), so it has to grow
   // with its content instead of scrolling internally like a fixed input.
-  useLayoutEffect(() => {
+  const resizeTitle = () => {
     const node = titleRef.current;
     if (!node) return;
     node.style.height = "auto";
     node.style.height = `${node.scrollHeight}px`;
-  }, [title]);
+  };
+
+  useLayoutEffect(resizeTitle, [title]);
+
+  // Toggling full-width (or any other layout change) resizes this textarea's
+  // own width without changing `title`, so the height effect above wouldn't
+  // rerun and re-wrap — watch the box itself instead of just its content.
+  useLayoutEffect(() => {
+    const node = titleRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(resizeTitle);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const handleIconSelect = (nextIcon: PageIcon) => {
     onIconSelect(nextIcon);
@@ -58,8 +72,15 @@ export function PageHeader({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col px-24 pt-8">
-      {hasCover && <div className="-mx-24 mb-6 h-40 bg-gradient-to-br from-sky-200 to-indigo-200" />}
+    <div className={cn("mx-auto flex w-full flex-col pt-8", fullWidth ? "max-w-none px-12" : "max-w-3xl px-24")}>
+      {hasCover && (
+        <div
+          className={cn(
+            "mb-6 h-40 bg-gradient-to-br from-sky-200 to-indigo-200",
+            fullWidth ? "-mx-12" : "-mx-24",
+          )}
+        />
+      )}
 
       {canEdit && (
         <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -137,7 +158,11 @@ export function PageHeader({
         <textarea
           ref={titleRef}
           value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
+          onChange={(event) => {
+            onTitleChange(event.target.value);
+            resizeTitle();
+          }}
+          onPaste={() => requestAnimationFrame(resizeTitle)}
           placeholder={placeholder}
           readOnly={!canEdit}
           rows={1}

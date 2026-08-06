@@ -3,7 +3,9 @@
 import { useEffect, useRef } from "react";
 
 import { useEditor } from "../EditorProvider";
+import type { MarkRange } from "../../engine/mark/mark.types";
 import { parseTabularClipboardText } from "../../blocks/table/table.parser";
+import { getTextOffset, renderMarkedText, setSelectionByTextOffsets } from "./renderMarkedText";
 import { mapSlashCommandToBlockType } from "../../features/slash-command/mapSlashCommandToBlockType";
 import { SlashCommandPlugin } from "../../features/slash-command/SlashCommandPlugin";
 import type { SlashCommandPluginHandle } from "../../features/slash-command/SlashCommandPlugin";
@@ -13,6 +15,7 @@ import type { AiSuggestionPluginHandle } from "../../features/ai-suggestion/AiSu
 export interface EditableTextProps {
   blockId: string;
   text: string;
+  marks?: MarkRange[];
   onChange: (text: string) => void;
   onEnter: () => void;
   onBackspaceAtStart: () => void;
@@ -23,6 +26,7 @@ export interface EditableTextProps {
 export function EditableText({
   blockId,
   text,
+  marks,
   onChange,
   onEnter,
   onBackspaceAtStart,
@@ -32,8 +36,17 @@ export function EditableText({
   const ref = useRef<HTMLDivElement>(null);
   const slashCommandRef = useRef<SlashCommandPluginHandle>(null);
   const aiSuggestionRef = useRef<AiSuggestionPluginHandle>(null);
-  const { state, clearFocus, convertBlockType, splitPasteIntoBlocks, insertTableAfterBlock, canEdit } =
-    useEditor();
+  const marksSignatureRef = useRef<string>("");
+  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
+  const {
+    state,
+    clearFocus,
+    convertBlockType,
+    splitPasteIntoBlocks,
+    insertTableAfterBlock,
+    toggleMark,
+    canEdit,
+  } = useEditor();
 
   useEffect(() => {
     if (state.focusBlockId !== blockId || !ref.current) return;
@@ -55,25 +68,39 @@ export function EditableText({
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    if (node.textContent === text) return;
 
-    node.textContent = text;
+    const marksSignature = JSON.stringify(marks ?? []);
+    if (node.textContent === text && marksSignatureRef.current === marksSignature) return;
+    marksSignatureRef.current = marksSignature;
+
+    renderMarkedText(node, text, marks);
+
+    if (window.document.activeElement !== node) return;
+
+    const pendingSelection = pendingSelectionRef.current;
+    pendingSelectionRef.current = null;
+
+    if (pendingSelection) {
+      // A toggleMark just rebuilt the DOM out from under an active selection
+      // (e.g. Cmd/Ctrl+B) — restore it instead of falling through to the
+      // collapse-to-end below, which would drop the user's selection.
+      setSelectionByTextOffsets(node, pendingSelection.start, pendingSelection.end);
+      return;
+    }
 
     // While typing, onInput already keeps state text equal to the DOM text, so this
     // effect is a no-op above. When it isn't — e.g. a markdown-shortcut conversion
     // strips the "# "/"- " marker out from under an actively focused node — restore
     // the caret to the end instead of leaving focus on a node whose content just
     // changed underneath it.
-    if (window.document.activeElement === node) {
-      const range = window.document.createRange();
-      range.selectNodeContents(node);
-      range.collapse(false);
+    const range = window.document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
 
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-    }
-  }, [text]);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }, [text, marks]);
 
   const syncSlashCommandMenu = (nextText: string) => {
     if (nextText !== "/") {
@@ -144,6 +171,33 @@ export function EditableText({
           splitPasteIntoBlocks(blockId, before, lines, after);
         }}
         onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+            event.preventDefault();
+            // Sidebar (components/ui/sidebar.tsx) listens for the same
+            // Cmd/Ctrl+B on `window` to toggle itself — stop it here so
+            // bolding text doesn't also flip the sidebar open/closed.
+            event.stopPropagation();
+
+            const node = ref.current;
+            const domSelection = window.getSelection();
+            if (!node || !domSelection || domSelection.rangeCount === 0 || domSelection.isCollapsed) {
+              return;
+            }
+
+            const start = Math.min(
+              getTextOffset(node, domSelection.anchorNode!, domSelection.anchorOffset),
+              getTextOffset(node, domSelection.focusNode!, domSelection.focusOffset),
+            );
+            const end = Math.max(
+              getTextOffset(node, domSelection.anchorNode!, domSelection.anchorOffset),
+              getTextOffset(node, domSelection.focusNode!, domSelection.focusOffset),
+            );
+
+            pendingSelectionRef.current = { start, end };
+            toggleMark(blockId, start, end, "bold");
+            return;
+          }
+
           if (event.key === "Enter") {
             // While a Vietnamese/CJK IME composition is active (the underlined
             // in-progress text), Enter confirms the composition rather than

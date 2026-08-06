@@ -1,6 +1,8 @@
 import * as Y from "yjs";
 import type { BlockNode, BlockType } from "../engine/block/block.types";
 import type { DocumentModel } from "../engine/document/document.types";
+import type { MarkRange } from "../engine/mark/mark.types";
+import { shiftMarksForDelete, shiftMarksForInsert } from "../engine/mark/shiftMarks";
 import type {
   CollaborativeDocument,
   CreateBlockInput,
@@ -15,12 +17,14 @@ import type {
 export class YjsCollaborativeDocument implements CollaborativeDocument {
   private readonly ydoc: Y.Doc;
   private readonly blocks: Y.Array<Y.Map<unknown>>;
+  private readonly metadata: Y.Map<unknown>;
   private readonly changeListeners = new Set<() => void>();
   private readonly localUpdateListeners = new Set<(update: Uint8Array) => void>();
 
   constructor(initialState?: Uint8Array) {
     this.ydoc = new Y.Doc();
     this.blocks = this.ydoc.getArray<Y.Map<unknown>>("blocks");
+    this.metadata = this.ydoc.getMap<unknown>("metadata");
 
     if (initialState?.length) {
       Y.applyUpdate(this.ydoc, initialState, "initial-snapshot");
@@ -57,8 +61,14 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         return;
       }
 
-      const ytext = this.blocks.get(index).get("text") as Y.Text;
+      const block = this.blocks.get(index);
+      const ytext = block.get("text") as Y.Text;
       ytext.insert(offset, text);
+
+      const marks = block.get("marks") as MarkRange[] | undefined;
+      if (marks?.length) {
+        block.set("marks", shiftMarksForInsert(marks, offset, text.length));
+      }
     });
   }
 
@@ -70,8 +80,14 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         return;
       }
 
-      const ytext = this.blocks.get(index).get("text") as Y.Text;
+      const block = this.blocks.get(index);
+      const ytext = block.get("text") as Y.Text;
       ytext.delete(offset, length);
+
+      const marks = block.get("marks") as MarkRange[] | undefined;
+      if (marks?.length) {
+        block.set("marks", shiftMarksForDelete(marks, offset, length));
+      }
     });
   }
 
@@ -83,12 +99,15 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         return;
       }
 
-      const ytext = this.blocks.get(index).get("text") as Y.Text;
+      const block = this.blocks.get(index);
+      const ytext = block.get("text") as Y.Text;
       const oldText = ytext.toString();
 
       if (oldText === text) {
         return;
       }
+
+      let marks = block.get("marks") as MarkRange[] | undefined;
 
       let prefixLength = 0;
       const maxPrefix = Math.min(oldText.length, text.length);
@@ -114,11 +133,26 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
 
       if (oldEnd > prefixLength) {
         ytext.delete(prefixLength, oldEnd - prefixLength);
+        if (marks?.length) marks = shiftMarksForDelete(marks, prefixLength, oldEnd - prefixLength);
       }
 
       if (newEnd > prefixLength) {
         ytext.insert(prefixLength, text.slice(prefixLength, newEnd));
+        if (marks?.length) marks = shiftMarksForInsert(marks, prefixLength, newEnd - prefixLength);
       }
+
+      if (marks?.length) {
+        block.set("marks", marks);
+      }
+    });
+  }
+
+  setMarks(blockId: string, marks: MarkRange[]): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      this.blocks.get(index).set("marks", marks);
     });
   }
 
@@ -202,6 +236,12 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setFullWidth(fullWidth: boolean): void {
+    this.ydoc.transact(() => {
+      this.metadata.set("fullWidth", fullWidth);
+    });
+  }
+
   getSnapshot(): DocumentModel {
     const blocks: BlockNode[] = [];
 
@@ -210,16 +250,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       const table = block.get("table") as string[][] | undefined;
       const columnWidths = block.get("columnWidths") as number[] | undefined;
       const rowHeights = block.get("rowHeights") as number[] | undefined;
+      const marks = block.get("marks") as MarkRange[] | undefined;
 
       blocks.push({
         id: block.get("id") as string,
         type: block.get("type") as BlockType,
         text: (block.get("text") as Y.Text).toString(),
+        ...(marks?.length ? { marks } : {}),
         ...(table ? { table: { rows: table, columnWidths, rowHeights } } : {}),
       });
     }
 
-    return { blocks };
+    return { blocks, fullWidth: (this.metadata.get("fullWidth") as boolean | undefined) ?? false };
   }
 
   createBlock(input: CreateBlockInput): void {

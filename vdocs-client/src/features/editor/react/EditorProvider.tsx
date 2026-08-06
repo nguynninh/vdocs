@@ -13,6 +13,8 @@ import {
 
 import type { BlockType } from "../engine/block/block.types";
 import { findBlockIndex } from "../engine/document/findBlock";
+import type { MarkType } from "../engine/mark/mark.types";
+import { toggleMark as toggleMarkRange } from "../engine/mark/toggleMark";
 import type { EditorState } from "../engine/state/editorState.types";
 import { generateId } from "../engine/utils/id";
 import { CollaborationProvider } from "../collaboration/CollaborationProvider";
@@ -44,7 +46,10 @@ interface EditorContextValue {
   permission: DocumentPermission;
   canEdit: boolean;
   wordCount: number;
+  fullWidth: boolean;
+  setFullWidth: (fullWidth: boolean) => void;
   updateBlockText: (blockId: string, text: string) => void;
+  toggleMark: (blockId: string, start: number, end: number, type: MarkType) => void;
   updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
@@ -71,7 +76,7 @@ export function EditorProvider({
   children,
 }: EditorProviderProps) {
   const [state, setState] = useState<EditorState>({
-    document: { blocks: [] },
+    document: { blocks: [], fullWidth: false },
     focusBlockId: null,
   });
   const [connectionState, setConnectionState] = useState<ConnectionState>("idle");
@@ -134,6 +139,22 @@ export function EditorProvider({
   const updateBlockText = useCallback((blockId: string, text: string) => {
     documentRef.current?.replaceText(blockId, text);
   }, []);
+
+  const setFullWidth = useCallback((fullWidth: boolean) => {
+    documentRef.current?.setFullWidth(fullWidth);
+  }, []);
+
+  const toggleMark = useCallback(
+    (blockId: string, start: number, end: number, type: MarkType) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      if (!block) return;
+
+      const nextMarks = toggleMarkRange(block.marks ?? [], type, start, end);
+      documentRef.current?.setMarks(blockId, nextMarks);
+    },
+    [state.document],
+  );
 
   const updateTableCell = useCallback(
     (blockId: string, row: number, col: number, text: string) => {
@@ -395,7 +416,10 @@ export function EditorProvider({
       permission,
       canEdit,
       wordCount,
+      fullWidth: state.document.fullWidth,
+      setFullWidth,
       updateBlockText,
+      toggleMark,
       updateTableCell,
       updateTableColumnWidth,
       updateTableRowHeight,
@@ -418,7 +442,9 @@ export function EditorProvider({
       permission,
       canEdit,
       wordCount,
+      setFullWidth,
       updateBlockText,
+      toggleMark,
       updateTableCell,
       updateTableColumnWidth,
       updateTableRowHeight,

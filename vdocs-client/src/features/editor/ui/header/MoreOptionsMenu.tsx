@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useEditor } from "../../react/EditorProvider";
 
 export interface MoreOptionsMenuProps {
   onCopyLink?: () => void;
@@ -85,9 +86,9 @@ export function MoreOptionsMenu(props: MoreOptionsMenuProps) {
   const { onCopyLink, onRename, onDuplicate, onDelete, wordCount = 0, canEdit = true } = props;
   const t = useTranslations("editorHeader.moreOptionsMenu");
 
+  const { fullWidth, setFullWidth } = useEditor();
   const [fontStyle, setFontStyle] = useState<"default" | "serif" | "mono">("default");
   const [smallText, setSmallText] = useState(false);
-  const [fullWidth, setFullWidth] = useState(true);
   const [lockPage, setLockPage] = useState(false);
 
   if (!canEdit) {

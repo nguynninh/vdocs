@@ -1,3 +1,5 @@
+import type { MarkRange } from "../mark/mark.types";
+
 export type BlockType =
   | "paragraph"
   | "heading1"
@@ -24,5 +26,6 @@ export interface BlockNode {
   id: string;
   type: BlockType;
   text: string;
+  marks?: MarkRange[];
   table?: TableData;
 }

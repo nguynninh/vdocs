@@ -1,5 +1,6 @@
 import type { BlockType } from "../engine/block/block.types";
 import type { DocumentModel } from "../engine/document/document.types";
+import type { MarkRange } from "../engine/mark/mark.types";
 
 export type DocumentPermission =
   | "OWNER"
@@ -52,6 +53,12 @@ export interface CollaborativeDocument {
   deleteBlock(blockId: string): void;
   moveBlock(blockId: string, targetIndex: number): void;
   setBlockType(blockId: string, type: BlockType): void;
+
+  /** Replaces a block's full set of inline mark ranges (e.g. bold spans). */
+  setMarks(blockId: string, marks: MarkRange[]): void;
+
+  /** Sets the document-level full-width layout preference. */
+  setFullWidth(fullWidth: boolean): void;
 
   /** Replaces a table block's entire grid (used when first turning a block
    * into a table, to seed its default rows). */

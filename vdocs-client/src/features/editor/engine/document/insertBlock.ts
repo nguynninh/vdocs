@@ -10,5 +10,5 @@ export function insertBlockAfter(
   const index = findBlockIndex(document, afterId);
   const blocks = [...document.blocks];
   blocks.splice(index + 1, 0, block);
-  return { blocks };
+  return { ...document, blocks };
 }

@@ -7,6 +7,7 @@ export function setBlockType(
   blockType: BlockType,
 ): DocumentModel {
   return {
+    ...document,
     blocks: document.blocks.map((block) => (block.id === blockId ? { ...block, type: blockType } : block)),
   };
 }

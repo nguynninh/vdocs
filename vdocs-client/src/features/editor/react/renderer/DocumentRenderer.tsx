@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import { useEditor } from "../EditorProvider";
 import { BlockGutterControls } from "./BlockGutterControls";
 import { BlockRenderer } from "./BlockRenderer";
@@ -70,7 +71,7 @@ function getBlockIndexFromEvent(event: { target: EventTarget | null }): number |
 }
 
 export function DocumentRenderer() {
-  const { state, deleteBlockRange } = useEditor();
+  const { state, deleteBlockRange, fullWidth } = useEditor();
   const [range, setRange] = useState<BlockRange | null>(null);
   const [highlightRectsByIndex, setHighlightRectsByIndex] = useState<
     Record<number, HighlightRect[]>
@@ -186,7 +187,10 @@ export function DocumentRenderer() {
   return (
     <div
       ref={containerRef}
-      className="relative mx-auto flex w-full max-w-3xl flex-col px-24 py-4"
+      className={cn(
+        "relative mx-auto flex w-full flex-col py-4",
+        fullWidth ? "max-w-none px-12" : "max-w-3xl px-24",
+      )}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

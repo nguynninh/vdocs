@@ -246,6 +246,7 @@ export function EditorHeader(props: EditorHeaderProps) {
               onRename={onRename}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
+              onOpenUpdates={() => setUpdatesSidebarOpen(true)}
               wordCount={wordCount}
               canEdit={canEdit}
             />

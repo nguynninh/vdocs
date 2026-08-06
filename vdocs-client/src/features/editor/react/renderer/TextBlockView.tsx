@@ -32,6 +32,23 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   table: "",
 };
 
+// "Small text" (MoreOptionsMenu toggle) shrinks each block one Tailwind step
+// down rather than scaling by parent font-size, since Tailwind's text-* sizes
+// are all rem-based (relative to the root, not the parent) and wouldn't
+// shrink from a wrapping container alone.
+const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
+  paragraph: "text-sm leading-6",
+  heading1: "text-2xl font-semibold leading-tight",
+  heading2: "text-xl font-semibold leading-tight",
+  heading3: "text-lg font-semibold leading-snug",
+  bulletedListItem: "text-sm leading-6",
+  numberedListItem: "text-sm leading-6",
+  quote: "text-sm leading-6 border-l-2 border-border pl-3 italic text-foreground/90",
+  codeBlock: "text-xs leading-5 rounded-md bg-muted px-3 py-2 font-mono",
+  divider: "",
+  table: "",
+};
+
 // Every branch below renders through this one component (never a different
 // component per block.type) so that converting a block's type — via a
 // markdown shortcut or the slash menu — updates its className instead of
@@ -39,7 +56,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
 // swallow whatever the user was mid-typing.
 export function TextBlockView({ block }: TextBlockViewProps) {
   const t = useTranslations("editorContent");
-  const { state, insertBlockAfterFocused, mergeBlockIntoPrevious, convertBlockType } = useEditor();
+  const { state, smallText, insertBlockAfterFocused, mergeBlockIntoPrevious, convertBlockType } = useEditor();
   const onChange = useAutoformatText(block);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -81,7 +98,7 @@ export function TextBlockView({ block }: TextBlockViewProps) {
     </div>
   );
 
-  const typographyClassName = TYPOGRAPHY_CLASS_NAMES[block.type];
+  const typographyClassName = (smallText ? SMALL_TYPOGRAPHY_CLASS_NAMES : TYPOGRAPHY_CLASS_NAMES)[block.type];
 
   return (
     <div className={isListItem ? "flex gap-2" : ""}>

@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import type { BlockNode, BlockType } from "../engine/block/block.types";
-import type { DocumentModel } from "../engine/document/document.types";
+import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 import { shiftMarksForDelete, shiftMarksForInsert } from "../engine/mark/shiftMarks";
 import type {
@@ -242,6 +242,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setFontStyle(fontStyle: FontStyle): void {
+    this.ydoc.transact(() => {
+      this.metadata.set("fontStyle", fontStyle);
+    });
+  }
+
+  setSmallText(smallText: boolean): void {
+    this.ydoc.transact(() => {
+      this.metadata.set("smallText", smallText);
+    });
+  }
+
   getSnapshot(): DocumentModel {
     const blocks: BlockNode[] = [];
 
@@ -261,7 +273,12 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       });
     }
 
-    return { blocks, fullWidth: (this.metadata.get("fullWidth") as boolean | undefined) ?? false };
+    return {
+      blocks,
+      fullWidth: (this.metadata.get("fullWidth") as boolean | undefined) ?? false,
+      fontStyle: (this.metadata.get("fontStyle") as FontStyle | undefined) ?? "default",
+      smallText: (this.metadata.get("smallText") as boolean | undefined) ?? false,
+    };
   }
 
   createBlock(input: CreateBlockInput): void {

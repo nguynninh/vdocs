@@ -13,6 +13,7 @@ import {
 
 import type { BlockType } from "../engine/block/block.types";
 import { findBlockIndex } from "../engine/document/findBlock";
+import type { FontStyle } from "../engine/document/document.types";
 import type { MarkType } from "../engine/mark/mark.types";
 import { toggleMark as toggleMarkRange } from "../engine/mark/toggleMark";
 import type { EditorState } from "../engine/state/editorState.types";
@@ -48,6 +49,10 @@ interface EditorContextValue {
   wordCount: number;
   fullWidth: boolean;
   setFullWidth: (fullWidth: boolean) => void;
+  fontStyle: FontStyle;
+  setFontStyle: (fontStyle: FontStyle) => void;
+  smallText: boolean;
+  setSmallText: (smallText: boolean) => void;
   updateBlockText: (blockId: string, text: string) => void;
   toggleMark: (blockId: string, start: number, end: number, type: MarkType) => void;
   updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
@@ -76,7 +81,7 @@ export function EditorProvider({
   children,
 }: EditorProviderProps) {
   const [state, setState] = useState<EditorState>({
-    document: { blocks: [], fullWidth: false },
+    document: { blocks: [], fullWidth: false, fontStyle: "default", smallText: false },
     focusBlockId: null,
   });
   const [connectionState, setConnectionState] = useState<ConnectionState>("idle");
@@ -142,6 +147,14 @@ export function EditorProvider({
 
   const setFullWidth = useCallback((fullWidth: boolean) => {
     documentRef.current?.setFullWidth(fullWidth);
+  }, []);
+
+  const setFontStyle = useCallback((fontStyle: FontStyle) => {
+    documentRef.current?.setFontStyle(fontStyle);
+  }, []);
+
+  const setSmallText = useCallback((smallText: boolean) => {
+    documentRef.current?.setSmallText(smallText);
   }, []);
 
   const toggleMark = useCallback(
@@ -418,6 +431,10 @@ export function EditorProvider({
       wordCount,
       fullWidth: state.document.fullWidth,
       setFullWidth,
+      fontStyle: state.document.fontStyle,
+      setFontStyle,
+      smallText: state.document.smallText,
+      setSmallText,
       updateBlockText,
       toggleMark,
       updateTableCell,
@@ -443,6 +460,8 @@ export function EditorProvider({
       canEdit,
       wordCount,
       setFullWidth,
+      setFontStyle,
+      setSmallText,
       updateBlockText,
       toggleMark,
       updateTableCell,

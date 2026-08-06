@@ -1,5 +1,5 @@
 import type { BlockType } from "../engine/block/block.types";
-import type { DocumentModel } from "../engine/document/document.types";
+import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 
 export type DocumentPermission =
@@ -59,6 +59,12 @@ export interface CollaborativeDocument {
 
   /** Sets the document-level full-width layout preference. */
   setFullWidth(fullWidth: boolean): void;
+
+  /** Sets the document-level font style preference. */
+  setFontStyle(fontStyle: FontStyle): void;
+
+  /** Sets the document-level small-text preference. */
+  setSmallText(smallText: boolean): void;
 
   /** Replaces a table block's entire grid (used when first turning a block
    * into a table, to seed its default rows). */

@@ -92,6 +92,21 @@ export class WebSocketTransport implements CollaborationTransport {
     return () => this.remoteUpdateListeners.delete(listener);
   }
 
+  restoreVersion(documentId: string, versionId: string): Promise<UpdateAck> {
+    return new Promise((resolve) => {
+      this.connectionManager
+        .getSocket()
+        .timeout(10_000)
+        .emit(
+          "document:restoreVersion",
+          { documentId, versionId },
+          (err: Error | null, ack?: UpdateAck) => {
+            resolve(err || !ack ? { success: false } : ack);
+          }
+        );
+    });
+  }
+
   disconnect(): void {
     if (this.documentId) {
       this.connectionManager

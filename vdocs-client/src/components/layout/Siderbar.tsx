@@ -44,6 +44,7 @@ import {
   documentApi,
   type DocumentSummaryApiResponse,
 } from "@/src/features/editor/data/api/documentApi";
+import TreeCommponent, { type TreeDataNode } from '@/src/app/components/tree/TreeComponent'
 
 const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
 
@@ -359,6 +360,14 @@ export default function Siderbar(props: Props) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+                {/* <TreeCommponent treeData={documents.map((document) => {
+                  TreeDataNode(
+                    key=document.id,
+                        title: {document.title || t("untitledDocument")}
+                        link?: `/document/${document.id}`,
+                        children?: TreeDataNode[];
+                  )
+                }}/>  */}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

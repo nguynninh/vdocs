@@ -102,5 +102,10 @@ export interface CollaborationTransport {
   joinDocument(documentId: string, knownVersion: number): Promise<JoinResult>;
   sendUpdate(update: Uint8Array): Promise<UpdateAck>;
   onRemoteUpdate(listener: (update: Uint8Array) => void): () => void;
+
+  /** Asks the server to restore the live document to an older version; the
+   * resulting diff comes back through the normal `onRemoteUpdate` path. */
+  restoreVersion(documentId: string, versionId: string): Promise<UpdateAck>;
+
   disconnect(): void;
 }

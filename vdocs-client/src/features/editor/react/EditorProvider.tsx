@@ -70,6 +70,7 @@ interface EditorContextValue {
   removeBlock: (blockId: string) => void;
   removeBlocks: (blockIds: string[]) => void;
   clearFocus: () => void;
+  restoreVersion: (versionId: string) => Promise<boolean>;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -89,6 +90,7 @@ export function EditorProvider({
     initialPermission ?? "VIEWER",
   );
   const documentRef = useRef<CollaborativeDocument | null>(null);
+  const providerRef = useRef<CollaborationProvider | null>(null);
 
   useLayoutEffect(() => {
     const provider = new CollaborationProvider({
@@ -101,6 +103,7 @@ export function EditorProvider({
     });
 
     documentRef.current = provider.document;
+    providerRef.current = provider;
 
     const syncState = () => {
       const document = provider.document.getSnapshot();
@@ -135,6 +138,7 @@ export function EditorProvider({
       unsubscribe();
       provider.stop();
       documentRef.current = null;
+      providerRef.current = null;
     };
     // documentId identifies which document this provider instance owns for
     // its whole lifetime — a change means a fresh mount, not a re-sync.
@@ -410,6 +414,12 @@ export function EditorProvider({
     [],
   );
 
+  const restoreVersion = useCallback(async (versionId: string) => {
+    const provider = providerRef.current;
+    if (!provider) return false;
+    return provider.restoreVersion(versionId);
+  }, []);
+
   const wordCount = useMemo(
     () =>
       state.document.blocks.reduce(
@@ -452,6 +462,7 @@ export function EditorProvider({
       removeBlock,
       removeBlocks,
       clearFocus,
+      restoreVersion,
     }),
     [
       state,
@@ -479,6 +490,7 @@ export function EditorProvider({
       removeBlock,
       removeBlocks,
       clearFocus,
+      restoreVersion,
     ],
   );
 

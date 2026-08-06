@@ -210,6 +210,7 @@ export function VDocsEditor({
         initialPermission={initialPermission}
       >
         <EditorHeaderWithWordCount
+          documentId={documentId}
           icon={icon}
           title={title}
           untitledLabel={untitledLabel}
@@ -249,6 +250,7 @@ export function VDocsEditor({
 }
 
 interface EditorHeaderWithWordCountProps {
+  documentId: string;
   icon?: PageIcon;
   title: string;
   untitledLabel: string;
@@ -268,6 +270,7 @@ interface EditorHeaderWithWordCountProps {
 }
 
 function EditorHeaderWithWordCount({
+  documentId,
   icon,
   title,
   untitledLabel,
@@ -289,6 +292,7 @@ function EditorHeaderWithWordCount({
 
   return (
     <EditorHeader
+      documentId={documentId}
       icon={icon}
       title={title}
       placeholder={untitledLabel}

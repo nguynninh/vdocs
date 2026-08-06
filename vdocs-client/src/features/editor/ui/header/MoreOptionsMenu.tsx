@@ -42,6 +42,7 @@ export interface MoreOptionsMenuProps {
   onDuplicate?: () => void;
   onDelete?: () => void;
   onOpenUpdates?: () => void;
+  onOpenVersionHistory?: () => void;
   wordCount?: number;
   canEdit?: boolean;
 }
@@ -84,7 +85,16 @@ function ToggleRow({
 }
 
 export function MoreOptionsMenu(props: MoreOptionsMenuProps) {
-  const { onCopyLink, onRename, onDuplicate, onDelete, onOpenUpdates, wordCount = 0, canEdit = true } = props;
+  const {
+    onCopyLink,
+    onRename,
+    onDuplicate,
+    onDelete,
+    onOpenUpdates,
+    onOpenVersionHistory,
+    wordCount = 0,
+    canEdit = true,
+  } = props;
   const t = useTranslations("editorHeader.moreOptionsMenu");
 
   const { fullWidth, setFullWidth, fontStyle, setFontStyle, smallText, setSmallText } = useEditor();
@@ -275,7 +285,7 @@ export function MoreOptionsMenu(props: MoreOptionsMenuProps) {
           <BarChart3 className="size-4" />
           {t("updatesAndAnalytics")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onOpenUpdates}>
+        <DropdownMenuItem onClick={onOpenVersionHistory}>
           <History className="size-4" />
           {t("versionHistory")}
         </DropdownMenuItem>

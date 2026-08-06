@@ -3,6 +3,7 @@ import { Server, type DefaultEventsMap } from "socket.io";
 import { documentRepository } from "../repositories/document.repository.ts";
 import { canEdit, getDocumentPermission } from "../services/document.service.ts";
 import type { DocumentPermission } from "../dtos/response/DocumentPermission.ts";
+import { versionRepository } from "../repositories/version.repository.ts";
 import {
   socketAuthMiddleware,
   type RealtimeSocket,
@@ -13,6 +14,7 @@ import {
   applyRemoteUpdate,
   encodeState,
   releaseRoom,
+  restoreVersion,
 } from "./documentRoomManager.ts";
 
 const MAX_UPDATE_BYTES = 64 * 1024;
@@ -28,6 +30,11 @@ interface UpdatePayload {
 
 interface LeavePayload {
   documentId: string;
+}
+
+interface RestoreVersionPayload {
+  documentId: string;
+  versionId: string;
 }
 
 interface JoinAck {
@@ -165,6 +172,88 @@ export function createRealtimeServer(httpServer: http.Server) {
           callback?.({
             success: false,
             error: { code: "INTERNAL_ERROR", message: "Failed to apply update" },
+          });
+        }
+      }
+    );
+
+    socket.on(
+      "document:restoreVersion",
+      async (
+        payload: RestoreVersionPayload,
+        callback?: (ack: UpdateAck) => void
+      ) => {
+        try {
+          if (!socket.data.joinedDocuments.has(payload.documentId)) {
+            callback?.({
+              success: false,
+              error: { code: "FORBIDDEN", message: "Join the document first" },
+            });
+            return;
+          }
+
+          const document = await documentRepository.findById(payload.documentId);
+
+          if (!document) {
+            callback?.({
+              success: false,
+              error: { code: "DOCUMENT_NOT_FOUND", message: "Document not found" },
+            });
+            return;
+          }
+
+          const permission = await getDocumentPermission(
+            document,
+            socket.data.user?.id ?? null
+          );
+
+          if (!permission || !canEdit(permission)) {
+            callback?.({
+              success: false,
+              error: { code: "FORBIDDEN", message: "You cannot edit this document" },
+            });
+            return;
+          }
+
+          const version = await versionRepository.findById(
+            payload.documentId,
+            payload.versionId
+          );
+
+          if (!version) {
+            callback?.({
+              success: false,
+              error: { code: "VERSION_NOT_FOUND", message: "Version not found" },
+            });
+            return;
+          }
+
+          const diff = restoreVersion(
+            payload.documentId,
+            new Uint8Array(version.ydocState)
+          );
+
+          if (!diff) {
+            callback?.({
+              success: false,
+              error: { code: "INTERNAL_ERROR", message: "Document is not open" },
+            });
+            return;
+          }
+
+          callback?.({ success: true });
+
+          // Broadcast to the whole room, including the requester — their own
+          // view must also pick up the restored content.
+          io.to(roomName(payload.documentId)).emit("document:update", {
+            documentId: payload.documentId,
+            update: diff,
+          });
+        } catch (error) {
+          console.error("document:restoreVersion failed", error);
+          callback?.({
+            success: false,
+            error: { code: "INTERNAL_ERROR", message: "Failed to restore version" },
           });
         }
       }

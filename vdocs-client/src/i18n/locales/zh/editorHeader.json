@@ -52,7 +52,18 @@
       "updatedPermission": "更新了权限：",
       "viewMore": "查看更多 {count} 项更改",
       "analyticsEmpty": "暂无分析数据",
-      "close": "关闭"
+      "close": "关闭",
+      "versions": {
+        "empty": "尚未保存任何版本",
+        "auto": "自动保存",
+        "manual": "手动保存",
+        "saveVersion": "保存当前版本",
+        "restore": "恢复此版本",
+        "restoring": "正在恢复...",
+        "backToList": "返回列表",
+        "previewEmpty": "此版本没有内容",
+        "confirmRestore": "将文档恢复到此版本？当前内容将被替换。"
+      }
     },
     "moreOptionsMenu": {
       "searchActions": "搜索操作...",

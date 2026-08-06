@@ -1,80 +1,28 @@
 "use client";
 
-import { Clock, Share as ShareIcon, Star, MoreHorizontal, ChevronsLeft } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { ChevronsLeft, ChevronLeft, History, Share as ShareIcon, Star, MoreHorizontal } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  revisionApi,
+  type VersionApiResponse,
+  type VersionSummaryApiResponse,
+} from "../../data/api/revisionApi";
+import { useEditor } from "../../react/EditorProvider";
 
 export interface UpdatesPanelProps {
+  documentId: string;
   documentTitle: string;
   onClose?: () => void;
 }
 
 type Tab = "updates" | "analytics";
 
-interface EditEntry {
-  type: "edit";
-  actorName: string;
-  timeLabel: string;
-  field: string;
-  before?: string;
-  after: string;
-  moreCount?: number;
-}
-
-interface PermissionEntry {
-  type: "permission";
-  actorName: string;
-  timeLabel: string;
-  label: string;
-  before: string;
-  after: string;
-}
-
-type FeedEntry = EditEntry | PermissionEntry;
-
-function buildMockFeed(documentTitle: string): FeedEntry[] {
-  return [
-    {
-      type: "edit",
-      actorName: "You",
-      timeLabel: "2 minutes ago",
-      field: "Title",
-      before: documentTitle,
-      after: documentTitle,
-      moreCount: 3,
-    },
-    {
-      type: "permission",
-      actorName: "You",
-      timeLabel: "17 hours ago",
-      label: "Published link",
-      before: "Can view",
-      after: "Can comment",
-    },
-    {
-      type: "edit",
-      actorName: "You",
-      timeLabel: "18 hours ago",
-      field: "Title",
-      after: documentTitle,
-    },
-    {
-      type: "permission",
-      actorName: "You",
-      timeLabel: "18 hours ago",
-      label: "Published link",
-      before: "",
-      after: "Can view",
-    },
-  ];
-}
-
-export function UpdatesPanel({ documentTitle, onClose }: UpdatesPanelProps) {
+export function UpdatesPanel({ documentId, documentTitle, onClose }: UpdatesPanelProps) {
   const t = useTranslations("editorHeader.updatesPanel");
   const [tab, setTab] = useState<Tab>("updates");
-  const feed = buildMockFeed(documentTitle);
 
   return (
     <div className="flex h-full w-full flex-col text-sm">
@@ -130,11 +78,7 @@ export function UpdatesPanel({ documentTitle, onClose }: UpdatesPanelProps) {
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {tab === "updates" ? (
-          <ul className="flex flex-col gap-4">
-            {feed.map((entry, index) => (
-              <FeedRow key={index} entry={entry} documentTitle={documentTitle} />
-            ))}
-          </ul>
+          <VersionsTab documentId={documentId} />
         ) : (
           <div className="flex h-32 items-center justify-center text-muted-foreground">
             {t("analyticsEmpty")}
@@ -145,66 +89,141 @@ export function UpdatesPanel({ documentTitle, onClose }: UpdatesPanelProps) {
   );
 }
 
-function FeedRow({ entry, documentTitle }: { entry: FeedEntry; documentTitle: string }) {
-  const t = useTranslations("editorHeader.updatesPanel");
+function VersionsTab({ documentId }: { documentId: string }) {
+  const t = useTranslations("editorHeader.updatesPanel.versions");
+  const format = useFormatter();
+  const { canEdit, restoreVersion } = useEditor();
 
-  return (
-    <li className="flex gap-2">
-      <div className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-muted" aria-hidden />
-      <div className="min-w-0 flex-1">
-        {entry.type === "edit" ? (
-          <>
-            <p className="leading-snug text-foreground">
-              <span className="font-medium">{entry.actorName}</span> {t("edited")}{" "}
-              <span className="font-medium">{documentTitle}</span>
-            </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {entry.timeLabel}
-            </p>
+  const [versions, setVersions] = useState<VersionSummaryApiResponse[]>([]);
+  const [selected, setSelected] = useState<VersionApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-            <div className="mt-2 rounded-md bg-muted/50 p-2 text-xs">
-              <p className="mb-1 flex items-center gap-1 text-muted-foreground">
-                <span className="font-serif italic">Aa</span> {entry.field}
+  const loadVersions = (silent = false) => {
+    if (!silent) setLoading(true);
+    revisionApi
+      .list(documentId)
+      .then((response) => setVersions(response.data))
+      .catch((error) => console.error("Failed to load version history", error))
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadVersions();
+
+    // New auto-saved checkpoints can appear while this panel stays open
+    // during an editing session — poll quietly so they show up without
+    // requiring the user to close and reopen the panel.
+    const interval = setInterval(() => loadVersions(true), 20_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
+
+  const openVersion = (versionId: string) => {
+    revisionApi
+      .get(documentId, versionId)
+      .then((response) => setSelected(response.data))
+      .catch((error) => console.error("Failed to load version", error));
+  };
+
+  const handleSaveVersion = () => {
+    setSaving(true);
+    revisionApi
+      .createManual(documentId)
+      .then(() => loadVersions())
+      .catch((error) => console.error("Failed to save version", error))
+      .finally(() => setSaving(false));
+  };
+
+  const handleRestore = () => {
+    if (!selected) return;
+    if (!window.confirm(t("confirmRestore"))) return;
+
+    setRestoring(true);
+    restoreVersion(selected.id)
+      .then((success) => {
+        if (success) {
+          setSelected(null);
+        }
+      })
+      .catch((error) => console.error("Failed to restore version", error))
+      .finally(() => setRestoring(false));
+  };
+
+  if (selected) {
+    return (
+      <div className="flex h-full flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          {t("backToList")}
+        </button>
+
+        <div className="flex-1 overflow-y-auto rounded-md bg-muted/50 p-3">
+          {selected.content.blocks.length === 0 ? (
+            <p className="text-muted-foreground">{t("previewEmpty")}</p>
+          ) : (
+            selected.content.blocks.map((block) => (
+              <p key={block.id} className="mb-2 whitespace-pre-wrap text-foreground last:mb-0">
+                {block.text || " "}
               </p>
-              {entry.before && entry.before !== entry.after && (
-                <p className="text-muted-foreground line-through">{entry.before}</p>
-              )}
-              <p className="rounded bg-primary/10 px-1 text-foreground">{entry.after}</p>
-            </div>
+            ))
+          )}
+        </div>
 
-            {!!entry.moreCount && (
-              <button type="button" className="mt-1 text-xs text-muted-foreground hover:underline">
-                {t("viewMore", { count: entry.moreCount })}
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="leading-snug text-foreground">
-              <span className="font-medium">{entry.actorName}</span> {t("updatedPermission")}{" "}
-              <span className="font-medium">{documentTitle}</span>
-            </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {entry.timeLabel}
-            </p>
-
-            <div className="mt-2 rounded-md bg-muted/50 p-2 text-xs">
-              <p className="mb-1 text-muted-foreground">{entry.label}</p>
-              {entry.before ? (
-                <p className="flex items-center gap-1">
-                  <span className="text-muted-foreground line-through">{entry.before}</span>
-                  <span>→</span>
-                  <span className="font-medium text-foreground">{entry.after}</span>
-                </p>
-              ) : (
-                <p className="font-medium text-foreground">{entry.after}</p>
-              )}
-            </div>
-          </>
+        {canEdit && (
+          <Button onClick={handleRestore} disabled={restoring}>
+            {restoring ? t("restoring") : t("restore")}
+          </Button>
         )}
       </div>
-    </li>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      {canEdit && (
+        <Button variant="ghost" size="sm" className="self-start" onClick={handleSaveVersion} disabled={saving}>
+          {t("saveVersion")}
+        </Button>
+      )}
+
+      {loading ? null : versions.length === 0 ? (
+        <div className="flex h-32 items-center justify-center text-muted-foreground">{t("empty")}</div>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {versions.map((version) => (
+            <li key={version.id}>
+              <button
+                type="button"
+                onClick={() => openVersion(version.id)}
+                className="flex w-full items-start gap-2 rounded-md p-2 text-left hover:bg-muted"
+              >
+                <History className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-foreground">
+                    {version.label ??
+                      format.dateTime(new Date(version.createdAt), {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {version.trigger === "manual" ? t("manual") : t("auto")}
+                    {version.createdBy ? ` · ${version.createdBy.name}` : ""}
+                  </p>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

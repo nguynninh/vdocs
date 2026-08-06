@@ -21,6 +21,7 @@ import { SharePanel, type ShareMember, type LinkAccess, type AssignableRole } fr
 import { UpdatesPanel } from "./UpdatesPanel";
 
 export interface EditorHeaderProps {
+  documentId: string;
   icon?: PageIcon;
   title: string;
   placeholder?: string;
@@ -49,6 +50,7 @@ export interface EditorHeaderProps {
 
 export function EditorHeader(props: EditorHeaderProps) {
   const {
+    documentId,
     icon,
     title,
     placeholder,
@@ -247,6 +249,7 @@ export function EditorHeader(props: EditorHeaderProps) {
               onDuplicate={onDuplicate}
               onDelete={onDelete}
               onOpenUpdates={() => setUpdatesSidebarOpen(true)}
+              onOpenVersionHistory={() => setUpdatesSidebarOpen(true)}
               wordCount={wordCount}
               canEdit={canEdit}
             />
@@ -261,7 +264,11 @@ export function EditorHeader(props: EditorHeaderProps) {
     )}
     {updatesSidebarOpen && (
       <div className="fixed inset-y-0 right-0 z-50 w-96 max-w-full border-l border-border bg-background shadow-xl">
-        <UpdatesPanel documentTitle={title} onClose={() => setUpdatesSidebarOpen(false)} />
+        <UpdatesPanel
+          documentId={documentId}
+          documentTitle={title}
+          onClose={() => setUpdatesSidebarOpen(false)}
+        />
       </div>
     )}
     </>

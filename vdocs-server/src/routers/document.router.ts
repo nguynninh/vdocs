@@ -17,6 +17,10 @@ import type {
 } from "../dtos/response/DocumentResponse.ts";
 import type { DocumentMemberResponse } from "../dtos/response/DocumentMemberResponse.ts";
 import type { LinkAccess } from "../dtos/response/DocumentPermission.ts";
+import type {
+  DocumentVersionResponse,
+  DocumentVersionSummaryResponse,
+} from "../dtos/response/DocumentVersionResponse.ts";
 import {
   DocumentForbiddenError,
   DocumentNotFoundError,
@@ -26,6 +30,10 @@ import {
   documentService,
   type MemberRole,
 } from "../services/document.service.ts";
+import {
+  VersionNotFoundError,
+  versionService,
+} from "../services/version.service.ts";
 import { sendError, sendSuccess } from "../utils/apiResponse.ts";
 
 export const documentRouter = Router();
@@ -64,6 +72,11 @@ function handleError(error: unknown, res: Response) {
   }
 
   if (error instanceof ShareLinkNotFoundError) {
+    sendError(res, 404, error.message);
+    return;
+  }
+
+  if (error instanceof VersionNotFoundError) {
     sendError(res, 404, error.message);
     return;
   }
@@ -367,6 +380,91 @@ documentRouter.patch(
       };
 
       sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/:documentId/versions",
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const versions = await versionService.listVersions(
+        req.params.documentId,
+        userId
+      );
+
+      const response: DocumentVersionSummaryResponse[] = versions.map((version) => ({
+        id: version.id,
+        trigger: version.trigger,
+        label: version.label,
+        contentVersion: version.contentVersion,
+        createdAt: version.createdAt.toISOString(),
+        createdBy: version.createdBy,
+      }));
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/:documentId/versions/:versionId",
+  async (req: Request<{ documentId: string; versionId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const version = await versionService.getVersion(
+        req.params.documentId,
+        req.params.versionId,
+        userId
+      );
+
+      const response: DocumentVersionResponse = {
+        id: version.id,
+        trigger: version.trigger,
+        label: version.label,
+        contentVersion: version.contentVersion,
+        createdAt: version.createdAt.toISOString(),
+        createdBy: version.createdBy,
+        content: version.content,
+      };
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.post(
+  "/:documentId/versions",
+  requireAuth,
+  async (
+    req: Request<{ documentId: string }, unknown, { label?: string }>,
+    res: Response
+  ) => {
+    try {
+      const userId = getUserId(req);
+      const version = await versionService.createManualVersion(
+        req.params.documentId,
+        userId,
+        req.body?.label
+      );
+
+      const response: DocumentVersionSummaryResponse = {
+        id: version.id,
+        trigger: version.trigger,
+        label: version.label,
+        contentVersion: version.contentVersion,
+        createdAt: version.createdAt.toISOString(),
+        createdBy: version.createdBy,
+      };
+
+      sendSuccess(res, response, "Created", 201);
     } catch (error) {
       handleError(error, res);
     }

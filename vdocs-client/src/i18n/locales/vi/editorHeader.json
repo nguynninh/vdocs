@@ -52,7 +52,18 @@
       "updatedPermission": "đã cập nhật quyền của",
       "viewMore": "Xem thêm {count} thay đổi",
       "analyticsEmpty": "Chưa có dữ liệu phân tích",
-      "close": "Đóng"
+      "close": "Đóng",
+      "versions": {
+        "empty": "Chưa có phiên bản nào được lưu",
+        "auto": "Tự động lưu",
+        "manual": "Đã lưu thủ công",
+        "saveVersion": "Lưu phiên bản hiện tại",
+        "restore": "Khôi phục phiên bản này",
+        "restoring": "Đang khôi phục...",
+        "backToList": "Quay lại danh sách",
+        "previewEmpty": "Phiên bản này không có nội dung",
+        "confirmRestore": "Khôi phục nội dung tài liệu về phiên bản này? Nội dung hiện tại sẽ được thay thế."
+      }
     },
     "moreOptionsMenu": {
       "searchActions": "Tìm hành động...",

@@ -30,6 +30,7 @@ model User {
   ownedDocuments    Document[]        @relation("DocumentOwner")
   documentMembers   DocumentMember[]
   createdShareLinks ShareLink[]
+  documentVersions  DocumentVersion[]
 
   @@unique([provider, providerUserId])
 }
@@ -72,10 +73,30 @@ model Document {
   updatedAt      DateTime  @updatedAt
   archivedAt     DateTime?
 
-  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  owner      User             @relation("DocumentOwner", fields: [ownerId], references: [id])
+  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner      User              @relation("DocumentOwner", fields: [ownerId], references: [id])
   members    DocumentMember[]
   shareLinks ShareLink[]
+  versions   DocumentVersion[]
+}
+
+// Periodic checkpoints of a document's Yjs state, so past content can be
+// listed, previewed, and restored. Auto snapshots are throttled (see
+// documentRoomManager.ts); manual ones are always created on request.
+model DocumentVersion {
+  id             String   @id @default(uuid())
+  documentId     String
+  ydocState      Bytes
+  contentVersion Int
+  trigger        String // "auto" | "manual"
+  label          String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User?    @relation(fields: [createdBy], references: [id])
+
+  @@index([documentId, createdAt])
 }
 
 // The public, revocable stand-in for a document's real UUID. Copying a

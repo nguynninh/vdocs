@@ -54,6 +54,14 @@ export class CollaborationProvider {
     );
   }
 
+  /** Restores the document to an older version; the diff arrives back
+   * through the normal remote-update path once the server broadcasts it. */
+  restoreVersion(versionId: string): Promise<boolean> {
+    return this.transport
+      .restoreVersion(this.options.documentId, versionId)
+      .then((ack) => ack.success);
+  }
+
   async start(): Promise<void> {
     if (this.started) {
       return;

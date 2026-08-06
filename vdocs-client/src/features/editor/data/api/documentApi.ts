@@ -36,9 +36,13 @@ export interface DocumentMemberApiResponse {
 }
 
 export const documentApi = {
-  create: (title?: string) => api.post<{ id: string }>("/api/documents", { title }),
+  create: (title?: string, workspaceId?: string) =>
+    api.post<{ id: string }>("/api/documents", { title, workspaceId }),
 
-  list: () => api.get<DocumentSummaryApiResponse[]>("/api/documents"),
+  list: (workspaceId?: string) =>
+    api.get<DocumentSummaryApiResponse[]>("/api/documents", {
+      params: workspaceId ? { workspaceId } : undefined,
+    }),
 
   get: (documentId: string) =>
     api.get<DocumentApiResponse>(`/api/documents/${documentId}`),

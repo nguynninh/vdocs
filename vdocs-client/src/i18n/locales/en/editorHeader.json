@@ -40,6 +40,20 @@
       "createdBy": "Created by",
       "justNow": "Just now"
     },
+    "updatesPanel": {
+      "tabs": {
+        "updates": "Updates",
+        "analytics": "Analytics"
+      },
+      "share": "Share",
+      "star": "Add to favorites",
+      "more": "More options",
+      "edited": "edited",
+      "updatedPermission": "updated permission for",
+      "viewMore": "View {count} more",
+      "analyticsEmpty": "No analytics data yet",
+      "close": "Close"
+    },
     "moreOptionsMenu": {
       "searchActions": "Search actions...",
       "fontStyles": {

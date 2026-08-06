@@ -4,6 +4,18 @@
     "placeholderLink": "insert a sub-list",
     "addIcon": "Add icon",
     "addCover": "Add cover",
-    "addComment": "Add comment"
+    "addComment": "Add comment",
+    "gutterAddBlock": "Add block below",
+    "gutterOpenMenu": "Open block menu",
+    "gutterTurnInto": "Turn into",
+    "gutterColor": "Color",
+    "gutterCopyLink": "Copy link to block",
+    "gutterDuplicate": "Duplicate",
+    "gutterMoveTo": "Move to",
+    "gutterDelete": "Delete",
+    "gutterComment": "Comment",
+    "gutterSuggestEdits": "Suggest edits",
+    "gutterAskAi": "Ask AI",
+    "gutterSkills": "Skills"
   }
 }

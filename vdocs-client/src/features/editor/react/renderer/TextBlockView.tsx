@@ -29,6 +29,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   quote: "text-base leading-7 border-l-2 border-border pl-3 italic text-foreground/90",
   codeBlock: "text-sm leading-6 rounded-md bg-muted px-3 py-2 font-mono",
   divider: "",
+  table: "",
 };
 
 // Every branch below renders through this one component (never a different

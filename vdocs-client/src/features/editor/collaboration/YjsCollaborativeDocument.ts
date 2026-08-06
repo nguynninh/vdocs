@@ -134,16 +134,88 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setTableData(blockId: string, rows: string[][]): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      this.blocks.get(index).set("table", rows.map((row) => [...row]));
+    });
+  }
+
+  setTableCell(blockId: string, row: number, col: number, text: string): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      const block = this.blocks.get(index);
+      const current = (block.get("table") as string[][] | undefined) ?? [];
+      const next = current.map((r) => [...r]);
+
+      while (next.length <= row) {
+        next.push([]);
+      }
+      while (next[row].length <= col) {
+        next[row].push("");
+      }
+
+      next[row][col] = text;
+      block.set("table", next);
+    });
+  }
+
+  setTableColumnWidth(blockId: string, col: number, width: number): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      const block = this.blocks.get(index);
+      const current = (block.get("columnWidths") as number[] | undefined) ?? [];
+      const next = [...current];
+      while (next.length <= col) {
+        next.push(next.length > 0 ? next[next.length - 1] : 0);
+      }
+      next[col] = width;
+      block.set("columnWidths", next);
+    });
+  }
+
+  setTableRowHeight(blockId: string, row: number, height: number): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      const block = this.blocks.get(index);
+      const current = (block.get("rowHeights") as number[] | undefined) ?? [];
+      const next = [...current];
+      while (next.length <= row) {
+        next.push(next.length > 0 ? next[next.length - 1] : 0);
+      }
+      next[row] = height;
+      block.set("rowHeights", next);
+    });
+  }
+
   getSnapshot(): DocumentModel {
     const blocks: BlockNode[] = [];
 
     for (let index = 0; index < this.blocks.length; index += 1) {
       const block = this.blocks.get(index);
+      const table = block.get("table") as string[][] | undefined;
+      const columnWidths = block.get("columnWidths") as number[] | undefined;
+      const rowHeights = block.get("rowHeights") as number[] | undefined;
 
       blocks.push({
         id: block.get("id") as string,
         type: block.get("type") as BlockType,
         text: (block.get("text") as Y.Text).toString(),
+        ...(table ? { table: { rows: table, columnWidths, rowHeights } } : {}),
       });
     }
 
@@ -163,6 +235,10 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       }
 
       block.set("text", ytext);
+
+      if (input.table) {
+        block.set("table", input.table.map((row) => [...row]));
+      }
 
       const afterIndex = input.afterBlockId
         ? this.findBlockIndex(input.afterBlockId)

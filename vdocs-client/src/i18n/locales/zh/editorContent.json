@@ -4,6 +4,18 @@
     "placeholderLink": "插入子列表",
     "addIcon": "添加图标",
     "addCover": "添加封面",
-    "addComment": "添加评论"
+    "addComment": "添加评论",
+    "gutterAddBlock": "在下方添加块",
+    "gutterOpenMenu": "打开块菜单",
+    "gutterTurnInto": "转换为",
+    "gutterColor": "颜色",
+    "gutterCopyLink": "复制块链接",
+    "gutterDuplicate": "复制",
+    "gutterMoveTo": "移动到",
+    "gutterDelete": "删除",
+    "gutterComment": "评论",
+    "gutterSuggestEdits": "建议编辑",
+    "gutterAskAi": "询问 AI",
+    "gutterSkills": "技能"
   }
 }

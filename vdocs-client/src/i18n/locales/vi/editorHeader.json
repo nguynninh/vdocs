@@ -40,6 +40,20 @@
       "createdBy": "Tạo bởi",
       "justNow": "Vừa xong"
     },
+    "updatesPanel": {
+      "tabs": {
+        "updates": "Cập nhật",
+        "analytics": "Phân tích"
+      },
+      "share": "Chia sẻ",
+      "star": "Đánh dấu sao",
+      "more": "Thêm tùy chọn",
+      "edited": "đã sửa",
+      "updatedPermission": "đã cập nhật quyền của",
+      "viewMore": "Xem thêm {count} thay đổi",
+      "analyticsEmpty": "Chưa có dữ liệu phân tích",
+      "close": "Đóng"
+    },
     "moreOptionsMenu": {
       "searchActions": "Tìm hành động...",
       "fontStyles": {

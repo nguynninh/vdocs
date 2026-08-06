@@ -1,17 +1,25 @@
 "use client";
 
-import { ChevronsUpDown, HomeIcon, LogOut } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  HomeIcon,
+  LogOut,
+  Plus,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React, { useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -24,10 +32,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator"
+import CreateWorkspaceDialog, {
+  type CreateWorkspaceValues,
+} from "@/src/components/layout/CreateWorkspaceDialog";
 import type { AuthUser } from "@/src/features/auth/types";
 import { useSidebarWidth } from "@/src/components/layout/sidebar-width";
+import { getWorkspaceIconOption } from "@/src/components/layout/workspace-icons";
 import Image from "next/image";
 import Home from "@/src/app/page";
+import {
+  documentApi,
+  type DocumentSummaryApiResponse,
+} from "@/src/features/editor/data/api/documentApi";
+
+const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
 
 function SidebarResizeHandle() {
   const { setWidth, commitWidth, setIsResizing } = useSidebarWidth();
@@ -91,19 +109,120 @@ export interface WorkSpace {
   label: string,
 }
 
+export interface WorkspaceGroup {
+  id: string,
+  label: string,
+  icon: string,
+}
+
 export interface Props {
   workspace?: WorkSpace,
+  workspaceGroups?: WorkspaceGroup[],
   user: AuthUser,
   menu: ItemMenuSider[],
   onLogout?: (id: string) => void,
+  onCreateWorkspace?: (values: CreateWorkspaceValues) => Promise<void> | void,
 }
 
 export default function Siderbar(props: Props) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
+  const router = useRouter();
 
-  const { workspace, user, menu, onLogout } = props;
+  const {
+    workspace,
+    workspaceGroups = [],
+    user,
+    menu,
+    onLogout,
+    onCreateWorkspace,
+  } = props;
   const { state } = useSidebar();
+  const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
+  const [selectedWorkspace, setSelectedWorkspaceState] = useState<WorkspaceGroup | null>(null);
+  const [documents, setDocuments] = useState<DocumentSummaryApiResponse[]>([]);
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
+  const hasRestoredRef = useRef(false);
+
+  function setSelectedWorkspace(group: WorkspaceGroup | null) {
+    setSelectedWorkspaceState(group);
+
+    if (group) {
+      window.localStorage.setItem(SELECTED_WORKSPACE_STORAGE_KEY, group.id);
+    } else {
+      window.localStorage.removeItem(SELECTED_WORKSPACE_STORAGE_KEY);
+    }
+  }
+
+  useEffect(() => {
+    if (hasRestoredRef.current || workspaceGroups.length === 0) return;
+
+    hasRestoredRef.current = true;
+    const storedId = window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY);
+    const restored = storedId
+      ? workspaceGroups.find((group) => group.id === storedId)
+      : undefined;
+
+    if (restored) setSelectedWorkspaceState(restored);
+  }, [workspaceGroups]);
+
+  useEffect(() => {
+    if (pathname === "/dashboard") setSelectedWorkspace(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!selectedWorkspace) {
+      setDocuments([]);
+      return;
+    }
+
+    let ignore = false;
+
+    documentApi
+      .list(selectedWorkspace.id)
+      .then((response) => {
+        if (ignore) return;
+        setDocuments(response.data);
+      })
+      .catch((error) => {
+        console.error("Failed to load workspace documents", error);
+        if (!ignore) setDocuments([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedWorkspace]);
+
+  async function handleSelectWorkspace(group: WorkspaceGroup) {
+    setSelectedWorkspace(group);
+
+    try {
+      const response = await documentApi.list(group.id);
+      const latestDocument = response.data[0];
+
+      if (latestDocument) {
+        router.push(`/document/${latestDocument.id}`);
+      }
+    } catch (error) {
+      console.error("Failed to load workspace documents", error);
+    }
+  }
+
+  async function handleCreateWorkspaceDocument() {
+    if (!selectedWorkspace || isCreatingDocument) return;
+
+    setIsCreatingDocument(true);
+
+    try {
+      const response = await documentApi.create(undefined, selectedWorkspace.id);
+      router.push(`/document/${response.data.id}`);
+    } catch (error) {
+      console.error("Failed to create document", error);
+    } finally {
+      setIsCreatingDocument(false);
+    }
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -115,7 +234,7 @@ export default function Siderbar(props: Props) {
                 <DropdownMenuTrigger
                   render={
                     <SidebarMenuButton size="lg">
-                      {!workspace ? (
+                      {!selectedWorkspace ? (
                         <div
                           className={
                             state === "collapsed" ? "relative h-8 w-8" : "relative h-8 w-full"
@@ -130,17 +249,22 @@ export default function Siderbar(props: Props) {
                         </div>
                       ) : (
                         <>
-                          <Image
-                            src={workspace.icon}
-                            alt={workspace.label}
-                            width={32}
-                            height={32}
-                            unoptimized
-                            className="h-8 w-8 shrink-0 rounded-lg object-cover"
-                          />
+                          {(() => {
+                            const { icon: Icon, className } = getWorkspaceIconOption(
+                              selectedWorkspace.icon
+                            );
+
+                            return (
+                              <span
+                                className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${className}`}
+                              >
+                                <Icon className="size-4" strokeWidth={2.25} />
+                              </span>
+                            );
+                          })()}
                           <span className="grid flex-1 text-left text-sm leading-tight">
                             <span className="truncate font-medium">
-                              {workspace && workspace.label}
+                              {selectedWorkspace.label}
                             </span>
                           </span>
                           <ChevronsUpDown className="ml-auto size-4" />
@@ -156,34 +280,89 @@ export default function Siderbar(props: Props) {
 
         <Separator />
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menu.map(({ key, href, label, icon }) => (
-                <SidebarMenuItem key={key}>
-                  <SidebarMenuButton
-                    isActive={pathname === href}
-                    tooltip={label}
-                    render={<Link href={href} />}>
-                    {icon}
-                    <h3>{label}</h3>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {!selectedWorkspace && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menu.map(({ key, href, label, icon }) => (
+                  <SidebarMenuItem key={key}>
+                    <SidebarMenuButton
+                      isActive={pathname === href}
+                      tooltip={label}
+                      render={<Link href={href} />}>
+                      {icon}
+                      <h3>{label}</h3>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
+        {!selectedWorkspace && (
         <SidebarGroup>
+          <SidebarGroupLabel>{t("workspace")}</SidebarGroupLabel>
+          <SidebarGroupAction
+            title={t("addWorkspace")}
+            onClick={() => setIsCreateWorkspaceOpen(true)}
+          >
+            <Plus />
+          </SidebarGroupAction>
           <SidebarGroupContent>
-            <h2>
-              
-            </h2>
             <SidebarMenu>
-            
+              {workspaceGroups.map((group) => {
+                const { id, label, icon } = group;
+                const { icon: Icon, className } = getWorkspaceIconOption(icon);
+
+                return (
+                  <SidebarMenuItem key={id}>
+                    <SidebarMenuButton
+                      tooltip={label}
+                      onClick={() => handleSelectWorkspace(group)}
+                    >
+                      <span className={`flex size-6 shrink-0 items-center justify-center rounded-md ${className}`}>
+                        <Icon className="size-3.5" strokeWidth={2.25} />
+                      </span>
+                      <h3 className="flex-1 truncate">{label}</h3>
+                      <ChevronDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/70" />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
+
+        {selectedWorkspace && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("documentIndex")}</SidebarGroupLabel>
+            <SidebarGroupAction
+              title={t("addDocument")}
+              onClick={handleCreateWorkspaceDocument}
+              disabled={isCreatingDocument}
+            >
+              <Plus />
+            </SidebarGroupAction>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {documents.map((document) => (
+                  <SidebarMenuItem key={document.id}>
+                    <SidebarMenuButton
+                      isActive={pathname === `/document/${document.id}`}
+                      tooltip={document.title || t("untitledDocument")}
+                      render={<Link href={`/document/${document.id}`} />}>
+                      <h3 className="truncate">
+                        {document.title || t("untitledDocument")}
+                      </h3>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       {user && (
@@ -231,6 +410,11 @@ export default function Siderbar(props: Props) {
         </SidebarFooter>
       )}
       <SidebarResizeHandle />
+      <CreateWorkspaceDialog
+        open={isCreateWorkspaceOpen}
+        onOpenChange={setIsCreateWorkspaceOpen}
+        onCreate={onCreateWorkspace}
+      />
     </Sidebar>
   );
 }

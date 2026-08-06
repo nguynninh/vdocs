@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import { useSlashCommandManager } from "./SlashCommandManager";
 import type { SlashCommandItem } from "./slashCommand.types";
@@ -12,10 +12,14 @@ export interface SlashCommandMenuProps {
   style?: React.CSSProperties;
 }
 
-export function SlashCommandMenu({ onSelect, onClose, style }: SlashCommandMenuProps) {
+export const SlashCommandMenu = forwardRef<HTMLDivElement, SlashCommandMenuProps>(
+  function SlashCommandMenu({ onSelect, onClose, style }, forwardedRef) {
   const t = useTranslations("slashCommand");
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeItemRef = useRef<HTMLButtonElement>(null);
+
+  useImperativeHandle(forwardedRef, () => containerRef.current as HTMLDivElement);
   const { query, setQuery, groups, items, activeIndex, setActiveIndex, handleKeyDown } =
     useSlashCommandManager({ onSelect, onClose });
 
@@ -31,6 +35,7 @@ export function SlashCommandMenu({ onSelect, onClose, style }: SlashCommandMenuP
 
   return (
     <div
+      ref={containerRef}
       role="listbox"
       style={style}
       className="flex w-64 flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
@@ -104,4 +109,5 @@ export function SlashCommandMenu({ onSelect, onClose, style }: SlashCommandMenuP
       </div>
     </div>
   );
-}
+  },
+);

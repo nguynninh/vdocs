@@ -1,0 +1,30 @@
+{
+  "dashboard": {
+    "greeting": {
+      "morning": "Chào buổi sáng, {name}",
+      "afternoon": "Chào buổi chiều, {name}",
+      "evening": "Chào buổi tối, {name}"
+    },
+    "subtitle": "Đây là những gì đang diễn ra trong không gian làm việc của bạn.",
+    "newDocument": "Tài liệu mới",
+    "stats": {
+      "total": "Tổng tài liệu",
+      "shared": "Đã chia sẻ",
+      "favorites": "Yêu thích",
+      "trash": "Trong thùng rác"
+    },
+    "recentDocuments": "Tài liệu gần đây",
+    "recentActivity": "Hoạt động gần đây",
+    "activityUpdated": "Bạn đã chỉnh sửa {title}",
+    "noActivity": "Chưa có hoạt động nào.",
+    "viewAll": "Xem tất cả",
+    "untitled": "Không có tiêu đề",
+    "updatedAt": "Cập nhật {time}",
+    "empty": {
+      "title": "Chưa có tài liệu nào",
+      "description": "Tạo tài liệu đầu tiên của bạn để bắt đầu.",
+      "action": "Tạo tài liệu"
+    },
+    "error": "Không thể tải danh sách tài liệu."
+  }
+}

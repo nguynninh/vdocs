@@ -5,6 +5,22 @@
     "shared": "共享给我",
     "trash": "回收站",
     "settings": "设置",
-    "signOut": "登出"
+    "workspace": "工作区",
+    "addWorkspace": "添加工作区",
+    "createWorkspaceTitle": "创建新工作区",
+    "createWorkspaceDescription": "工作区是您和团队一起创建、存储和共享文档的地方。",
+    "workspaceName": "工作区名称",
+    "workspaceNamePlaceholder": "输入工作区名称",
+    "workspaceDescription": "描述（可选）",
+    "workspaceDescriptionPlaceholder": "简短描述此工作区...",
+    "workspaceIcon": "图标",
+    "cancel": "取消",
+    "createWorkspace": "创建工作区",
+    "creatingWorkspace": "创建中...",
+    "createWorkspaceError": "创建工作区失败，请重试。",
+    "signOut": "登出",
+    "documentIndex": "目录",
+    "addDocument": "新建文档",
+    "untitledDocument": "无标题"
   }
 }

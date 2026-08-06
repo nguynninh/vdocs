@@ -4,6 +4,18 @@
     "placeholderLink": "chèn danh sách con",
     "addIcon": "Thêm biểu tượng",
     "addCover": "Thêm ảnh bìa",
-    "addComment": "Thêm bình luận"
+    "addComment": "Thêm bình luận",
+    "gutterAddBlock": "Thêm khối bên dưới",
+    "gutterOpenMenu": "Mở menu khối",
+    "gutterTurnInto": "Chuyển thành",
+    "gutterColor": "Màu sắc",
+    "gutterCopyLink": "Sao chép liên kết đến khối",
+    "gutterDuplicate": "Nhân bản",
+    "gutterMoveTo": "Di chuyển đến",
+    "gutterDelete": "Xóa",
+    "gutterComment": "Bình luận",
+    "gutterSuggestEdits": "Đề xuất chỉnh sửa",
+    "gutterAskAi": "Hỏi AI",
+    "gutterSkills": "Kỹ năng"
   }
 }

@@ -89,21 +89,53 @@ async function requireDocumentAndPermission(
   return { document, permission };
 }
 
-async function createDocument(userId: string, title?: string) {
-  const membership = await documentRepository.findPersonalWorkspace(userId);
+async function createDocument(userId: string, title?: string, workspaceId?: string) {
+  let targetWorkspaceId = workspaceId;
 
-  if (!membership) {
-    throw new NoWorkspaceError(`User ${userId} has no workspace`);
+  if (targetWorkspaceId) {
+    const membership = await documentRepository.findWorkspaceMembership(
+      targetWorkspaceId,
+      userId
+    );
+
+    if (!membership) {
+      throw new DocumentForbiddenError(
+        `User ${userId} is not a member of workspace ${targetWorkspaceId}`
+      );
+    }
+  } else {
+    const membership = await documentRepository.findPersonalWorkspace(userId);
+
+    if (!membership) {
+      throw new NoWorkspaceError(`User ${userId} has no workspace`);
+    }
+
+    targetWorkspaceId = membership.workspaceId;
   }
 
   return documentRepository.create({
-    workspaceId: membership.workspaceId,
+    workspaceId: targetWorkspaceId,
     ownerId: userId,
     title: title?.trim() ?? "",
   });
 }
 
-async function listDocuments(userId: string) {
+async function listDocuments(userId: string, workspaceId?: string) {
+  if (workspaceId) {
+    const membership = await documentRepository.findWorkspaceMembership(
+      workspaceId,
+      userId
+    );
+
+    if (!membership) {
+      throw new DocumentForbiddenError(
+        `User ${userId} is not a member of workspace ${workspaceId}`
+      );
+    }
+
+    return documentRepository.listForWorkspaces([workspaceId]);
+  }
+
   const membership = await documentRepository.findPersonalWorkspace(userId);
 
   if (!membership) {

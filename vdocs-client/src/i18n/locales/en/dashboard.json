@@ -1,0 +1,30 @@
+{
+  "dashboard": {
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}"
+    },
+    "subtitle": "Here's what's happening in your workspace.",
+    "newDocument": "New document",
+    "stats": {
+      "total": "Total documents",
+      "shared": "Shared",
+      "favorites": "Favorites",
+      "trash": "In trash"
+    },
+    "recentDocuments": "Recent documents",
+    "recentActivity": "Recent activity",
+    "activityUpdated": "You edited {title}",
+    "noActivity": "No activity yet.",
+    "viewAll": "View all",
+    "untitled": "Untitled",
+    "updatedAt": "Updated {time}",
+    "empty": {
+      "title": "No documents yet",
+      "description": "Create your first document to get started.",
+      "action": "Create document"
+    },
+    "error": "Failed to load documents."
+  }
+}

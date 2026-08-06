@@ -5,6 +5,22 @@
     "shared": "Chia sẻ với tôi",
     "trash": "Thùng rác",
     "settings": "Cài đặt",
-    "signOut": "Đăng xuất"
+    "workspace": "WORKSPACE",
+    "addWorkspace": "Thêm workspace",
+    "createWorkspaceTitle": "Tạo workspace mới",
+    "createWorkspaceDescription": "Workspace là nơi bạn và nhóm cùng tạo, lưu trữ và chia sẻ tài liệu.",
+    "workspaceName": "Tên workspace",
+    "workspaceNamePlaceholder": "Nhập tên workspace",
+    "workspaceDescription": "Mô tả (tùy chọn)",
+    "workspaceDescriptionPlaceholder": "Mô tả ngắn về workspace này...",
+    "workspaceIcon": "Biểu tượng",
+    "cancel": "Hủy",
+    "createWorkspace": "Tạo workspace",
+    "creatingWorkspace": "Đang tạo...",
+    "createWorkspaceError": "Không thể tạo workspace. Vui lòng thử lại.",
+    "signOut": "Đăng xuất",
+    "documentIndex": "Mục lục",
+    "addDocument": "Thêm tài liệu",
+    "untitledDocument": "Không có tiêu đề"
   }
 }

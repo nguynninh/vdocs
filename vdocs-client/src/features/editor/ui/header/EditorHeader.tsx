@@ -12,13 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { PreviewCard, PreviewCardContent, PreviewCardTrigger } from "@/components/ui/preview-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageIconGlyph } from "../icon-picker/PageIconGlyph";
 import type { PageIcon } from "../icon-picker/PageIcon";
 import { ActivityPanel, type ActivityEntry } from "./ActivityPanel";
 import { MoreOptionsMenu } from "./MoreOptionsMenu";
 import { SharePanel, type ShareMember, type LinkAccess, type AssignableRole } from "./SharePanel";
+import { UpdatesPanel } from "./UpdatesPanel";
 
 export interface EditorHeaderProps {
   icon?: PageIcon;
@@ -77,6 +77,7 @@ export function EditorHeader(props: EditorHeaderProps) {
 
   const t = useTranslations("editorHeader");
   const [starred, setStarred] = useState(isStarred);
+  const [updatesSidebarOpen, setUpdatesSidebarOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number | null>(null);
 
@@ -149,8 +150,11 @@ export function EditorHeader(props: EditorHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <PreviewCard>
-          <PreviewCardTrigger
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            delay={300}
+            onClick={() => setUpdatesSidebarOpen(true)}
             render={
               <button
                 type="button"
@@ -160,10 +164,10 @@ export function EditorHeader(props: EditorHeaderProps) {
               </button>
             }
           />
-          <PreviewCardContent align="end" sideOffset={8}>
+          <PopoverContent align="end" sideOffset={8}>
             <ActivityPanel editedBy={editedBy} createdBy={createdBy} />
-          </PreviewCardContent>
-        </PreviewCard>
+          </PopoverContent>
+        </Popover>
 
         {canEdit && (
           <Popover>
@@ -252,6 +256,11 @@ export function EditorHeader(props: EditorHeaderProps) {
     {!canEdit && (
       <div className="flex items-center justify-center gap-2 bg-blue-50 px-4 py-2 text-center text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
         {t("viewOnlyBanner")}
+      </div>
+    )}
+    {updatesSidebarOpen && (
+      <div className="fixed inset-y-0 right-0 z-50 w-96 max-w-full border-l border-border bg-background shadow-xl">
+        <UpdatesPanel documentTitle={title} onClose={() => setUpdatesSidebarOpen(false)} />
       </div>
     )}
     </>

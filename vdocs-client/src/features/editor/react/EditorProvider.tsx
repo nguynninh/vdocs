@@ -22,6 +22,10 @@ import type {
   DocumentPermission,
 } from "../collaboration/collaboration.types";
 
+function createDefaultTableRows(rowCount = 3, colCount = 3): string[][] {
+  return Array.from({ length: rowCount }, () => Array.from({ length: colCount }, () => ""));
+}
+
 const REALTIME_URL =
   process.env.NEXT_PUBLIC_REALTIME_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
@@ -41,10 +45,20 @@ interface EditorContextValue {
   canEdit: boolean;
   wordCount: number;
   updateBlockText: (blockId: string, text: string) => void;
+  updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
+  updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
+  updateTableRowHeight: (blockId: string, row: number, height: number) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
+  insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
   mergeBlockIntoPrevious: (blockId: string) => void;
   convertBlockType: (blockId: string, blockType: BlockType, text?: string) => void;
+  convertBlockTypeForBlocks: (blockIds: string[], blockType: BlockType) => void;
   deleteBlockRange: (startIndex: number, endIndex: number) => void;
+  splitPasteIntoBlocks: (blockId: string, before: string, lines: string[], after: string) => void;
+  duplicateBlock: (blockId: string) => void;
+  duplicateBlocks: (blockIds: string[]) => void;
+  removeBlock: (blockId: string) => void;
+  removeBlocks: (blockIds: string[]) => void;
   clearFocus: () => void;
 }
 
@@ -121,6 +135,35 @@ export function EditorProvider({
     documentRef.current?.replaceText(blockId, text);
   }, []);
 
+  const updateTableCell = useCallback(
+    (blockId: string, row: number, col: number, text: string) => {
+      documentRef.current?.setTableCell(blockId, row, col, text);
+    },
+    [],
+  );
+
+  const updateTableColumnWidth = useCallback((blockId: string, col: number, width: number) => {
+    documentRef.current?.setTableColumnWidth(blockId, col, width);
+  }, []);
+
+  const updateTableRowHeight = useCallback((blockId: string, row: number, height: number) => {
+    documentRef.current?.setTableRowHeight(blockId, row, height);
+  }, []);
+
+  // Used by paste-detection: pasted tabular clipboard text becomes a table
+  // block (with the parsed rows already filled in) inserted right after the
+  // block the paste happened in, rather than being split into paragraphs.
+  const insertTableAfterBlock = useCallback((blockId: string, rows: string[][]) => {
+    const newBlockId = generateId();
+    documentRef.current?.createBlock({
+      id: newBlockId,
+      type: "table",
+      afterBlockId: blockId,
+      table: rows,
+    });
+    setState((current) => ({ ...current, focusBlockId: newBlockId }));
+  }, []);
+
   const insertBlockAfterFocused = useCallback(
     (blockId: string, blockType?: BlockType) => {
       const newBlockId = generateId();
@@ -128,6 +171,7 @@ export function EditorProvider({
         id: newBlockId,
         type: blockType ?? "paragraph",
         afterBlockId: blockId,
+        table: blockType === "table" ? createDefaultTableRows() : undefined,
       });
       setState((current) => ({ ...current, focusBlockId: newBlockId }));
     },
@@ -158,12 +202,25 @@ export function EditorProvider({
         documentRef.current?.replaceText(blockId, text);
       }
 
+      if (blockType === "table") {
+        const existing = state.document.blocks.find((block) => block.id === blockId);
+        if (!existing?.table) {
+          documentRef.current?.setTableData(blockId, createDefaultTableRows());
+        }
+      }
+
       // Changing a block's type swaps which view renders it, remounting its
       // contentEditable node and dropping DOM focus — refocus so typing can continue.
       setState((current) => ({ ...current, focusBlockId: blockId }));
     },
-    [],
+    [state.document],
   );
+
+  const convertBlockTypeForBlocks = useCallback((blockIds: string[], blockType: BlockType) => {
+    blockIds.forEach((id) => documentRef.current?.setBlockType(id, blockType));
+    const lastId = blockIds[blockIds.length - 1];
+    setState((current) => ({ ...current, focusBlockId: lastId ?? current.focusBlockId }));
+  }, []);
 
   const deleteBlockRange = useCallback(
     (startIndex: number, endIndex: number) => {
@@ -182,6 +239,136 @@ export function EditorProvider({
       setState((current) => ({ ...current, focusBlockId: first.id }));
     },
     [state.document],
+  );
+
+  // Pasting multi-line clipboard content should land as one block per line
+  // instead of collapsing into the currently focused block's single text
+  // field — `before`/`after` are the text surrounding the caret in that
+  // block, so the first and last pasted lines merge with them naturally.
+  const splitPasteIntoBlocks = useCallback(
+    (blockId: string, before: string, lines: string[], after: string) => {
+      documentRef.current?.replaceText(blockId, before + lines[0]);
+
+      let previousId = blockId;
+      for (let index = 1; index < lines.length; index += 1) {
+        const isLast = index === lines.length - 1;
+        const newId = generateId();
+        documentRef.current?.createBlock({
+          id: newId,
+          type: "paragraph",
+          text: isLast ? lines[index] + after : lines[index],
+          afterBlockId: previousId,
+        });
+        previousId = newId;
+      }
+
+      setState((current) => ({ ...current, focusBlockId: previousId }));
+    },
+    [],
+  );
+
+  const duplicateBlock = useCallback(
+    (blockId: string) => {
+      const source = state.document.blocks.find((block) => block.id === blockId);
+      if (!source) return;
+
+      const newId = generateId();
+      documentRef.current?.createBlock({
+        id: newId,
+        type: source.type,
+        text: source.text,
+        afterBlockId: blockId,
+        table: source.table ? source.table.rows.map((row) => [...row]) : undefined,
+      });
+      setState((current) => ({ ...current, focusBlockId: newId }));
+    },
+    [state.document],
+  );
+
+  const removeBlock = useCallback(
+    (blockId: string) => {
+      const blocks = state.document.blocks;
+      const index = blocks.findIndex((block) => block.id === blockId);
+      if (index === -1) return;
+
+      // Never delete the document's last remaining block — clear it instead
+      // so there's always at least one block to focus and type into.
+      if (blocks.length === 1) {
+        documentRef.current?.replaceText(blockId, "");
+        setState((current) => ({ ...current, focusBlockId: blockId }));
+        return;
+      }
+
+      const nextFocusId = blocks[index - 1]?.id ?? blocks[index + 1]?.id ?? null;
+      documentRef.current?.deleteBlock(blockId);
+      setState((current) => ({ ...current, focusBlockId: nextFocusId }));
+    },
+    [state.document],
+  );
+
+  // Removes a contiguous multi-block selection (the drag-highlight range) in
+  // one go — collapses into the first selected block instead of deleting it
+  // too, matching deleteBlockRange's "always keep one block" rule.
+  const removeBlocks = useCallback(
+    (blockIds: string[]) => {
+      if (blockIds.length <= 1) {
+        if (blockIds[0]) removeBlock(blockIds[0]);
+        return;
+      }
+
+      const blocks = state.document.blocks;
+      const idSet = new Set(blockIds);
+      const indices = blocks
+        .map((block, index) => (idSet.has(block.id) ? index : -1))
+        .filter((index) => index !== -1);
+      if (indices.length === 0) return;
+
+      const startIndex = indices[0];
+      const endIndex = indices[indices.length - 1];
+      const first = blocks[startIndex];
+
+      for (let index = endIndex; index > startIndex; index -= 1) {
+        const block = blocks[index];
+        if (block) documentRef.current?.deleteBlock(block.id);
+      }
+
+      documentRef.current?.replaceText(first.id, "");
+      setState((current) => ({ ...current, focusBlockId: first.id }));
+    },
+    [state.document, removeBlock],
+  );
+
+  // Duplicates a contiguous multi-block selection, preserving order, by
+  // chaining each copy after the previous one (starting after the last
+  // selected block) rather than after its own source.
+  const duplicateBlocks = useCallback(
+    (blockIds: string[]) => {
+      if (blockIds.length <= 1) {
+        if (blockIds[0]) duplicateBlock(blockIds[0]);
+        return;
+      }
+
+      const blocks = state.document.blocks;
+      let insertAfterId = blockIds[blockIds.length - 1];
+
+      blockIds.forEach((id) => {
+        const source = blocks.find((block) => block.id === id);
+        if (!source) return;
+
+        const newId = generateId();
+        documentRef.current?.createBlock({
+          id: newId,
+          type: source.type,
+          text: source.text,
+          afterBlockId: insertAfterId,
+          table: source.table ? source.table.rows.map((row) => [...row]) : undefined,
+        });
+        insertAfterId = newId;
+      });
+
+      setState((current) => ({ ...current, focusBlockId: insertAfterId }));
+    },
+    [state.document, duplicateBlock],
   );
 
   const clearFocus = useCallback(
@@ -209,10 +396,20 @@ export function EditorProvider({
       canEdit,
       wordCount,
       updateBlockText,
+      updateTableCell,
+      updateTableColumnWidth,
+      updateTableRowHeight,
       insertBlockAfterFocused,
+      insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
+      convertBlockTypeForBlocks,
       deleteBlockRange,
+      splitPasteIntoBlocks,
+      duplicateBlock,
+      duplicateBlocks,
+      removeBlock,
+      removeBlocks,
       clearFocus,
     }),
     [
@@ -222,10 +419,20 @@ export function EditorProvider({
       canEdit,
       wordCount,
       updateBlockText,
+      updateTableCell,
+      updateTableColumnWidth,
+      updateTableRowHeight,
       insertBlockAfterFocused,
+      insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
+      convertBlockTypeForBlocks,
       deleteBlockRange,
+      splitPasteIntoBlocks,
+      duplicateBlock,
+      duplicateBlocks,
+      removeBlock,
+      removeBlocks,
       clearFocus,
     ],
   );

@@ -2,7 +2,7 @@
 
 import { Image as ImageIcon, MessageSquarePlus, Smile } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEditor } from "../../react/EditorProvider";
@@ -36,6 +36,16 @@ export function PageHeader({
   const t = useTranslations("editorContent");
   const { canEdit } = useEditor();
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Title is a freeform textarea now (line breaks allowed), so it has to grow
+  // with its content instead of scrolling internally like a fixed input.
+  useLayoutEffect(() => {
+    const node = titleRef.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${node.scrollHeight}px`;
+  }, [title]);
 
   const handleIconSelect = (nextIcon: PageIcon) => {
     onIconSelect(nextIcon);
@@ -124,12 +134,14 @@ export function PageHeader({
           )
         )}
 
-        <input
+        <textarea
+          ref={titleRef}
           value={title}
           onChange={(event) => onTitleChange(event.target.value)}
           placeholder={placeholder}
           readOnly={!canEdit}
-          className="w-full bg-transparent text-4xl font-bold text-foreground outline-none placeholder:text-muted-foreground/60"
+          rows={1}
+          className="w-full resize-none overflow-hidden bg-transparent text-4xl font-bold leading-tight text-foreground outline-none placeholder:text-muted-foreground/60"
         />
       </div>
     </div>

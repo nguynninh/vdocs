@@ -81,7 +81,8 @@ documentRouter.post(
       const userId = getUserId(req);
       const document = await documentService.createDocument(
         userId,
-        req.body?.title
+        req.body?.title,
+        req.body?.workspaceId
       );
 
       sendSuccess(res, { id: document.id }, "Created", 201);
@@ -94,7 +95,9 @@ documentRouter.post(
 documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const documents = await documentService.listDocuments(userId);
+    const workspaceId =
+      typeof req.query.workspaceId === "string" ? req.query.workspaceId : undefined;
+    const documents = await documentService.listDocuments(userId, workspaceId);
 
     const response: DocumentSummaryResponse[] = documents.map((document) => ({
       id: document.id,

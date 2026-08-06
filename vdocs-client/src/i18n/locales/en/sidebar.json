@@ -5,6 +5,22 @@
     "shared": "Shared with me",
     "trash": "Trash",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "workspace": "WORKSPACE",
+    "addWorkspace": "Add workspace",
+    "createWorkspaceTitle": "Create new workspace",
+    "createWorkspaceDescription": "A workspace is where you and your team create, store, and share documents.",
+    "workspaceName": "Workspace name",
+    "workspaceNamePlaceholder": "Enter workspace name",
+    "workspaceDescription": "Description (optional)",
+    "workspaceDescriptionPlaceholder": "Short description of this workspace...",
+    "workspaceIcon": "Icon",
+    "cancel": "Cancel",
+    "createWorkspace": "Create workspace",
+    "creatingWorkspace": "Creating...",
+    "createWorkspaceError": "Failed to create workspace. Please try again.",
+    "signOut": "Sign out",
+    "documentIndex": "Table of contents",
+    "addDocument": "Add document",
+    "untitledDocument": "Untitled"
   }
 }

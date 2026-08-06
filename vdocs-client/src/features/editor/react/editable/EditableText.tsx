@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { useEditor } from "../EditorProvider";
+import { parseTabularClipboardText } from "../../blocks/table/table.parser";
 import { mapSlashCommandToBlockType } from "../../features/slash-command/mapSlashCommandToBlockType";
 import { SlashCommandPlugin } from "../../features/slash-command/SlashCommandPlugin";
 import type { SlashCommandPluginHandle } from "../../features/slash-command/SlashCommandPlugin";
@@ -31,7 +32,8 @@ export function EditableText({
   const ref = useRef<HTMLDivElement>(null);
   const slashCommandRef = useRef<SlashCommandPluginHandle>(null);
   const aiSuggestionRef = useRef<AiSuggestionPluginHandle>(null);
-  const { state, clearFocus, convertBlockType, canEdit } = useEditor();
+  const { state, clearFocus, convertBlockType, splitPasteIntoBlocks, insertTableAfterBlock, canEdit } =
+    useEditor();
 
   useEffect(() => {
     if (state.focusBlockId !== blockId || !ref.current) return;
@@ -83,7 +85,7 @@ export function EditableText({
     const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
     if (!rect) return;
 
-    slashCommandRef.current?.open({ top: rect.bottom + 4, left: rect.left });
+    slashCommandRef.current?.open({ top: rect.top, bottom: rect.bottom, left: rect.left });
   };
 
   const openAiSuggestionMenu = () => {
@@ -107,6 +109,39 @@ export function EditableText({
           const nextText = event.currentTarget.textContent ?? "";
           onChange(nextText);
           syncSlashCommandMenu(nextText);
+        }}
+        onPaste={(event) => {
+          const clipboardText = event.clipboardData.getData("text/plain");
+          if (!clipboardText) return;
+
+          const tableRows = parseTabularClipboardText(clipboardText);
+          if (tableRows) {
+            event.preventDefault();
+            insertTableAfterBlock(blockId, tableRows);
+            return;
+          }
+
+          const lines = clipboardText.split(/\r\n|\r|\n/);
+          if (lines.length <= 1) {
+            // Single-line paste: let the browser's native insertion handle
+            // caret placement and undo history as before.
+            return;
+          }
+
+          event.preventDefault();
+
+          const node = event.currentTarget;
+          const fullText = node.textContent ?? "";
+          const selection = window.getSelection();
+          const caretOffset =
+            selection && selection.rangeCount > 0
+              ? selection.getRangeAt(0).startOffset
+              : fullText.length;
+
+          const before = fullText.slice(0, caretOffset);
+          const after = fullText.slice(caretOffset);
+
+          splitPasteIntoBlocks(blockId, before, lines, after);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {

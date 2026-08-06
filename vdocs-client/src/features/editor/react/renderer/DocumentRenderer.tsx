@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useEditor } from "../EditorProvider";
+import { BlockGutterControls } from "./BlockGutterControls";
 import { BlockRenderer } from "./BlockRenderer";
 
 interface BlockRange {
@@ -78,6 +79,14 @@ export function DocumentRenderer() {
   const dragAnchorRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
 
+  // The block-gutter menu (Turn into / Duplicate / Delete) needs to know
+  // whether the block it was opened on is part of the current drag-highlight
+  // range, so an action taken there applies to the whole selection instead
+  // of just the one block whose gutter happened to be clicked.
+  const selectedBlockIds = range
+    ? state.document.blocks.slice(range.start, range.end + 1).map((block) => block.id)
+    : [];
+
   useLayoutEffect(() => {
     if (!range || !containerRef.current) {
       setHighlightRectsByIndex({});
@@ -109,6 +118,13 @@ export function DocumentRenderer() {
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+
+    // The block-gutter controls (add-block "+", "⋮⋮" menu trigger) sit inside
+    // each block wrapper, so their mousedown bubbles up here too — without
+    // this guard, opening the menu clears whatever multi-block selection the
+    // menu action was meant to apply to.
+    if ((event.target as HTMLElement).closest("[data-block-gutter]")) return;
+
     const index = getBlockIndexFromEvent(event);
     if (index === null) return;
 
@@ -178,7 +194,8 @@ export function DocumentRenderer() {
       onKeyDown={handleKeyDown}
     >
       {state.document.blocks.map((block, index) => (
-        <div key={block.id} data-block-index={index} className="relative">
+        <div key={block.id} data-block-index={index} className="group relative">
+          <BlockGutterControls block={block} selectedBlockIds={selectedBlockIds} />
           <BlockRenderer block={block} isFirst={index === 0} />
         </div>
       ))}

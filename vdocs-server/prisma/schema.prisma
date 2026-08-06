@@ -35,10 +35,12 @@ model User {
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  ownerId   String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String   @default("briefcase")
+  ownerId     String
+  createdAt   DateTime @default(now())
 
   owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   members   WorkspaceMember[]

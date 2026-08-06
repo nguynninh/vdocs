@@ -21,6 +21,7 @@ export interface CreateBlockInput {
   type: BlockType;
   text?: string;
   afterBlockId?: string;
+  table?: string[][];
 }
 
 export interface JoinResult {
@@ -51,6 +52,19 @@ export interface CollaborativeDocument {
   deleteBlock(blockId: string): void;
   moveBlock(blockId: string, targetIndex: number): void;
   setBlockType(blockId: string, type: BlockType): void;
+
+  /** Replaces a table block's entire grid (used when first turning a block
+   * into a table, to seed its default rows). */
+  setTableData(blockId: string, rows: string[][]): void;
+
+  /** Updates a single cell's text within a table block's grid. */
+  setTableCell(blockId: string, row: number, col: number, text: string): void;
+
+  /** Sets one column's pixel width (drag-resize), leaving others untouched. */
+  setTableColumnWidth(blockId: string, col: number, width: number): void;
+
+  /** Sets one row's pixel height (drag-resize), leaving others untouched. */
+  setTableRowHeight(blockId: string, row: number, height: number): void;
 
   /** Plain-object snapshot for rendering — the read half of the read path. */
   getSnapshot(): DocumentModel;

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EditorContent } from "./react/EditorContent";
 import { EditorProvider, useEditor } from "./react/EditorProvider";
 import { DocumentRenderer } from "./react/renderer/DocumentRenderer";
+import { HeadingMinimap } from "./react/renderer/HeadingMinimap";
 import type { PageIcon } from "./ui/icon-picker/PageIcon";
 import { EditorHeader } from "./ui/header";
 import type { ShareMember, AssignableRole } from "./ui/header/SharePanel";
@@ -244,6 +245,7 @@ export function VDocsEditor({
           />
           <DocumentRenderer />
         </EditorContent>
+        <HeadingMinimap />
       </EditorProvider>
     </div>
   );

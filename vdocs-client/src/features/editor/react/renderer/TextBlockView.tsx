@@ -26,7 +26,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   heading3: "text-xl font-semibold leading-snug",
   bulletedListItem: "text-base leading-7",
   numberedListItem: "text-base leading-7",
-  quote: "text-base leading-7 border-l-2 border-border pl-3 italic text-foreground/90",
+  quote: "text-base leading-7 border-l-2 border-foreground pl-3 text-muted-foreground whitespace-pre-wrap",
   codeBlock: "",
   divider: "",
   table: "",
@@ -43,7 +43,7 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   heading3: "text-lg font-semibold leading-snug",
   bulletedListItem: "text-sm leading-6",
   numberedListItem: "text-sm leading-6",
-  quote: "text-sm leading-6 border-l-2 border-border pl-3 italic text-foreground/90",
+  quote: "text-sm leading-6 border-l-2 border-foreground pl-3 text-muted-foreground whitespace-pre-wrap",
   codeBlock: "",
   divider: "",
   table: "",
@@ -86,6 +86,7 @@ export function TextBlockView({ block }: TextBlockViewProps) {
         onBackspaceAtStart={onBackspaceAtStart}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        enterInsertsNewline={block.type === "quote"}
       />
       {showPlaceholder && (
         <div

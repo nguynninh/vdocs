@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { DragDropPlugin } from "../../features/drag-drop/DragDropPlugin";
 import { useEditor } from "../EditorProvider";
 import { BlockGutterControls } from "./BlockGutterControls";
 import { BlockRenderer } from "./BlockRenderer";
@@ -71,7 +72,7 @@ function getBlockIndexFromEvent(event: { target: EventTarget | null }): number |
 }
 
 export function DocumentRenderer() {
-  const { state, deleteBlockRange, fullWidth } = useEditor();
+  const { state, deleteBlockRange, fullWidth, moveBlock } = useEditor();
   const [range, setRange] = useState<BlockRange | null>(null);
   const [highlightRectsByIndex, setHighlightRectsByIndex] = useState<
     Record<number, HighlightRect[]>
@@ -79,6 +80,39 @@ export function DocumentRenderer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragAnchorRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
+
+  // Block reordering via the gutter's "⋮⋮" handle, using native HTML5 drag
+  // events rather than a library — the handle itself is `draggable`, and
+  // each block wrapper below is the drop target.
+  const draggingBlockIdRef = useRef<string | null>(null);
+  const [dropIndicatorIndex, setDropIndicatorIndex] = useState<number | null>(null);
+
+  const handleGutterDragStart = (blockId: string) => (event: React.DragEvent) => {
+    draggingBlockIdRef.current = blockId;
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleGutterDragEnd = () => {
+    draggingBlockIdRef.current = null;
+    setDropIndicatorIndex(null);
+  };
+
+  const handleBlockDragOver = (index: number) => (event: React.DragEvent) => {
+    if (!draggingBlockIdRef.current) return;
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const isAfter = event.clientY - rect.top > rect.height / 2;
+    setDropIndicatorIndex(isAfter ? index + 1 : index);
+  };
+
+  const handleBlockDrop = (event: React.DragEvent) => {
+    const blockId = draggingBlockIdRef.current;
+    draggingBlockIdRef.current = null;
+    if (blockId === null || dropIndicatorIndex === null) return;
+    event.preventDefault();
+    moveBlock(blockId, dropIndicatorIndex);
+    setDropIndicatorIndex(null);
+  };
 
   // The block-gutter menu (Turn into / Duplicate / Delete) needs to know
   // whether the block it was opened on is part of the current drag-highlight
@@ -185,33 +219,52 @@ export function DocumentRenderer() {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative mx-auto flex w-full flex-col py-4",
-        fullWidth ? "max-w-none px-12" : "max-w-3xl px-24",
-      )}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onCopy={handleCopy}
-      onKeyDown={handleKeyDown}
-    >
-      {state.document.blocks.map((block, index) => (
-        <div key={block.id} data-block-index={index} className="group relative min-w-0">
-          <BlockGutterControls block={block} selectedBlockIds={selectedBlockIds} />
-          <BlockRenderer block={block} isFirst={index === 0} />
-        </div>
-      ))}
-      {Object.entries(highlightRectsByIndex).flatMap(([index, rects]) =>
-        rects.map((rect, rectIndex) => (
+    <DragDropPlugin>
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative mx-auto flex w-full flex-col py-4",
+          fullWidth ? "max-w-none px-12" : "max-w-3xl px-24",
+        )}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onCopy={handleCopy}
+        onKeyDown={handleKeyDown}
+      >
+        {state.document.blocks.map((block, index) => (
           <div
-            key={`${index}-${rectIndex}`}
-            className="pointer-events-none absolute z-20 bg-blue-400/25"
-            style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
-          />
-        )),
-      )}
-    </div>
+            key={`${block.id}-${index}`}
+            data-block-index={index}
+            className="group relative min-w-0"
+            onDragOver={handleBlockDragOver(index)}
+            onDrop={handleBlockDrop}
+          >
+            {dropIndicatorIndex === index && (
+              <div className="pointer-events-none absolute -top-0.5 left-0 right-0 h-0.5 rounded bg-primary" />
+            )}
+            <BlockGutterControls
+              block={block}
+              selectedBlockIds={selectedBlockIds}
+              onHandleDragStart={handleGutterDragStart(block.id)}
+              onHandleDragEnd={handleGutterDragEnd}
+            />
+            <BlockRenderer block={block} isFirst={index === 0} />
+            {dropIndicatorIndex === index + 1 && index === state.document.blocks.length - 1 && (
+              <div className="pointer-events-none absolute -bottom-0.5 left-0 right-0 h-0.5 rounded bg-primary" />
+            )}
+          </div>
+        ))}
+        {Object.entries(highlightRectsByIndex).flatMap(([index, rects]) =>
+          rects.map((rect, rectIndex) => (
+            <div
+              key={`${index}-${rectIndex}`}
+              className="pointer-events-none absolute z-20 bg-blue-400/25"
+              style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
+            />
+          )),
+        )}
+      </div>
+    </DragDropPlugin>
   );
 }

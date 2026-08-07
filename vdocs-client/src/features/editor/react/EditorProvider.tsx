@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { BlockType, FileData } from "../engine/block/block.types";
+import type { BlockType, FileData, ImageData } from "../engine/block/block.types";
 import { findBlockIndex } from "../engine/document/findBlock";
 import type { FontStyle } from "../engine/document/document.types";
 import type { MarkType } from "../engine/mark/mark.types";
@@ -72,11 +72,13 @@ interface EditorContextValue {
   setTableCellFile: (blockId: string, row: number, col: number, file: FileData | null) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
   insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
+  insertImageBlockAfter: (blockId: string, image: ImageData) => void;
   mergeBlockIntoPrevious: (blockId: string) => void;
   convertBlockType: (blockId: string, blockType: BlockType, text?: string) => void;
   setBlockCodeLanguage: (blockId: string, language: string) => void;
   setChecked: (blockId: string, checked: boolean) => void;
   setBlockFileData: (blockId: string, file: FileData) => void;
+  setBlockImageData: (blockId: string, image: ImageData) => void;
   convertBlockTypeForBlocks: (blockIds: string[], blockType: BlockType) => void;
   deleteBlockRange: (startIndex: number, endIndex: number) => void;
   splitPasteIntoBlocks: (blockId: string, before: string, lines: string[], after: string) => void;
@@ -84,6 +86,7 @@ interface EditorContextValue {
   duplicateBlocks: (blockIds: string[]) => void;
   removeBlock: (blockId: string) => void;
   removeBlocks: (blockIds: string[]) => void;
+  moveBlock: (blockId: string, targetIndex: number) => void;
   clearFocus: () => void;
   restoreVersion: (versionId: string) => Promise<boolean>;
 }
@@ -295,6 +298,20 @@ export function EditorProvider({
     setState((current) => ({ ...current, focusBlockId: newBlockId }));
   }, []);
 
+  // Drag-drop and paste already have the uploaded image data in hand before
+  // any block exists, so create the block and set its image in one go
+  // instead of racing a create + a separate setImageData against re-renders.
+  const insertImageBlockAfter = useCallback((blockId: string, image: ImageData) => {
+    const newBlockId = generateId();
+    documentRef.current?.createBlock({
+      id: newBlockId,
+      type: "image",
+      afterBlockId: blockId,
+      image,
+    });
+    setState((current) => ({ ...current, focusBlockId: newBlockId }));
+  }, []);
+
   const insertBlockAfterFocused = useCallback(
     (blockId: string, blockType?: BlockType) => {
       const newBlockId = generateId();
@@ -364,6 +381,10 @@ export function EditorProvider({
 
   const setBlockFileData = useCallback((blockId: string, file: FileData) => {
     documentRef.current?.setFileData(blockId, file);
+  }, []);
+
+  const setBlockImageData = useCallback((blockId: string, image: ImageData) => {
+    documentRef.current?.setImageData(blockId, image);
   }, []);
 
   const convertBlockTypeForBlocks = useCallback((blockIds: string[], blockType: BlockType) => {
@@ -521,6 +542,10 @@ export function EditorProvider({
     [state.document, duplicateBlock],
   );
 
+  const moveBlock = useCallback((blockId: string, targetIndex: number) => {
+    documentRef.current?.moveBlock(blockId, targetIndex);
+  }, []);
+
   const clearFocus = useCallback(
     () => setState((current) => ({ ...current, focusBlockId: null })),
     [],
@@ -569,11 +594,13 @@ export function EditorProvider({
       setTableCellFile,
       insertBlockAfterFocused,
       insertTableAfterBlock,
+      insertImageBlockAfter,
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
       setChecked,
       setBlockFileData,
+      setBlockImageData,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,
@@ -581,6 +608,7 @@ export function EditorProvider({
       duplicateBlocks,
       removeBlock,
       removeBlocks,
+      moveBlock,
       clearFocus,
       restoreVersion,
     }),
@@ -605,11 +633,13 @@ export function EditorProvider({
       setTableCellFile,
       insertBlockAfterFocused,
       insertTableAfterBlock,
+      insertImageBlockAfter,
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
       setChecked,
       setBlockFileData,
+      setBlockImageData,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,
@@ -617,6 +647,7 @@ export function EditorProvider({
       duplicateBlocks,
       removeBlock,
       removeBlocks,
+      moveBlock,
       clearFocus,
       restoreVersion,
     ],

@@ -1,4 +1,4 @@
-import type { BlockType, FileData } from "../engine/block/block.types";
+import type { BlockType, FileData, ImageData } from "../engine/block/block.types";
 import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 
@@ -23,6 +23,7 @@ export interface CreateBlockInput {
   text?: string;
   afterBlockId?: string;
   table?: string[][];
+  image?: ImageData;
 }
 
 export interface JoinResult {
@@ -62,6 +63,9 @@ export interface CollaborativeDocument {
 
   /** Sets a `file` block's attached file (upload result or link). */
   setFileData(blockId: string, file: FileData): void;
+
+  /** Sets an `image` block's attached image (upload result or link). */
+  setImageData(blockId: string, image: ImageData): void;
 
   /** Replaces a block's full set of inline mark ranges (e.g. bold spans). */
   setMarks(blockId: string, marks: MarkRange[]): void;

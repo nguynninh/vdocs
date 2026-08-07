@@ -33,6 +33,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   divider: "",
   table: "",
   file: "",
+  image: "",
 };
 
 // "Small text" (MoreOptionsMenu toggle) shrinks each block one Tailwind step
@@ -52,6 +53,7 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   divider: "",
   table: "",
   file: "",
+  image: "",
 };
 
 // Every branch below renders through this one component (never a different

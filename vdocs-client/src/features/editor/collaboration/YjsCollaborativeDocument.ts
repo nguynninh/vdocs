@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import type { BlockNode, BlockType, FileData } from "../engine/block/block.types";
+import type { BlockNode, BlockType, FileData, ImageData } from "../engine/block/block.types";
 import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 import { shiftMarksForDelete, shiftMarksForInsert } from "../engine/mark/shiftMarks";
@@ -236,6 +236,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setImageData(blockId: string, image: ImageData): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      this.blocks.get(index).set("image", image);
+    });
+  }
+
   setTableData(blockId: string, rows: string[][]): void {
     this.ydoc.transact(() => {
       const index = this.findBlockIndex(blockId);
@@ -399,16 +411,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       const codeLanguage = block.get("codeLanguage") as string | undefined;
       const checked = block.get("checked") as boolean | undefined;
       const file = block.get("file") as FileData | undefined;
+      const image = block.get("image") as ImageData | undefined;
 
       blocks.push({
         id: block.get("id") as string,
         type: block.get("type") as BlockType,
-        text: (block.get("text") as Y.Text).toString(),
+        text: (block.get("text") as Y.Text | undefined)?.toString() ?? "",
         ...(marks?.length ? { marks } : {}),
         ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights, cellFiles } } : {}),
         ...(codeLanguage ? { codeLanguage } : {}),
         ...(checked !== undefined ? { checked } : {}),
         ...(file ? { file } : {}),
+        ...(image ? { image } : {}),
       });
     }
 
@@ -436,6 +450,10 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
 
       if (input.table) {
         block.set("table", input.table.map((row) => [...row]));
+      }
+
+      if (input.image) {
+        block.set("image", input.image);
       }
 
       if (input.type === "todoListItem") {

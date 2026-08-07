@@ -11,6 +11,8 @@ import { SlashCommandPlugin } from "../../features/slash-command/SlashCommandPlu
 import type { SlashCommandPluginHandle } from "../../features/slash-command/SlashCommandPlugin";
 import { AiSuggestionPlugin } from "../../features/ai-suggestion/AiSuggestionPlugin";
 import type { AiSuggestionPluginHandle } from "../../features/ai-suggestion/AiSuggestionPlugin";
+import { uploadAndBuildImageData } from "../../blocks/image/image.upload";
+import { extractImageFileFromClipboard } from "../../features/paste/pasteFiles";
 
 export interface EditableTextProps {
   blockId: string;
@@ -44,10 +46,12 @@ export function EditableText({
   const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const {
     state,
+    documentId,
     clearFocus,
     convertBlockType,
     splitPasteIntoBlocks,
     insertTableAfterBlock,
+    insertImageBlockAfter,
     toggleMark,
     canEdit,
   } = useEditor();
@@ -164,6 +168,15 @@ export function EditableText({
           syncSlashCommandMenu(nextText);
         }}
         onPaste={(event) => {
+          const imageFile = extractImageFileFromClipboard(event.clipboardData);
+          if (imageFile && canEdit) {
+            event.preventDefault();
+            void uploadAndBuildImageData(documentId, imageFile).then(({ data }) => {
+              if (data) insertImageBlockAfter(blockId, data);
+            });
+            return;
+          }
+
           const clipboardText = event.clipboardData.getData("text/plain");
           if (!clipboardText) return;
 

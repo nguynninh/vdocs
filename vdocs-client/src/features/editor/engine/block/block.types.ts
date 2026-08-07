@@ -12,7 +12,8 @@ export type BlockType =
   | "divider"
   | "codeBlock"
   | "table"
-  | "file";
+  | "file"
+  | "image";
 
 /** Text grid for a table block — rows[r][c] is the text of that cell, and
  * cellMarks[r][c] (when present) is that same cell's inline mark ranges.
@@ -37,6 +38,21 @@ export interface FileData {
   url: string;
 }
 
+export type ImageAlignment = "left" | "center" | "full";
+
+/** An uploaded or linked image embedded via an `image` block. */
+export interface ImageData {
+  id?: string;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+  url: string;
+  alt?: string;
+  caption?: string;
+  width?: number;
+  align?: ImageAlignment;
+}
+
 export interface BlockNode {
   id: string;
   type: BlockType;
@@ -49,4 +65,6 @@ export interface BlockNode {
   checked?: boolean;
   /** Attached file for a `file` block; undefined while still showing the upload panel. */
   file?: FileData;
+  /** Attached image for an `image` block; undefined while still showing the upload panel. */
+  image?: ImageData;
 }

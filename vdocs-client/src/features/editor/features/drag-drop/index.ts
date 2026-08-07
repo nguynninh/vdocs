@@ -1,1 +1,1 @@
-export {};
+export { DragDropPlugin } from "./DragDropPlugin";

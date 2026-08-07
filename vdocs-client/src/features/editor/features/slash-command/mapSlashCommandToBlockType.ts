@@ -14,6 +14,7 @@ const BLOCK_TYPE_BY_SLASH_COMMAND: Partial<Record<SlashCommandBlockType, BlockTy
   code: "codeBlock",
   table: "table",
   file: "file",
+  image: "image",
 };
 
 export function mapSlashCommandToBlockType(id: SlashCommandBlockType): BlockType | null {

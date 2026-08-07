@@ -28,7 +28,12 @@ const isProduction = process.env.NODE_ENV === "production";
 const ACCESS_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-app.use(helmet());
+// Helmet's default Cross-Origin-Resource-Policy is "same-origin", which
+// makes the browser block cross-origin <img> loads (e.g. the client app on
+// a different host/port loading /api/files/:id/download) even though CORS
+// allows it for fetch/XHR. Relax it so uploaded files can be embedded from
+// other origins.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(morgan("dev"));
 app.use(express.json());

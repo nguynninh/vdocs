@@ -37,6 +37,8 @@ import { useEditor } from "../EditorProvider";
 export interface BlockGutterControlsProps {
   block: BlockNode;
   selectedBlockIds?: string[];
+  onHandleDragStart?: (event: React.DragEvent) => void;
+  onHandleDragEnd?: () => void;
 }
 
 const TURN_INTO_OPTIONS: Array<{ type: BlockType; label: string; icon: typeof Type }> = [
@@ -66,7 +68,12 @@ const COLOR_OPTIONS = [
   "Red",
 ];
 
-export function BlockGutterControls({ block, selectedBlockIds }: BlockGutterControlsProps) {
+export function BlockGutterControls({
+  block,
+  selectedBlockIds,
+  onHandleDragStart,
+  onHandleDragEnd,
+}: BlockGutterControlsProps) {
   const t = useTranslations("editorContent");
   const {
     insertBlockAfterFocused,
@@ -104,6 +111,9 @@ export function BlockGutterControls({ block, selectedBlockIds }: BlockGutterCont
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={t("gutterOpenMenu")}
+          draggable
+          onDragStart={onHandleDragStart}
+          onDragEnd={onHandleDragEnd}
           className="cursor-grab rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
           <GripVertical className="size-4" />

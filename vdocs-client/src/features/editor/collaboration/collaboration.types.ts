@@ -57,6 +57,9 @@ export interface CollaborativeDocument {
   /** Sets a `codeBlock`'s selected language (e.g. "java", "sql"). */
   setCodeLanguage(blockId: string, language: string): void;
 
+  /** Sets a `todoListItem`'s checked state. */
+  setChecked(blockId: string, checked: boolean): void;
+
   /** Replaces a block's full set of inline mark ranges (e.g. bold spans). */
   setMarks(blockId: string, marks: MarkRange[]): void;
 

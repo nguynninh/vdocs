@@ -2,6 +2,7 @@ import type { DocumentPermission, LinkAccess } from "./DocumentPermission.ts";
 
 export interface DocumentResponse {
   id: string;
+  workspaceId: string;
   title: string;
   icon: string | null;
   permission: DocumentPermission;
@@ -22,7 +23,16 @@ export interface DocumentUpdateResponse {
 
 export interface DocumentSummaryResponse {
   id: string;
+  parentId: string | null;
   title: string;
   icon: string | null;
   updatedAt: string;
+}
+
+export interface DocumentTrashResponse {
+  id: string;
+  title: string;
+  icon: string | null;
+  updatedAt: string;
+  archivedAt: string;
 }

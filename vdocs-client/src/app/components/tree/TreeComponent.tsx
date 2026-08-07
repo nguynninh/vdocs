@@ -21,10 +21,12 @@ interface TreeComponentProps {
     onParentChange?: (id: React.Key, parentId: React.Key | null) => void;
     onExpandChange?: (id: React.Key, expanded: boolean) => void;
     onNodeClick?: (id: React.Key) => void;
+    onAdd?: (id: React.Key) => void;
+    renderMoreMenu?: (id: React.Key) => React.ReactNode;
 }
 
 const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
-    const { treeData, onParentChange, onExpandChange, onNodeClick } = props;
+    const { treeData, onParentChange, onExpandChange, onNodeClick, onAdd, renderMoreMenu } = props;
     const pathname = usePathname();
     const [nodeState, setNodeState] = useState({ source: treeData, nodes: treeData });
 
@@ -42,8 +44,8 @@ const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
     }, [nodes, treeData, onParentChange]);
 
     const leafTreeData = useMemo(
-        () => renderLeafComponents(nodes, pathname, handleMove, onExpandChange, onNodeClick),
-        [nodes, pathname, handleMove, onExpandChange, onNodeClick]
+        () => renderLeafComponents(nodes, pathname, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu),
+        [nodes, pathname, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu]
     );
 
     return (
@@ -58,12 +60,14 @@ const renderLeafComponents = (
     pathname: string,
     onMove?: (dragId: React.Key, targetId: React.Key, mode: DropMode) => void,
     onExpandChange?: (id: React.Key, expanded: boolean) => void,
-    onNodeClick?: (id: React.Key) => void
+    onNodeClick?: (id: React.Key) => void,
+    onAdd?: (id: React.Key) => void,
+    renderMoreMenu?: (id: React.Key) => React.ReactNode
 ): React.ReactNode =>
     nodes.map((node) => {
         const children = node.children?.length ? (
             <div className={css.children}>
-                {renderLeafComponents(node.children, pathname, onMove, onExpandChange, onNodeClick)}
+                {renderLeafComponents(node.children, pathname, onMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu)}
             </div>
         ) : undefined;
         const title = typeof node.title === "function" ? node.title(node) : node.title;
@@ -82,6 +86,8 @@ const renderLeafComponents = (
                 active={active}
                 onMove={onMove}
                 onExpandChange={onExpandChange}
+                onAdd={onAdd}
+                renderMoreMenu={renderMoreMenu}
                 styles={{ width: "100%" }}>
                 {children}
             </LeafComponent>

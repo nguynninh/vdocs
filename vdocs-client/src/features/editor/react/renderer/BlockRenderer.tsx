@@ -19,6 +19,7 @@ export function BlockRenderer({ block, isFirst }: BlockRendererProps) {
     case "heading3":
     case "bulletedListItem":
     case "numberedListItem":
+    case "todoListItem":
     case "quote":
       return <TextBlockView block={block} isFirst={isFirst} />;
     case "codeBlock":

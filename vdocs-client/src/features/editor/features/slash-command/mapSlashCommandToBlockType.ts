@@ -8,6 +8,7 @@ const BLOCK_TYPE_BY_SLASH_COMMAND: Partial<Record<SlashCommandBlockType, BlockTy
   heading3: "heading3",
   bulletedList: "bulletedListItem",
   numberedList: "numberedListItem",
+  todoList: "todoListItem",
   quote: "quote",
   divider: "divider",
   code: "codeBlock",

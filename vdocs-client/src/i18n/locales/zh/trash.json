@@ -1,0 +1,25 @@
+{
+  "trash": {
+    "title": "回收站",
+    "description": "已删除的文档将保留 30 天，之后将被永久删除。",
+    "restoreAll": "全部恢复",
+    "deleteAll": "永久删除全部",
+    "columnName": "名称",
+    "columnDeletedAt": "删除时间",
+    "columnExpiresAt": "将于以下时间后删除",
+    "expiresInDays": "{days} 天",
+    "restore": "恢复",
+    "deletePermanently": "永久删除",
+    "untitledDocument": "无标题",
+    "empty": {
+      "title": "回收站为空",
+      "description": "您删除的文档将显示在这里。"
+    },
+    "error": "加载回收站失败，请重试。",
+    "confirmRestoreAll": "恢复回收站中的所有文档？",
+    "confirmDeleteAll": "永久删除回收站中的所有文档？此操作无法撤销。",
+    "confirmDeletePermanently": "永久删除“{title}”？此操作无法撤销。",
+    "restoredToast": "恢复成功",
+    "restoredToastDescription": "“{title}”已恢复到原始位置。"
+  }
+}

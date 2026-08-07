@@ -11,6 +11,7 @@ type DocumentPageProps = {
 
 interface DocumentApiResponse {
   id: string;
+  workspaceId: string;
   title: string;
   icon: string | null;
   permission: NonNullable<VDocsEditorProps["initialPermission"]>;
@@ -76,6 +77,7 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
     <main>
       <VDocsEditor
         documentId={documentId}
+        workspaceId={document.workspaceId}
         initialTitle={document.title}
         initialIcon={initialIcon}
         initialContent={initialContent}

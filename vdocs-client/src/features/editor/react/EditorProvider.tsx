@@ -18,6 +18,7 @@ import type { MarkType } from "../engine/mark/mark.types";
 import { toggleMark as toggleMarkRange } from "../engine/mark/toggleMark";
 import type { EditorState } from "../engine/state/editorState.types";
 import { generateId } from "../engine/utils/id";
+import { takePendingImportBlocks } from "../import/pendingImport";
 import { CollaborationProvider } from "../collaboration/CollaborationProvider";
 import type {
   CollaborativeDocument,
@@ -65,6 +66,7 @@ interface EditorContextValue {
   mergeBlockIntoPrevious: (blockId: string) => void;
   convertBlockType: (blockId: string, blockType: BlockType, text?: string) => void;
   setBlockCodeLanguage: (blockId: string, language: string) => void;
+  setChecked: (blockId: string, checked: boolean) => void;
   convertBlockTypeForBlocks: (blockIds: string[], blockType: BlockType) => void;
   deleteBlockRange: (startIndex: number, endIndex: number) => void;
   splitPasteIntoBlocks: (blockId: string, before: string, lines: string[], after: string) => void;
@@ -126,6 +128,41 @@ export function EditorProvider({
       if (disposed) return;
 
       if (provider.document.getSnapshot().blocks.length === 0) {
+        const importedBlocks = takePendingImportBlocks(documentId);
+
+        if (importedBlocks?.length) {
+          let previousBlockId: string | undefined;
+          let firstBlockId: string | undefined;
+
+          for (const block of importedBlocks) {
+            const blockId = generateId();
+            firstBlockId ??= blockId;
+
+            provider.document.createBlock({
+              id: blockId,
+              type: block.type,
+              text: block.text,
+              afterBlockId: previousBlockId,
+              table: block.table,
+            });
+            if (block.marks?.length) provider.document.setMarks(blockId, block.marks);
+            if (block.cellMarks) {
+              block.cellMarks.forEach((row, rowIndex) =>
+                row.forEach((marks, colIndex) => {
+                  if (marks.length) provider.document.setTableCellMarks(blockId, rowIndex, colIndex, marks);
+                }),
+              );
+            }
+            if (block.codeLanguage) provider.document.setCodeLanguage(blockId, block.codeLanguage);
+            if (block.checked) provider.document.setChecked(blockId, true);
+
+            previousBlockId = blockId;
+          }
+
+          setState((current) => ({ ...current, focusBlockId: firstBlockId ?? null }));
+          return;
+        }
+
         const seedBlockId = generateId();
         provider.document.createBlock({
           id: seedBlockId,
@@ -278,6 +315,10 @@ export function EditorProvider({
 
   const setBlockCodeLanguage = useCallback((blockId: string, language: string) => {
     documentRef.current?.setCodeLanguage(blockId, language);
+  }, []);
+
+  const setChecked = useCallback((blockId: string, checked: boolean) => {
+    documentRef.current?.setChecked(blockId, checked);
   }, []);
 
   const convertBlockTypeForBlocks = useCallback((blockIds: string[], blockType: BlockType) => {
@@ -482,6 +523,7 @@ export function EditorProvider({
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
+      setChecked,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,
@@ -512,6 +554,7 @@ export function EditorProvider({
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
+      setChecked,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,

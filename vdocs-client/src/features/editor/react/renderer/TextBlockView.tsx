@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { BulletList } from "../../blocks/list/BulletList";
 import { NumberedList } from "../../blocks/list/NumberedList";
+import { TodoList } from "../../blocks/list/TodoList";
 import type { BlockNode, BlockType } from "../../engine/block/block.types";
 import { getNumberedListIndex } from "../../engine/document/getListItemIndex";
 import { EditableText } from "../editable/EditableText";
@@ -26,6 +27,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   heading3: "text-xl font-semibold leading-snug",
   bulletedListItem: "text-base leading-7",
   numberedListItem: "text-base leading-7",
+  todoListItem: "text-base leading-7",
   quote: "text-base leading-7 border-l-2 border-foreground pl-3 text-muted-foreground whitespace-pre-wrap",
   codeBlock: "",
   divider: "",
@@ -43,6 +45,7 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   heading3: "text-lg font-semibold leading-snug",
   bulletedListItem: "text-sm leading-6",
   numberedListItem: "text-sm leading-6",
+  todoListItem: "text-sm leading-6",
   quote: "text-sm leading-6 border-l-2 border-foreground pl-3 text-muted-foreground whitespace-pre-wrap",
   codeBlock: "",
   divider: "",
@@ -56,11 +59,13 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
 // swallow whatever the user was mid-typing.
 export function TextBlockView({ block }: TextBlockViewProps) {
   const t = useTranslations("editorContent");
-  const { state, smallText, insertBlockAfterFocused, mergeBlockIntoPrevious, convertBlockType } = useEditor();
+  const { state, smallText, insertBlockAfterFocused, mergeBlockIntoPrevious, convertBlockType, setChecked, canEdit } =
+    useEditor();
   const onChange = useAutoformatText(block);
   const [isFocused, setIsFocused] = useState(false);
 
-  const isListItem = block.type === "bulletedListItem" || block.type === "numberedListItem";
+  const isListItem =
+    block.type === "bulletedListItem" || block.type === "numberedListItem" || block.type === "todoListItem";
   const showPlaceholder = block.type === "paragraph" && block.text.length === 0 && isFocused;
 
   const onEnter = () => {
@@ -99,17 +104,31 @@ export function TextBlockView({ block }: TextBlockViewProps) {
     </div>
   );
 
+  const isTodoItem = block.type === "todoListItem";
   const typographyClassName = (smallText ? SMALL_TYPOGRAPHY_CLASS_NAMES : TYPOGRAPHY_CLASS_NAMES)[block.type];
+  const todoTextClassName = isTodoItem && block.checked ? "line-through text-muted-foreground" : "";
 
   return (
     <div className={isListItem ? "flex gap-2" : ""}>
-      <div className={isListItem ? `order-2 min-w-0 flex-1 ${typographyClassName}` : typographyClassName}>
+      <div
+        className={
+          isListItem
+            ? `order-2 min-w-0 flex-1 ${typographyClassName} ${todoTextClassName}`
+            : typographyClassName
+        }
+      >
         {editable}
       </div>
       {isListItem && (
         <div className="order-1 pt-1 text-base leading-7">
           {block.type === "numberedListItem" ? (
             <NumberedList index={getNumberedListIndex(state.document, block.id)} />
+          ) : block.type === "todoListItem" ? (
+            <TodoList
+              checked={block.checked ?? false}
+              onToggle={() => setChecked(block.id, !block.checked)}
+              disabled={!canEdit}
+            />
           ) : (
             <BulletList />
           )}

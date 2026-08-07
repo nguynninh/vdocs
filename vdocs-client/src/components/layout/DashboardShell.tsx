@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Home, Settings, Share2, Trash2 } from "lucide-react";
+import { FileText, Home, Settings, Share2, Trash2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -23,6 +23,7 @@ function useDashboardMenu(): ItemMenuSider[] {
   return [
     { key: "home", href: "/dashboard", label: t("home"), icon: <Home {...iconProps} /> },
     { key: "documents", href: "/documents", label: t("documents"), icon: <FileText {...iconProps} /> },
+    { key: "import", href: "", label: t("importDocument"), icon: <Upload {...iconProps} /> },
     { key: "shared", href: "/shared", label: t("shared"), icon: <Share2 {...iconProps} /> },
     { key: "trash", href: "/trash", label: t("trash"), icon: <Trash2 {...iconProps} /> },
     { key: "settings", href: "/settings", label: t("settings"), icon: <Settings {...iconProps} /> },

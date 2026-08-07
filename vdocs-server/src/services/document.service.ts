@@ -89,10 +89,32 @@ async function requireDocumentAndPermission(
   return { document, permission };
 }
 
-async function createDocument(userId: string, title?: string, workspaceId?: string) {
+async function createDocument(
+  userId: string,
+  title?: string,
+  workspaceId?: string,
+  parentId?: string
+) {
   let targetWorkspaceId = workspaceId;
 
-  if (targetWorkspaceId) {
+  // A parent document pins the workspace — nesting under a page you can see
+  // must land in that page's own workspace, not whatever was passed in.
+  if (parentId) {
+    const parent = await documentRepository.findById(parentId);
+
+    if (!parent || parent.archivedAt) {
+      throw new DocumentNotFoundError(`Document ${parentId} not found`);
+    }
+
+    const permission = await getDocumentPermission(parent, userId);
+    if (!permission || !canEdit(permission)) {
+      throw new DocumentForbiddenError(
+        `User ${userId} cannot add a child document under ${parentId}`
+      );
+    }
+
+    targetWorkspaceId = parent.workspaceId;
+  } else if (targetWorkspaceId) {
     const membership = await documentRepository.findWorkspaceMembership(
       targetWorkspaceId,
       userId
@@ -117,6 +139,7 @@ async function createDocument(userId: string, title?: string, workspaceId?: stri
     workspaceId: targetWorkspaceId,
     ownerId: userId,
     title: title?.trim() ?? "",
+    parentId,
   });
 }
 
@@ -163,6 +186,76 @@ async function updateDocument(
   }
 
   return documentRepository.updateMetadata(documentId, data);
+}
+
+async function trashDocument(documentId: string, userId: string) {
+  const { permission } = await requireDocumentAndPermission(documentId, userId);
+
+  if (!canEdit(permission)) {
+    throw new DocumentForbiddenError(
+      `User ${userId} cannot trash document ${documentId}`
+    );
+  }
+
+  return documentRepository.archive(documentId);
+}
+
+async function listTrash(userId: string, workspaceId?: string) {
+  if (workspaceId) {
+    const membership = await documentRepository.findWorkspaceMembership(
+      workspaceId,
+      userId
+    );
+
+    if (!membership) {
+      throw new DocumentForbiddenError(
+        `User ${userId} is not a member of workspace ${workspaceId}`
+      );
+    }
+
+    return documentRepository.listArchivedForWorkspaces([workspaceId]);
+  }
+
+  const membership = await documentRepository.findPersonalWorkspace(userId);
+
+  if (!membership) {
+    return [];
+  }
+
+  return documentRepository.listArchivedForWorkspaces([membership.workspaceId]);
+}
+
+async function restoreDocument(documentId: string, userId: string) {
+  const { permission } = await requireDocumentAndPermission(documentId, userId);
+
+  if (!canEdit(permission)) {
+    throw new DocumentForbiddenError(
+      `User ${userId} cannot restore document ${documentId}`
+    );
+  }
+
+  return documentRepository.restore(documentId);
+}
+
+async function permanentlyDeleteDocument(documentId: string, userId: string) {
+  const { document, permission } = await requireDocumentAndPermission(
+    documentId,
+    userId
+  );
+
+  if (!canManageAccess(permission)) {
+    throw new DocumentForbiddenError(
+      `User ${userId} cannot permanently delete document ${documentId}`
+    );
+  }
+
+  if (!document.archivedAt) {
+    throw new DocumentForbiddenError(
+      `Document ${documentId} must be trashed before it can be permanently deleted`
+    );
+  }
+
+  await documentRepository.hardDelete(documentId);
 }
 
 async function updateLinkAccess(
@@ -301,6 +394,10 @@ export const documentService = {
   listDocuments,
   getDocument,
   updateDocument,
+  trashDocument,
+  listTrash,
+  restoreDocument,
+  permanentlyDeleteDocument,
   updateLinkAccess,
   listMembers,
   inviteMember,

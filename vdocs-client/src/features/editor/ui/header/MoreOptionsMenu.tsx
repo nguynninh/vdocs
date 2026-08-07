@@ -43,6 +43,7 @@ export interface MoreOptionsMenuProps {
   onDelete?: () => void;
   onOpenUpdates?: () => void;
   onOpenVersionHistory?: () => void;
+  onImport?: () => void;
   wordCount?: number;
   canEdit?: boolean;
 }
@@ -92,6 +93,7 @@ export function MoreOptionsMenu(props: MoreOptionsMenuProps) {
     onDelete,
     onOpenUpdates,
     onOpenVersionHistory,
+    onImport,
     wordCount = 0,
     canEdit = true,
   } = props;
@@ -264,7 +266,7 @@ export function MoreOptionsMenu(props: MoreOptionsMenuProps) {
           {t("undo")}
           <DropdownMenuShortcut>⌘Z</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={onImport}>
           <Download className="size-4" />
           {t("import")}
         </DropdownMenuItem>

@@ -7,6 +7,7 @@ export type BlockType =
   | "heading3"
   | "bulletedListItem"
   | "numberedListItem"
+  | "todoListItem"
   | "quote"
   | "divider"
   | "codeBlock"
@@ -32,4 +33,6 @@ export interface BlockNode {
   table?: TableData;
   /** Selected language for a `codeBlock` (e.g. "java", "sql"); defaults to "plaintext". */
   codeLanguage?: string;
+  /** Checked state for a `todoListItem`; defaults to false/unchecked. */
+  checked?: boolean;
 }

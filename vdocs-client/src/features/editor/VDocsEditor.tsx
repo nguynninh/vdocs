@@ -19,6 +19,7 @@ import type { DocumentPermission } from "./collaboration/collaboration.types";
 
 export interface VDocsEditorProps {
   documentId: string;
+  workspaceId?: string;
   initialTitle?: string;
   initialIcon?: PageIcon;
   initialContent?: Uint8Array;
@@ -30,6 +31,7 @@ export interface VDocsEditorProps {
 
 export function VDocsEditor({
   documentId,
+  workspaceId,
   initialTitle = "",
   initialIcon,
   initialContent,
@@ -212,6 +214,7 @@ export function VDocsEditor({
       >
         <EditorHeaderWithWordCount
           documentId={documentId}
+          workspaceId={workspaceId}
           icon={icon}
           title={title}
           untitledLabel={untitledLabel}
@@ -253,6 +256,7 @@ export function VDocsEditor({
 
 interface EditorHeaderWithWordCountProps {
   documentId: string;
+  workspaceId?: string;
   icon?: PageIcon;
   title: string;
   untitledLabel: string;
@@ -273,6 +277,7 @@ interface EditorHeaderWithWordCountProps {
 
 function EditorHeaderWithWordCount({
   documentId,
+  workspaceId,
   icon,
   title,
   untitledLabel,
@@ -295,6 +300,7 @@ function EditorHeaderWithWordCount({
   return (
     <EditorHeader
       documentId={documentId}
+      workspaceId={workspaceId}
       icon={icon}
       title={title}
       placeholder={untitledLabel}

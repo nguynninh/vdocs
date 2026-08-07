@@ -1,12 +1,13 @@
 import { codeBlockShortcutRule } from "./code.rules";
 import { dividerShortcutRule } from "./divider.rules";
 import { headingShortcutRule } from "./heading.rules";
-import { bulletedListShortcutRule, numberedListShortcutRule } from "./list.rules";
+import { bulletedListShortcutRule, numberedListShortcutRule, todoListShortcutRule } from "./list.rules";
 import type { MarkdownShortcutMatch, MarkdownShortcutRule } from "./MarkdownShortcutRule";
 import { quoteShortcutRule } from "./quote.rules";
 
 const rules: MarkdownShortcutRule[] = [
   headingShortcutRule,
+  todoListShortcutRule,
   bulletedListShortcutRule,
   numberedListShortcutRule,
   quoteShortcutRule,

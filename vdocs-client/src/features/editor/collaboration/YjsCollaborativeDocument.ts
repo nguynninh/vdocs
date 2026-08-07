@@ -212,6 +212,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setChecked(blockId: string, checked: boolean): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      this.blocks.get(index).set("checked", checked);
+    });
+  }
+
   setTableData(blockId: string, rows: string[][]): void {
     this.ydoc.transact(() => {
       const index = this.findBlockIndex(blockId);
@@ -341,6 +353,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       const rowHeights = block.get("rowHeights") as number[] | undefined;
       const marks = block.get("marks") as MarkRange[] | undefined;
       const codeLanguage = block.get("codeLanguage") as string | undefined;
+      const checked = block.get("checked") as boolean | undefined;
 
       blocks.push({
         id: block.get("id") as string,
@@ -349,6 +362,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         ...(marks?.length ? { marks } : {}),
         ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights } } : {}),
         ...(codeLanguage ? { codeLanguage } : {}),
+        ...(checked !== undefined ? { checked } : {}),
       });
     }
 
@@ -376,6 +390,10 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
 
       if (input.table) {
         block.set("table", input.table.map((row) => [...row]));
+      }
+
+      if (input.type === "todoListItem") {
+        block.set("checked", false);
       }
 
       const afterIndex = input.afterBlockId

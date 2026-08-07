@@ -6,7 +6,7 @@ import type { BlockNode } from "../../engine/block/block.types";
 import { useEditor } from "../EditorProvider";
 
 export function useAutoformatText(block: BlockNode) {
-  const { updateBlockText, convertBlockType, insertBlockAfterFocused, toggleMark } = useEditor();
+  const { updateBlockText, convertBlockType, insertBlockAfterFocused, toggleMark, setChecked } = useEditor();
 
   return useCallback(
     (text: string) => {
@@ -14,6 +14,9 @@ export function useAutoformatText(block: BlockNode) {
         const match = matchMarkdownShortcut(text);
         if (match) {
           convertBlockType(block.id, match.blockType, match.text);
+          if (match.blockType === "todoListItem" && match.checked) {
+            setChecked(block.id, true);
+          }
           // Divider has no editable text of its own, so hop straight to a
           // fresh paragraph below it instead of leaving nothing focused.
           if (match.blockType === "divider") {
@@ -39,6 +42,6 @@ export function useAutoformatText(block: BlockNode) {
 
       updateBlockText(block.id, text);
     },
-    [block.id, block.type, updateBlockText, convertBlockType, insertBlockAfterFocused, toggleMark],
+    [block.id, block.type, updateBlockText, convertBlockType, insertBlockAfterFocused, toggleMark, setChecked],
   );
 }

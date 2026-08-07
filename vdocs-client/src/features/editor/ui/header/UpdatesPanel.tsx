@@ -239,7 +239,7 @@ function AnalyticsTab({
                   <span className="truncate text-foreground">{viewer.name}</span>
                 </div>
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  {format.relativeTime(new Date(viewer.lastViewedAt))}
+                  {format.relativeTime(new Date(viewer.lastViewedAt), new Date())}
                 </span>
               </li>
             ))}

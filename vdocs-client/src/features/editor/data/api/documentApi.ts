@@ -5,6 +5,7 @@ export type LinkAccess = "NONE" | "VIEWER" | "COMMENTER" | "EDITOR";
 
 export interface DocumentApiResponse {
   id: string;
+  workspaceId: string;
   title: string;
   icon: string | null;
   permission: DocumentPermission;
@@ -15,9 +16,18 @@ export interface DocumentApiResponse {
 
 export interface DocumentSummaryApiResponse {
   id: string;
+  parentId: string | null;
   title: string;
   icon: string | null;
   updatedAt: string;
+}
+
+export interface DocumentTrashApiResponse {
+  id: string;
+  title: string;
+  icon: string | null;
+  updatedAt: string;
+  archivedAt: string;
 }
 
 export interface UpdateDocumentPayload {
@@ -36,8 +46,8 @@ export interface DocumentMemberApiResponse {
 }
 
 export const documentApi = {
-  create: (title?: string, workspaceId?: string) =>
-    api.post<{ id: string }>("/api/documents", { title, workspaceId }),
+  create: (title?: string, workspaceId?: string, parentId?: string) =>
+    api.post<{ id: string }>("/api/documents", { title, workspaceId, parentId }),
 
   list: (workspaceId?: string) =>
     api.get<DocumentSummaryApiResponse[]>("/api/documents", {
@@ -52,6 +62,20 @@ export const documentApi = {
       `/api/documents/${documentId}`,
       payload,
     ),
+
+  moveToTrash: (documentId: string) =>
+    api.delete<{ id: string }>(`/api/documents/${documentId}`),
+
+  listTrash: (workspaceId?: string) =>
+    api.get<DocumentTrashApiResponse[]>("/api/documents/trash", {
+      params: workspaceId ? { workspaceId } : undefined,
+    }),
+
+  restore: (documentId: string) =>
+    api.post<{ id: string }>(`/api/documents/${documentId}/restore`),
+
+  permanentlyDelete: (documentId: string) =>
+    api.delete<{ deleted: boolean }>(`/api/documents/${documentId}/permanent`),
 
   updateAccess: (documentId: string, linkAccess: LinkAccess) =>
     api.patch<{ id: string; linkAccess: LinkAccess }>(

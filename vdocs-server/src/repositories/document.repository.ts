@@ -36,12 +36,18 @@ function findPersonalWorkspace(userId: string) {
   });
 }
 
-function create(input: { workspaceId: string; ownerId: string; title: string }) {
+function create(input: {
+  workspaceId: string;
+  ownerId: string;
+  title: string;
+  parentId?: string;
+}) {
   return prisma.document.create({
     data: {
       workspaceId: input.workspaceId,
       ownerId: input.ownerId,
       title: input.title,
+      parentId: input.parentId,
     },
   });
 }
@@ -63,6 +69,36 @@ function updateMetadata(
   return prisma.document.update({
     where: { id: documentId },
     data,
+  });
+}
+
+function archive(documentId: string) {
+  return prisma.document.update({
+    where: { id: documentId },
+    data: { archivedAt: new Date() },
+  });
+}
+
+function restore(documentId: string) {
+  return prisma.document.update({
+    where: { id: documentId },
+    data: { archivedAt: null },
+  });
+}
+
+function hardDelete(documentId: string) {
+  return prisma.document.delete({
+    where: { id: documentId },
+  });
+}
+
+function listArchivedForWorkspaces(workspaceIds: string[]) {
+  return prisma.document.findMany({
+    where: {
+      workspaceId: { in: workspaceIds },
+      archivedAt: { not: null },
+    },
+    orderBy: { archivedAt: "desc" },
   });
 }
 
@@ -150,6 +186,10 @@ export const documentRepository = {
   create,
   listForWorkspaces,
   updateMetadata,
+  archive,
+  restore,
+  hardDelete,
+  listArchivedForWorkspaces,
   updateLinkAccess,
   listMembers,
   findUserByEmail,

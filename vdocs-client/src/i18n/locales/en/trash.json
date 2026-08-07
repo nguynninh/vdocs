@@ -1,0 +1,25 @@
+{
+  "trash": {
+    "title": "Trash",
+    "description": "Deleted documents are kept for 30 days before being permanently deleted.",
+    "restoreAll": "Restore all",
+    "deleteAll": "Delete all permanently",
+    "columnName": "Name",
+    "columnDeletedAt": "Deleted at",
+    "columnExpiresAt": "Deletes in",
+    "expiresInDays": "{days} days",
+    "restore": "Restore",
+    "deletePermanently": "Delete permanently",
+    "untitledDocument": "Untitled",
+    "empty": {
+      "title": "Trash is empty",
+      "description": "Documents you delete will show up here."
+    },
+    "error": "Failed to load trash. Please try again.",
+    "confirmRestoreAll": "Restore all documents in trash?",
+    "confirmDeleteAll": "Permanently delete all documents in trash? This cannot be undone.",
+    "confirmDeletePermanently": "Permanently delete \"{title}\"? This cannot be undone.",
+    "restoredToast": "Restored successfully",
+    "restoredToastDescription": "\"{title}\" has been restored to its original location."
+  }
+}

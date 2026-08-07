@@ -8,6 +8,7 @@ import {
   Heading3,
   List,
   ListOrdered,
+  ListTodo,
   MessageSquare,
   Palette,
   Plus,
@@ -45,6 +46,7 @@ const TURN_INTO_OPTIONS: Array<{ type: BlockType; label: string; icon: typeof Ty
   { type: "heading3", label: "Heading 3", icon: Heading3 },
   { type: "bulletedListItem", label: "Bulleted list", icon: List },
   { type: "numberedListItem", label: "Numbered list", icon: ListOrdered },
+  { type: "todoListItem", label: "To-do list", icon: ListTodo },
   { type: "quote", label: "Quote", icon: Quote },
 ];
 

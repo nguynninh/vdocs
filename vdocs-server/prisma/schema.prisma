@@ -64,6 +64,7 @@ model WorkspaceMember {
 model Document {
   id             String    @id @default(uuid())
   workspaceId    String
+  parentId       String?
   ownerId        String
   title          String    @default("Untitled")
   icon           String?
@@ -75,11 +76,15 @@ model Document {
   archivedAt     DateTime?
 
   workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent     Document?         @relation("DocumentTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Document[]        @relation("DocumentTree")
   owner      User              @relation("DocumentOwner", fields: [ownerId], references: [id])
   members    DocumentMember[]
   shareLinks ShareLink[]
   versions   DocumentVersion[]
   views      DocumentView[]
+
+  @@index([parentId])
 }
 
 // One row per (viewer, day), upserted with an incrementing `count` — repeat

@@ -13,6 +13,7 @@ import type { UpdateMemberRoleRequest } from "../dtos/request/UpdateMemberRoleRe
 import type {
   DocumentResponse,
   DocumentSummaryResponse,
+  DocumentTrashResponse,
   DocumentUpdateResponse,
 } from "../dtos/response/DocumentResponse.ts";
 import type { DocumentMemberResponse } from "../dtos/response/DocumentMemberResponse.ts";
@@ -97,7 +98,8 @@ documentRouter.post(
       const document = await documentService.createDocument(
         userId,
         req.body?.title,
-        req.body?.workspaceId
+        req.body?.workspaceId,
+        req.body?.parentId
       );
 
       sendSuccess(res, { id: document.id }, "Created", 201);
@@ -116,6 +118,7 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
 
     const response: DocumentSummaryResponse[] = documents.map((document) => ({
       id: document.id,
+      parentId: document.parentId,
       title: document.title,
       icon: document.icon,
       updatedAt: document.updatedAt.toISOString(),
@@ -126,6 +129,63 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
     handleError(error, res);
   }
 });
+
+documentRouter.get("/trash", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const workspaceId =
+      typeof req.query.workspaceId === "string" ? req.query.workspaceId : undefined;
+    const documents = await documentService.listTrash(userId, workspaceId);
+
+    const response: DocumentTrashResponse[] = documents.map((document) => ({
+      id: document.id,
+      title: document.title,
+      icon: document.icon,
+      updatedAt: document.updatedAt.toISOString(),
+      archivedAt: (document.archivedAt as Date).toISOString(),
+    }));
+
+    sendSuccess(res, response);
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
+documentRouter.post(
+  "/:documentId/restore",
+  requireAuth,
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const document = await documentService.restoreDocument(
+        req.params.documentId,
+        userId
+      );
+
+      sendSuccess(res, { id: document.id });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.delete(
+  "/:documentId/permanent",
+  requireAuth,
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      await documentService.permanentlyDeleteDocument(
+        req.params.documentId,
+        userId
+      );
+
+      sendSuccess(res, { deleted: true });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
 
 documentRouter.get(
   "/share/:token",
@@ -139,6 +199,7 @@ documentRouter.get(
 
       const response: DocumentResponse = {
         id: document.id,
+        workspaceId: document.workspaceId,
         title: document.title,
         icon: document.icon,
         permission,
@@ -203,6 +264,7 @@ documentRouter.get(
 
       const response: DocumentResponse = {
         id: document.id,
+        workspaceId: document.workspaceId,
         title: document.title,
         icon: document.icon,
         permission,
@@ -421,6 +483,24 @@ documentRouter.patch(
       };
 
       sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.delete(
+  "/:documentId",
+  requireAuth,
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const document = await documentService.trashDocument(
+        req.params.documentId,
+        userId
+      );
+
+      sendSuccess(res, { id: document.id });
     } catch (error) {
       handleError(error, res);
     }

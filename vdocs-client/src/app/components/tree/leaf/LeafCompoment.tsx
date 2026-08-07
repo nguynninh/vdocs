@@ -3,6 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Collapse, type CollapseProps } from "antd";
 import { RightOutlined, PlusOutlined, EllipsisOutlined, FileOutlined } from "@ant-design/icons";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import css from "./LeafCompoment.module.css";
 
 type LeafItem = NonNullable<CollapseProps["items"]>[number];
@@ -20,6 +25,7 @@ type LeafComponentProps = {
     onMore?: (id: React.Key) => void;
     onAdd?: (id: React.Key) => void;
     onMove?: (dragId: React.Key, targetId: React.Key, mode: DropMode) => void;
+    renderMoreMenu?: (id: React.Key) => React.ReactNode;
 };
 
 const DRAG_START_DISTANCE = 4;
@@ -31,7 +37,8 @@ function isInteractiveTarget(target: EventTarget | null) {
 }
 
 const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) => {
-    const { id, label, children, items, styles, active, onClick, onMore, onAdd, onMove, onExpandChange } = props;
+    const { id, label, children, items, styles, active, onClick, onMore, onAdd, onMove, onExpandChange, renderMoreMenu } = props;
+    const [moreOpen, setMoreOpen] = useState(false);
     const collapseItem = items ?? { key: id ?? String(label), label, children };
     const itemKey = collapseItem.key ?? id;
 
@@ -96,6 +103,10 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
     }, [id, onMove]);
     const handleMore: React.MouseEventHandler<HTMLSpanElement> = (event) => {
         event.stopPropagation();
+        if (renderMoreMenu) {
+            setMoreOpen(true);
+            return;
+        }
         onMore?.(id);
     };
     const handleAdd: React.MouseEventHandler<HTMLSpanElement> = (event) => {
@@ -173,11 +184,31 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
                     {
                         ...collapseItem,
                         key: itemKey,
-                        extra: hover ? (
+                        extra: hover || moreOpen ? (
                             <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                                <span className={css.action} onClick={handleMore}>
-                                    <EllipsisOutlined />
-                                </span>
+                                {renderMoreMenu ? (
+                                    <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
+                                        <DropdownMenuTrigger
+                                            nativeButton={false}
+                                            render={
+                                                <span className={css.action} onClick={handleMore}>
+                                                    <EllipsisOutlined />
+                                                </span>
+                                            }
+                                        />
+                                        <DropdownMenuContent
+                                            align="start"
+                                            className="w-56"
+                                            onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                                        >
+                                            {renderMoreMenu(id)}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : (
+                                    <span className={css.action} onClick={handleMore}>
+                                        <EllipsisOutlined />
+                                    </span>
+                                )}
                                 <span className={css.action} onClick={handleAdd}>
                                     <PlusOutlined />
                                 </span>

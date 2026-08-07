@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import ImportDocumentDialog from "@/src/components/layout/ImportDocumentDialog";
+import { importDocumentFile } from "@/src/features/editor/import/importDocumentFile";
 import { PageIconGlyph } from "../icon-picker/PageIconGlyph";
 import type { PageIcon } from "../icon-picker/PageIcon";
 import { ActivityPanel, type ActivityEntry } from "./ActivityPanel";
@@ -22,6 +24,7 @@ import { UpdatesPanel } from "./UpdatesPanel";
 
 export interface EditorHeaderProps {
   documentId: string;
+  workspaceId?: string;
   icon?: PageIcon;
   title: string;
   placeholder?: string;
@@ -51,6 +54,7 @@ export interface EditorHeaderProps {
 export function EditorHeader(props: EditorHeaderProps) {
   const {
     documentId,
+    workspaceId,
     icon,
     title,
     placeholder,
@@ -81,6 +85,7 @@ export function EditorHeader(props: EditorHeaderProps) {
   const [starred, setStarred] = useState(isStarred);
   const [updatesSidebarOpen, setUpdatesSidebarOpen] = useState(false);
   const [updatesSidebarTab, setUpdatesSidebarTab] = useState<"updates" | "analytics">("updates");
+  const [isImportDocumentOpen, setIsImportDocumentOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number | null>(null);
 
@@ -256,6 +261,7 @@ export function EditorHeader(props: EditorHeaderProps) {
                 setUpdatesSidebarTab("updates");
                 setUpdatesSidebarOpen(true);
               }}
+              onImport={() => setIsImportDocumentOpen(true)}
               wordCount={wordCount}
               canEdit={canEdit}
             />
@@ -280,6 +286,13 @@ export function EditorHeader(props: EditorHeaderProps) {
         />
       </div>
     )}
+    <ImportDocumentDialog
+      open={isImportDocumentOpen}
+      onOpenChange={setIsImportDocumentOpen}
+      onImport={(values) => importDocumentFile(values, workspaceId)}
+      currentPageId={documentId}
+      currentPageTitle={title}
+    />
     </>
   );
 }

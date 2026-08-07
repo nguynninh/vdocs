@@ -1,0 +1,25 @@
+{
+  "trash": {
+    "title": "Thùng rác",
+    "description": "Các tài liệu đã xóa sẽ được giữ trong 30 ngày trước khi bị xóa vĩnh viễn.",
+    "restoreAll": "Khôi phục tất cả",
+    "deleteAll": "Xóa vĩnh viễn tất cả",
+    "columnName": "Tên",
+    "columnDeletedAt": "Thời gian xóa",
+    "columnExpiresAt": "Sẽ bị xóa sau",
+    "expiresInDays": "{days} ngày",
+    "restore": "Khôi phục",
+    "deletePermanently": "Xóa vĩnh viễn",
+    "untitledDocument": "Không có tiêu đề",
+    "empty": {
+      "title": "Thùng rác trống",
+      "description": "Các tài liệu bạn xóa sẽ xuất hiện ở đây."
+    },
+    "error": "Không thể tải thùng rác. Vui lòng thử lại.",
+    "confirmRestoreAll": "Khôi phục tất cả tài liệu trong thùng rác?",
+    "confirmDeleteAll": "Xóa vĩnh viễn tất cả tài liệu trong thùng rác? Hành động này không thể hoàn tác.",
+    "confirmDeletePermanently": "Xóa vĩnh viễn \"{title}\"? Hành động này không thể hoàn tác.",
+    "restoredToast": "Đã khôi phục thành công",
+    "restoredToastDescription": "\"{title}\" đã được khôi phục về vị trí gốc."
+  }
+}

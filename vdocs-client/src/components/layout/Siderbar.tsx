@@ -3,9 +3,19 @@
 import {
   ChevronDown,
   ChevronsUpDown,
+  Copy,
+  ExternalLink,
+  EyeOff,
+  FolderInput,
+  Grid2x2,
   HomeIcon,
+  Link as LinkIcon,
   LogOut,
+  PanelRight,
+  PenLine,
   Plus,
+  Star,
+  Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -29,12 +39,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator"
 import CreateWorkspaceDialog, {
   type CreateWorkspaceValues,
 } from "@/src/components/layout/CreateWorkspaceDialog";
+import ImportDocumentDialog, {
+  type ImportDocumentValues,
+} from "@/src/components/layout/ImportDocumentDialog";
+import { importDocumentFile } from "@/src/features/editor/import/importDocumentFile";
 import type { AuthUser } from "@/src/features/auth/types";
 import { useSidebarWidth } from "@/src/components/layout/sidebar-width";
 import { getWorkspaceIconOption } from "@/src/components/layout/workspace-icons";
@@ -44,9 +59,43 @@ import {
   documentApi,
   type DocumentSummaryApiResponse,
 } from "@/src/features/editor/data/api/documentApi";
-import TreeCommponent, { type TreeDataNode } from '@/src/app/components/tree/TreeComponent'
+import TreeComponent, { type TreeDataNode } from '@/src/app/components/tree/TreeComponent'
 
 const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
+
+function buildDocumentTree(
+  documents: DocumentSummaryApiResponse[],
+  untitledLabel: string
+): TreeDataNode[] {
+  const nodeById = new Map<string, TreeDataNode>(
+    documents.map((document) => [
+      document.id,
+      {
+        key: document.id,
+        title: document.title || untitledLabel,
+        link: `/document/${document.id}`,
+        isLeaf: true,
+        children: [],
+      },
+    ])
+  );
+
+  const roots: TreeDataNode[] = [];
+
+  for (const document of documents) {
+    const node = nodeById.get(document.id)!;
+    const parent = document.parentId ? nodeById.get(document.parentId) : undefined;
+
+    if (parent) {
+      parent.isLeaf = false;
+      (parent.children ??= []).push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
 
 function SidebarResizeHandle() {
   const { setWidth, commitWidth, setIsResizing } = useSidebarWidth();
@@ -123,6 +172,7 @@ export interface Props {
   menu: ItemMenuSider[],
   onLogout?: (id: string) => void,
   onCreateWorkspace?: (values: CreateWorkspaceValues) => Promise<void> | void,
+  onImportDocument?: (values: ImportDocumentValues) => Promise<void> | void,
 }
 
 export default function Siderbar(props: Props) {
@@ -137,9 +187,14 @@ export default function Siderbar(props: Props) {
     menu,
     onLogout,
     onCreateWorkspace,
+    onImportDocument,
   } = props;
   const { state } = useSidebar();
+  const personalWorkspaceLabel = `${user.name}'s workspace`;
+  const personalWorkspace = workspaceGroups.find((group) => group.label === personalWorkspaceLabel);
+  const teamWorkspaceGroups = workspaceGroups.filter((group) => group.id !== personalWorkspace?.id);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
+  const [isImportDocumentOpen, setIsImportDocumentOpen] = useState(false);
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<WorkspaceGroup | null>(null);
   const [documents, setDocuments] = useState<DocumentSummaryApiResponse[]>([]);
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
@@ -193,7 +248,137 @@ export default function Siderbar(props: Props) {
     return () => {
       ignore = true;
     };
-  }, [selectedWorkspace]);
+    // Refetching on every pathname change (not just selectedWorkspace) picks
+    // up documents created elsewhere in the tree — e.g. importing a file
+    // from inside an open document, which this sidebar has no other way of
+    // hearing about since it doesn't remount when you navigate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkspace, pathname]);
+
+  async function refreshDocuments() {
+    if (!selectedWorkspace) return;
+
+    try {
+      const response = await documentApi.list(selectedWorkspace.id);
+      setDocuments(response.data);
+    } catch (error) {
+      console.error("Failed to load workspace documents", error);
+    }
+  }
+
+  async function handleAddChildDocument(parentId: React.Key) {
+    if (!selectedWorkspace) return;
+
+    try {
+      const response = await documentApi.create(
+        undefined,
+        selectedWorkspace.id,
+        String(parentId)
+      );
+      await refreshDocuments();
+      router.push(`/document/${response.data.id}`);
+    } catch (error) {
+      console.error("Failed to create document", error);
+    }
+  }
+
+  async function handleRenameDocument(documentId: React.Key) {
+    const current = documents.find((document) => document.id === documentId);
+    const nextTitle = window.prompt(t("renamePrompt"), current?.title ?? "");
+    if (nextTitle == null || nextTitle === current?.title) return;
+
+    try {
+      await documentApi.update(String(documentId), { title: nextTitle });
+      await refreshDocuments();
+    } catch (error) {
+      console.error("Failed to rename document", error);
+    }
+  }
+
+  async function handleCopyDocumentLink(documentId: React.Key) {
+    try {
+      const response = await documentApi.createShareLink(String(documentId));
+      const shareUrl = `${window.location.origin}/share/${response.data.token}`;
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (error) {
+      console.error("Failed to copy document link", error);
+    }
+  }
+
+  function handleOpenDocumentInNewTab(documentId: React.Key) {
+    window.open(`/document/${String(documentId)}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleMoveDocumentToTrash(documentId: React.Key) {
+    const current = documents.find((document) => document.id === documentId);
+    const confirmed = window.confirm(
+      t("confirmMoveToTrash", { title: current?.title || t("untitledDocument") })
+    );
+    if (!confirmed) return;
+
+    try {
+      await documentApi.moveToTrash(String(documentId));
+      await refreshDocuments();
+
+      if (pathname === `/document/${String(documentId)}`) {
+        router.push("/document");
+      }
+    } catch (error) {
+      console.error("Failed to move document to trash", error);
+    }
+  }
+
+  function renderTreeItemMenu(documentId: React.Key) {
+    return (
+      <>
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <Star className="h-4 w-4" />
+          {t("menuAddToFavorites")}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <EyeOff className="h-4 w-4" />
+          {t("menuRemoveFromRecents")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => handleCopyDocumentLink(documentId)}>
+          <LinkIcon className="h-4 w-4" />
+          {t("menuCopyLink")}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <Copy className="h-4 w-4" />
+          {t("menuDuplicate")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleRenameDocument(documentId)}>
+          <PenLine className="h-4 w-4" />
+          {t("menuRename")}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <FolderInput className="h-4 w-4" />
+          {t("menuMoveTo")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => handleMoveDocumentToTrash(documentId)}
+        >
+          <Trash2 className="h-4 w-4" />
+          {t("menuMoveToTrash")}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <Grid2x2 className="h-4 w-4" />
+          {t("menuTurnIntoWiki")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleOpenDocumentInNewTab(documentId)}>
+          <ExternalLink className="h-4 w-4" />
+          {t("menuOpenInNewTab")}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled title={t("menuComingSoon")}>
+          <PanelRight className="h-4 w-4" />
+          {t("menuOpenInSidePeek")}
+        </DropdownMenuItem>
+      </>
+    );
+  }
 
   async function handleSelectWorkspace(group: WorkspaceGroup) {
     setSelectedWorkspace(group);
@@ -285,34 +470,69 @@ export default function Siderbar(props: Props) {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {menu.map(({ key, href, label, icon }) => (
-                  <SidebarMenuItem key={key}>
-                    <SidebarMenuButton
-                      isActive={pathname === href}
-                      tooltip={label}
-                      render={<Link href={href} />}>
-                      {icon}
-                      <h3>{label}</h3>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {menu.map(({ key, href, label, icon }) =>
+                  key === "import" ? (
+                    <SidebarMenuItem key={key}>
+                      <SidebarMenuButton
+                        tooltip={label}
+                        onClick={() => setIsImportDocumentOpen(true)}
+                      >
+                        {icon}
+                        <h3>{label}</h3>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : (
+                    <SidebarMenuItem key={key}>
+                      <SidebarMenuButton
+                        isActive={pathname === href}
+                        tooltip={label}
+                        render={<Link href={href} />}>
+                        {icon}
+                        <h3>{label}</h3>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
+        {!selectedWorkspace && personalWorkspace && (
+        <SidebarGroup>
+          <SidebarGroupLabel>{t("private")}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {(() => {
+                const { id, label, icon } = personalWorkspace;
+                const { icon: Icon, className } = getWorkspaceIconOption(icon);
+
+                return (
+                  <SidebarMenuItem key={id}>
+                    <SidebarMenuButton
+                      tooltip={label}
+                      onClick={() => handleSelectWorkspace(personalWorkspace)}
+                    >
+                      <span className={`flex size-6 shrink-0 items-center justify-center rounded-md ${className}`}>
+                        <Icon className="size-3.5" strokeWidth={2.25} />
+                      </span>
+                      <h3 className="flex-1 truncate">{label}</h3>
+                      <ChevronDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/70" />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })()}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        )}
+
         {!selectedWorkspace && (
         <SidebarGroup>
           <SidebarGroupLabel>{t("workspace")}</SidebarGroupLabel>
-          <SidebarGroupAction
-            title={t("addWorkspace")}
-            onClick={() => setIsCreateWorkspaceOpen(true)}
-          >
-            <Plus />
-          </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
-              {workspaceGroups.map((group) => {
+              {teamWorkspaceGroups.map((group) => {
                 const { id, label, icon } = group;
                 const { icon: Icon, className } = getWorkspaceIconOption(icon);
 
@@ -347,28 +567,11 @@ export default function Siderbar(props: Props) {
               <Plus />
             </SidebarGroupAction>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {documents.map((document) => (
-                  <SidebarMenuItem key={document.id}>
-                    <SidebarMenuButton
-                      isActive={pathname === `/document/${document.id}`}
-                      tooltip={document.title || t("untitledDocument")}
-                      render={<Link href={`/document/${document.id}`} />}>
-                      <h3 className="truncate">
-                        {document.title || t("untitledDocument")}
-                      </h3>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-                {/* <TreeCommponent treeData={documents.map((document) => {
-                  TreeDataNode(
-                    key=document.id,
-                        title: {document.title || t("untitledDocument")}
-                        link?: `/document/${document.id}`,
-                        children?: TreeDataNode[];
-                  )
-                }}/>  */}
-              </SidebarMenu>
+              <TreeComponent
+                treeData={buildDocumentTree(documents, t("untitledDocument"))}
+                onAdd={handleAddChildDocument}
+                renderMoreMenu={renderTreeItemMenu}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         )}
@@ -423,6 +626,18 @@ export default function Siderbar(props: Props) {
         open={isCreateWorkspaceOpen}
         onOpenChange={setIsCreateWorkspaceOpen}
         onCreate={onCreateWorkspace}
+      />
+      <ImportDocumentDialog
+        open={isImportDocumentOpen}
+        onOpenChange={setIsImportDocumentOpen}
+        onImport={
+          onImportDocument ??
+          (async (values) => {
+            const result = await importDocumentFile(values, selectedWorkspace?.id);
+            await refreshDocuments();
+            return result;
+          })
+        }
       />
     </Sidebar>
   );

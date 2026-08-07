@@ -77,6 +77,7 @@
     "importOpenDocument": "打开文档",
     "importDone": "完成",
     "menuAddToFavorites": "添加到收藏",
+    "menuRemoveFromFavorites": "从收藏中移除",
     "menuRemoveFromRecents": "从最近使用中移除",
     "menuCopyLink": "复制链接",
     "menuDuplicate": "复制页面",

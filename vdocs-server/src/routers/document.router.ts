@@ -119,6 +119,7 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
     const response: DocumentSummaryResponse[] = documents.map((document) => ({
       id: document.id,
       parentId: document.parentId,
+      order: document.order,
       title: document.title,
       icon: document.icon,
       updatedAt: document.updatedAt.toISOString(),

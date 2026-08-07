@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Document" ADD COLUMN     "order" DOUBLE PRECISION NOT NULL DEFAULT 0;

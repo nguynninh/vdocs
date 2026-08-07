@@ -14,6 +14,7 @@ import {
 } from "./middleware/auth.middleware.ts";
 import { documentRouter } from "./routers/document.router.ts";
 import { workspaceRouter } from "./routers/workspace.router.ts";
+import { fileRouter } from "./routers/file.router.ts";
 import { createRealtimeServer } from "./realtime/createRealtimeServer.ts";
 import { scheduleDailyVersionJob } from "./jobs/dailyVersionJob.ts";
 import { sendError, sendSuccess } from "./utils/apiResponse.ts";
@@ -88,6 +89,7 @@ app.post("/api/auth/logout", (_req: Request, res: Response) => {
 
 app.use("/api/documents", documentRouter);
 app.use("/api/workspaces", workspaceRouter);
+app.use("/api", fileRouter);
 
 app.use((_req: Request, res: Response) => {
   sendError(res, 404, "Route not found");

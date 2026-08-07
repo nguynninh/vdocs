@@ -13,6 +13,7 @@ import type { ShareMember, AssignableRole } from "./ui/header/SharePanel";
 import { PageHeader } from "./ui/page-header";
 import { Toolbar } from "./ui/toolbar";
 import { documentApi, type LinkAccess } from "./data/api/documentApi";
+import { emitDocumentMetadataUpdated } from "./data/documentEvents";
 import { getMe } from "@/src/features/auth/api";
 import { debounce } from "./utils/debounce";
 import type { DocumentPermission } from "./collaboration/collaboration.types";
@@ -188,9 +189,14 @@ export function VDocsEditor({
   const saveMetadata = useMemo(
     () =>
       debounce((payload: { title?: string; icon?: string }) => {
-        documentApi.update(documentId, payload).catch((error) => {
-          console.error("Failed to save document metadata", error);
-        });
+        documentApi
+          .update(documentId, payload)
+          .then(() => {
+            emitDocumentMetadataUpdated({ documentId, ...payload });
+          })
+          .catch((error) => {
+            console.error("Failed to save document metadata", error);
+          });
       }, 500),
     [documentId],
   );

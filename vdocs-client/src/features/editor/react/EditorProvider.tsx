@@ -11,11 +11,16 @@ import {
   type ReactNode,
 } from "react";
 
-import type { BlockType } from "../engine/block/block.types";
+import type { BlockType, FileData } from "../engine/block/block.types";
 import { findBlockIndex } from "../engine/document/findBlock";
 import type { FontStyle } from "../engine/document/document.types";
 import type { MarkType } from "../engine/mark/mark.types";
-import { toggleMark as toggleMarkRange } from "../engine/mark/toggleMark";
+import {
+  toggleMark as toggleMarkRange,
+  applyMark as applyMarkRange,
+  removeMark as removeMarkRange,
+} from "../engine/mark/toggleMark";
+import type { MarkData } from "../engine/mark/mark.types";
 import type { EditorState } from "../engine/state/editorState.types";
 import { generateId } from "../engine/utils/id";
 import { takePendingImportBlocks } from "../import/pendingImport";
@@ -44,6 +49,7 @@ export interface EditorProviderProps {
 }
 
 interface EditorContextValue {
+  documentId: string;
   state: EditorState;
   connectionState: ConnectionState;
   permission: DocumentPermission;
@@ -57,16 +63,20 @@ interface EditorContextValue {
   setSmallText: (smallText: boolean) => void;
   updateBlockText: (blockId: string, text: string) => void;
   toggleMark: (blockId: string, start: number, end: number, type: MarkType) => void;
+  applyMark: (blockId: string, start: number, end: number, type: MarkType, data: MarkData) => void;
+  removeMark: (blockId: string, start: number, end: number, type: MarkType) => void;
   updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
   toggleTableCellMark: (blockId: string, row: number, col: number, start: number, end: number, type: MarkType) => void;
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
+  setTableCellFile: (blockId: string, row: number, col: number, file: FileData | null) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
   insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
   mergeBlockIntoPrevious: (blockId: string) => void;
   convertBlockType: (blockId: string, blockType: BlockType, text?: string) => void;
   setBlockCodeLanguage: (blockId: string, language: string) => void;
   setChecked: (blockId: string, checked: boolean) => void;
+  setBlockFileData: (blockId: string, file: FileData) => void;
   convertBlockTypeForBlocks: (blockIds: string[], blockType: BlockType) => void;
   deleteBlockRange: (startIndex: number, endIndex: number) => void;
   splitPasteIntoBlocks: (blockId: string, before: string, lines: string[], after: string) => void;
@@ -213,6 +223,30 @@ export function EditorProvider({
     [state.document],
   );
 
+  const applyMark = useCallback(
+    (blockId: string, start: number, end: number, type: MarkType, data: MarkData) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      if (!block) return;
+
+      const nextMarks = applyMarkRange(block.marks ?? [], type, start, end, data);
+      documentRef.current?.setMarks(blockId, nextMarks);
+    },
+    [state.document],
+  );
+
+  const removeMark = useCallback(
+    (blockId: string, start: number, end: number, type: MarkType) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      if (!block) return;
+
+      const nextMarks = removeMarkRange(block.marks ?? [], type, start, end);
+      documentRef.current?.setMarks(blockId, nextMarks);
+    },
+    [state.document],
+  );
+
   const updateTableCell = useCallback(
     (blockId: string, row: number, col: number, text: string) => {
       documentRef.current?.setTableCell(blockId, row, col, text);
@@ -239,6 +273,13 @@ export function EditorProvider({
   const updateTableRowHeight = useCallback((blockId: string, row: number, height: number) => {
     documentRef.current?.setTableRowHeight(blockId, row, height);
   }, []);
+
+  const setTableCellFile = useCallback(
+    (blockId: string, row: number, col: number, file: FileData | null) => {
+      documentRef.current?.setTableCellFile(blockId, row, col, file);
+    },
+    [],
+  );
 
   // Used by paste-detection: pasted tabular clipboard text becomes a table
   // block (with the parsed rows already filled in) inserted right after the
@@ -319,6 +360,10 @@ export function EditorProvider({
 
   const setChecked = useCallback((blockId: string, checked: boolean) => {
     documentRef.current?.setChecked(blockId, checked);
+  }, []);
+
+  const setBlockFileData = useCallback((blockId: string, file: FileData) => {
+    documentRef.current?.setFileData(blockId, file);
   }, []);
 
   const convertBlockTypeForBlocks = useCallback((blockIds: string[], blockType: BlockType) => {
@@ -501,6 +546,7 @@ export function EditorProvider({
 
   const value = useMemo<EditorContextValue>(
     () => ({
+      documentId,
       state,
       connectionState,
       permission,
@@ -514,16 +560,20 @@ export function EditorProvider({
       setSmallText,
       updateBlockText,
       toggleMark,
+      applyMark,
+      removeMark,
       updateTableCell,
       toggleTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
+      setTableCellFile,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
       setChecked,
+      setBlockFileData,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,
@@ -535,6 +585,7 @@ export function EditorProvider({
       restoreVersion,
     }),
     [
+      documentId,
       state,
       connectionState,
       permission,
@@ -545,16 +596,20 @@ export function EditorProvider({
       setSmallText,
       updateBlockText,
       toggleMark,
+      applyMark,
+      removeMark,
       updateTableCell,
       toggleTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
+      setTableCellFile,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       mergeBlockIntoPrevious,
       convertBlockType,
       setBlockCodeLanguage,
       setChecked,
+      setBlockFileData,
       convertBlockTypeForBlocks,
       deleteBlockRange,
       splitPasteIntoBlocks,

@@ -1,4 +1,4 @@
-import type { BlockType } from "../engine/block/block.types";
+import type { BlockType, FileData } from "../engine/block/block.types";
 import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 
@@ -60,6 +60,9 @@ export interface CollaborativeDocument {
   /** Sets a `todoListItem`'s checked state. */
   setChecked(blockId: string, checked: boolean): void;
 
+  /** Sets a `file` block's attached file (upload result or link). */
+  setFileData(blockId: string, file: FileData): void;
+
   /** Replaces a block's full set of inline mark ranges (e.g. bold spans). */
   setMarks(blockId: string, marks: MarkRange[]): void;
 
@@ -87,6 +90,9 @@ export interface CollaborativeDocument {
 
   /** Sets one row's pixel height (drag-resize), leaving others untouched. */
   setTableRowHeight(blockId: string, row: number, height: number): void;
+
+  /** Embeds (or clears, with `null`) a file in a single table cell. */
+  setTableCellFile(blockId: string, row: number, col: number, file: FileData | null): void;
 
   /** Plain-object snapshot for rendering — the read half of the read path. */
   getSnapshot(): DocumentModel;

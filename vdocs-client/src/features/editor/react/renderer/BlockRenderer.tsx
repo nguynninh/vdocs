@@ -2,6 +2,7 @@
 
 import { CodeBlock } from "../../blocks/code-block/CodeBlock";
 import { DividerView } from "../../blocks/divider/DividerView";
+import { FileBlock } from "../../blocks/file/FileBlock";
 import { TableView } from "../../blocks/table/TableView";
 import type { BlockNode } from "../../engine/block/block.types";
 import { TextBlockView } from "./TextBlockView";
@@ -28,6 +29,8 @@ export function BlockRenderer({ block, isFirst }: BlockRendererProps) {
       return <DividerView block={block} isFirst={isFirst} />;
     case "table":
       return <TableView block={block} isFirst={isFirst} />;
+    case "file":
+      return <FileBlock block={block} isFirst={isFirst} />;
     default:
       return null;
   }

@@ -18,7 +18,7 @@ export function EditorContent({ children }: EditorContentProps) {
   const { fontStyle } = useEditor();
 
   return (
-    <div className={cn("flex flex-1 flex-col overflow-auto", FONT_STYLE_CLASS_NAMES[fontStyle])}>
+    <div className={cn("flex flex-1 flex-col overflow-y-auto overflow-x-hidden", FONT_STYLE_CLASS_NAMES[fontStyle])}>
       {children}
     </div>
   );

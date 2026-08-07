@@ -58,13 +58,13 @@ function listForWorkspaces(workspaceIds: string[]) {
       workspaceId: { in: workspaceIds },
       archivedAt: null,
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { order: "asc" },
   });
 }
 
 function updateMetadata(
   documentId: string,
-  data: { title?: string; icon?: string }
+  data: { title?: string; icon?: string; parentId?: string | null; order?: number }
 ) {
   return prisma.document.update({
     where: { id: documentId },

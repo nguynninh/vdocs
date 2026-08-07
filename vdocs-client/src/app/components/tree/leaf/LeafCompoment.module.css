@@ -41,7 +41,7 @@
 }
 
 .leafCollapse :global(.ant-collapse-header) {
-  align-items: center;
+  align-items: flex-start;
   border-radius: 4px !important;
   margin: 1px 0;
   padding: 4px 8px !important;

@@ -77,6 +77,7 @@
     "importOpenDocument": "Open document",
     "importDone": "Done",
     "menuAddToFavorites": "Add to Favorites",
+    "menuRemoveFromFavorites": "Remove from Favorites",
     "menuRemoveFromRecents": "Remove from Recents",
     "menuCopyLink": "Copy link",
     "menuDuplicate": "Duplicate",

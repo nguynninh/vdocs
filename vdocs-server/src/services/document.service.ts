@@ -175,7 +175,7 @@ async function getDocument(documentId: string, userId: string | null) {
 async function updateDocument(
   documentId: string,
   userId: string,
-  data: { title?: string; icon?: string }
+  data: { title?: string; icon?: string; parentId?: string | null; order?: number }
 ) {
   const { permission } = await requireDocumentAndPermission(documentId, userId);
 

@@ -24,6 +24,7 @@ export interface DocumentUpdateResponse {
 export interface DocumentSummaryResponse {
   id: string;
   parentId: string | null;
+  order: number;
   title: string;
   icon: string | null;
   updatedAt: string;

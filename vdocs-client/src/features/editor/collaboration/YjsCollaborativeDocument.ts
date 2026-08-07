@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import type { BlockNode, BlockType } from "../engine/block/block.types";
+import type { BlockNode, BlockType, FileData } from "../engine/block/block.types";
 import type { DocumentModel, FontStyle } from "../engine/document/document.types";
 import type { MarkRange } from "../engine/mark/mark.types";
 import { shiftMarksForDelete, shiftMarksForInsert } from "../engine/mark/shiftMarks";
@@ -224,6 +224,18 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setFileData(blockId: string, file: FileData): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+
+      if (index === -1) {
+        return;
+      }
+
+      this.blocks.get(index).set("file", file);
+    });
+  }
+
   setTableData(blockId: string, rows: string[][]): void {
     this.ydoc.transact(() => {
       const index = this.findBlockIndex(blockId);
@@ -292,6 +304,37 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setTableCellFile(blockId: string, row: number, col: number, file: FileData | null): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      const block = this.blocks.get(index);
+      const current = (block.get("cellFiles") as (FileData | null)[][] | undefined) ?? [];
+      const next = current.map((r) => [...r]);
+
+      while (next.length <= row) {
+        next.push([]);
+      }
+      while (next[row].length <= col) {
+        next[row].push(null);
+      }
+
+      next[row][col] = file;
+      block.set("cellFiles", next);
+
+      if (file) {
+        // A file occupies the cell in place of text — keep the grid consistent.
+        const rows = (block.get("table") as string[][] | undefined) ?? [];
+        if (rows[row]?.[col] !== undefined && rows[row][col] !== "") {
+          const nextRows = rows.map((r) => [...r]);
+          nextRows[row][col] = "";
+          block.set("table", nextRows);
+        }
+      }
+    });
+  }
+
   setTableColumnWidth(blockId: string, col: number, width: number): void {
     this.ydoc.transact(() => {
       const index = this.findBlockIndex(blockId);
@@ -351,18 +394,21 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       const cellMarks = block.get("tableMarks") as MarkRange[][][] | undefined;
       const columnWidths = block.get("columnWidths") as number[] | undefined;
       const rowHeights = block.get("rowHeights") as number[] | undefined;
+      const cellFiles = block.get("cellFiles") as (FileData | null)[][] | undefined;
       const marks = block.get("marks") as MarkRange[] | undefined;
       const codeLanguage = block.get("codeLanguage") as string | undefined;
       const checked = block.get("checked") as boolean | undefined;
+      const file = block.get("file") as FileData | undefined;
 
       blocks.push({
         id: block.get("id") as string,
         type: block.get("type") as BlockType,
         text: (block.get("text") as Y.Text).toString(),
         ...(marks?.length ? { marks } : {}),
-        ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights } } : {}),
+        ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights, cellFiles } } : {}),
         ...(codeLanguage ? { codeLanguage } : {}),
         ...(checked !== undefined ? { checked } : {}),
+        ...(file ? { file } : {}),
       });
     }
 

@@ -17,9 +17,12 @@ export interface DocumentApiResponse {
 export interface DocumentSummaryApiResponse {
   id: string;
   parentId: string | null;
+  order: number;
   title: string;
   icon: string | null;
   updatedAt: string;
+  favorite?: boolean;
+  shared?: boolean;
 }
 
 export interface DocumentTrashApiResponse {
@@ -33,6 +36,16 @@ export interface DocumentTrashApiResponse {
 export interface UpdateDocumentPayload {
   title?: string;
   icon?: string;
+  parentId?: string | null;
+  order?: number;
+}
+
+export interface FileApiResponse {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  url: string;
 }
 
 export type MemberRole = "FULL_ACCESS" | "EDITOR" | "COMMENTER" | "VIEWER";
@@ -111,4 +124,31 @@ export const documentApi = {
 
   getByShareToken: (token: string) =>
     api.get<DocumentApiResponse>(`/api/documents/share/${token}`),
+
+  addFavorite: (documentId: string) =>
+    api.post<{ favorited: boolean }>(`/api/documents/${documentId}/favorite`),
+
+  removeFavorite: (documentId: string) =>
+    api.delete<{ favorited: boolean }>(`/api/documents/${documentId}/favorite`),
+
+  getFavoritesCount: () =>
+    api.get<{ count: number }>("/api/documents/favorites/count"),
+
+  getSharedCount: () =>
+    api.get<{ count: number }>("/api/documents/shared/count"),
+
+  uploadFile: (documentId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<FileApiResponse>(
+      `/api/documents/${documentId}/files`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
 };
+
+export function resolveFileUrl(url: string): string {
+  if (/^https?:\/\//.test(url)) return url;
+  return `${process.env.NEXT_PUBLIC_API_URL ?? ""}${url}`;
+}

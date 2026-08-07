@@ -10,6 +10,7 @@ export function renderMarkedText(node: HTMLElement, text: string, marks: MarkRan
       type: mark.type,
       start: Math.max(0, Math.min(mark.start, text.length)),
       end: Math.max(0, Math.min(mark.end, text.length)),
+      data: mark.data,
     }))
     .filter((mark) => mark.end > mark.start);
 
@@ -22,15 +23,25 @@ export function renderMarkedText(node: HTMLElement, text: string, marks: MarkRan
     const end = boundaries[i + 1];
     if (start >= end) continue;
 
-    const activeTypes = ranges.filter((r) => r.start <= start && r.end >= end).map((r) => r.type);
+    const active = ranges.filter((r) => r.start <= start && r.end >= end);
 
     let container: HTMLElement | null = null;
-    for (const type of activeTypes) {
-      const tag = MARK_REGISTRY[type]?.tag;
+    for (const range of active) {
+      const tag = MARK_REGISTRY[range.type]?.tag;
       if (!tag) continue;
       const el = document.createElement(tag);
       if (tag === "code") {
         el.className = "rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]";
+      }
+      if (tag === "a") {
+        el.setAttribute("href", range.data?.href ?? "#");
+        el.setAttribute("target", "_blank");
+        el.setAttribute("rel", "noopener noreferrer");
+        el.className = "text-blue-600 underline decoration-blue-600/40 hover:decoration-blue-600";
+      }
+      if (tag === "mark" && range.data?.color) {
+        el.style.backgroundColor = range.data.color;
+        el.className = "rounded-sm";
       }
       (container ?? node).appendChild(el);
       container = el;

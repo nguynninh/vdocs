@@ -23,6 +23,7 @@ export const CODE_LANGUAGES: CodeLanguageOption[] = [
   { value: "json", label: "JSON" },
   { value: "yaml", label: "YAML" },
   { value: "bash", label: "Bash" },
+  { value: "mermaid", label: "Mermaid" },
 ];
 
 export const DEFAULT_CODE_LANGUAGE = "plaintext";

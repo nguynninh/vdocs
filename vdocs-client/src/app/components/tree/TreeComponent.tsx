@@ -16,9 +16,16 @@ export interface TreeDataNode {
     children?: TreeDataNode[];
 }
 
+export interface TreeReorderUpdate {
+    id: React.Key;
+    parentId: React.Key | null;
+    order: number;
+}
+
 interface TreeComponentProps {
     treeData: TreeDataNode[];
     onParentChange?: (id: React.Key, parentId: React.Key | null) => void;
+    onReorder?: (updates: TreeReorderUpdate[]) => void;
     onExpandChange?: (id: React.Key, expanded: boolean) => void;
     onNodeClick?: (id: React.Key) => void;
     onAdd?: (id: React.Key) => void;
@@ -26,7 +33,7 @@ interface TreeComponentProps {
 }
 
 const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
-    const { treeData, onParentChange, onExpandChange, onNodeClick, onAdd, renderMoreMenu } = props;
+    const { treeData, onParentChange, onReorder, onExpandChange, onNodeClick, onAdd, renderMoreMenu } = props;
     const pathname = usePathname();
     const [nodeState, setNodeState] = useState({ source: treeData, nodes: treeData });
 
@@ -37,11 +44,27 @@ const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
     const nodes = nodeState.source === treeData ? nodeState.nodes : treeData;
 
     const handleMove = useCallback((dragId: React.Key, targetId: React.Key, mode: DropMode) => {
+        const oldParentId = findParentKey(nodes, dragId);
         const moved = moveNode(nodes, dragId, targetId, mode);
         if (!moved) return;
         setNodeState({ source: treeData, nodes: moved.nodes });
         onParentChange?.(dragId, moved.parentId);
-    }, [nodes, treeData, onParentChange]);
+
+        const getSiblings = (parentId: React.Key | null): TreeDataNode[] => {
+            if (parentId === null) return moved.nodes;
+            const parent = findNode(moved.nodes, parentId);
+            return parent?.children ?? [];
+        };
+
+        const affectedParentIds = new Set<React.Key | null>([oldParentId, moved.parentId]);
+        const updates: TreeReorderUpdate[] = [];
+        affectedParentIds.forEach((parentId) => {
+            getSiblings(parentId).forEach((node, index) => {
+                updates.push({ id: node.key, parentId, order: index });
+            });
+        });
+        onReorder?.(updates);
+    }, [nodes, treeData, onParentChange, onReorder]);
 
     const leafTreeData = useMemo(
         () => renderLeafComponents(nodes, pathname, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu),

@@ -40,3 +40,32 @@ export function toggleMark(marks: MarkRange[] = [], type: MarkType, start: numbe
 
   return [...others, ...updated];
 }
+
+/** Sets `type` with `data` (e.g. link href, highlight color) over [start, end), replacing any
+ * existing marks of that type in the range instead of toggling — repeat calls just update data. */
+export function applyMark(
+  marks: MarkRange[] = [],
+  type: MarkType,
+  start: number,
+  end: number,
+  data: MarkRange["data"],
+): MarkRange[] {
+  if (start >= end) return marks;
+
+  const others = marks.filter((mark) => mark.type !== type);
+  const sameType = marks.filter((mark) => mark.type === type);
+  const remaining = sameType.flatMap((range) => subtractRange(range, start, end));
+
+  return [...others, ...remaining, { type, start, end, data }];
+}
+
+/** Removes all marks of `type` overlapping [start, end). */
+export function removeMark(marks: MarkRange[] = [], type: MarkType, start: number, end: number): MarkRange[] {
+  if (start >= end) return marks;
+
+  const others = marks.filter((mark) => mark.type !== type);
+  const sameType = marks.filter((mark) => mark.type === type);
+  const remaining = sameType.flatMap((range) => subtractRange(range, start, end));
+
+  return [...others, ...remaining];
+}

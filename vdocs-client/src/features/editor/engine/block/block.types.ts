@@ -11,7 +11,8 @@ export type BlockType =
   | "quote"
   | "divider"
   | "codeBlock"
-  | "table";
+  | "table"
+  | "file";
 
 /** Text grid for a table block — rows[r][c] is the text of that cell, and
  * cellMarks[r][c] (when present) is that same cell's inline mark ranges.
@@ -23,6 +24,17 @@ export interface TableData {
   cellMarks?: MarkRange[][][];
   columnWidths?: number[];
   rowHeights?: number[];
+  /** File embedded in a cell (via "/file" inside the cell), keyed the same as rows[r][c]. */
+  cellFiles?: (FileData | null | undefined)[][];
+}
+
+/** An uploaded or linked file embedded via a `file` block. */
+export interface FileData {
+  id?: string;
+  filename: string;
+  mimeType?: string;
+  size?: number;
+  url: string;
 }
 
 export interface BlockNode {
@@ -35,4 +47,6 @@ export interface BlockNode {
   codeLanguage?: string;
   /** Checked state for a `todoListItem`; defaults to false/unchecked. */
   checked?: boolean;
+  /** Attached file for a `file` block; undefined while still showing the upload panel. */
+  file?: FileData;
 }

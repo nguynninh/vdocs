@@ -143,11 +143,21 @@ export function EditableText({
     <div className="relative">
       <div
         ref={ref}
+        data-block-id={blockId}
         contentEditable={canEdit}
         suppressContentEditableWarning
         className="py-1 outline-none"
         onFocus={onFocus}
         onBlur={onBlur}
+        onClick={(event) => {
+          // contentEditable swallows plain clicks on <a> into just placing the
+          // caret — open the link explicitly instead of requiring Cmd/Ctrl+click.
+          const link = (event.target as HTMLElement).closest("a[href]");
+          if (!link) return;
+
+          event.preventDefault();
+          window.open(link.getAttribute("href") ?? "#", "_blank", "noopener,noreferrer");
+        }}
         onInput={(event) => {
           const nextText = event.currentTarget.textContent ?? "";
           onChange(nextText);

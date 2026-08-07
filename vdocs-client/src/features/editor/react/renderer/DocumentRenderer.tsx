@@ -198,7 +198,7 @@ export function DocumentRenderer() {
       onKeyDown={handleKeyDown}
     >
       {state.document.blocks.map((block, index) => (
-        <div key={block.id} data-block-index={index} className="group relative">
+        <div key={block.id} data-block-index={index} className="group relative min-w-0">
           <BlockGutterControls block={block} selectedBlockIds={selectedBlockIds} />
           <BlockRenderer block={block} isFirst={index === 0} />
         </div>

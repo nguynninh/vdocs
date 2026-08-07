@@ -38,6 +38,8 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState<number | null>(null);
+  const [sharedCount, setSharedCount] = useState<number | null>(null);
 
   const greeting = useGreeting(user?.name);
 
@@ -58,6 +60,24 @@ const DashboardPage = () => {
       })
       .finally(() => {
         if (!ignore) setIsLoading(false);
+      });
+
+    documentApi
+      .getFavoritesCount()
+      .then((response) => {
+        if (!ignore) setFavoritesCount(response.data.count);
+      })
+      .catch(() => {
+        if (!ignore) setFavoritesCount(0);
+      });
+
+    documentApi
+      .getSharedCount()
+      .then((response) => {
+        if (!ignore) setSharedCount(response.data.count);
+      })
+      .catch(() => {
+        if (!ignore) setSharedCount(0);
       });
 
     return () => {
@@ -81,8 +101,8 @@ const DashboardPage = () => {
 
   const stats: { key: string; icon: typeof FileText; iconClass: string; value: number | null }[] = [
     { key: "total", icon: FileText, iconClass: "bg-[#EEF1FE] text-[#4F6DF5]", value: documents?.length ?? 0 },
-    { key: "shared", icon: Share2, iconClass: "bg-[#E9F9EF] text-[#22A55A]", value: null },
-    { key: "favorites", icon: Star, iconClass: "bg-[#FEF3E4] text-[#F5A524]", value: null },
+    { key: "shared", icon: Share2, iconClass: "bg-[#E9F9EF] text-[#22A55A]", value: sharedCount },
+    { key: "favorites", icon: Star, iconClass: "bg-[#FEF3E4] text-[#F5A524]", value: favoritesCount },
     { key: "trash", icon: Trash2, iconClass: "bg-[#EAF3FF] text-[#3B82F6]", value: null },
   ];
 

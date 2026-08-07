@@ -32,6 +32,7 @@ model User {
   createdShareLinks ShareLink[]
   documentVersions  DocumentVersion[]
   documentViews     DocumentView[]
+  uploadedFiles     DocumentFile[]
 
   @@unique([provider, providerUserId])
 }
@@ -66,6 +67,7 @@ model Document {
   workspaceId    String
   parentId       String?
   ownerId        String
+  order          Float     @default(0)
   title          String    @default("Untitled")
   icon           String?
   ydocState      Bytes?
@@ -83,8 +85,28 @@ model Document {
   shareLinks ShareLink[]
   versions   DocumentVersion[]
   views      DocumentView[]
+  files      DocumentFile[]
 
   @@index([parentId])
+}
+
+// A file attached/embedded via the editor's "/file" block. Bytes live on
+// disk under uploads/, named `${id}-${originalName}`; this row is only the
+// metadata needed to render and download it.
+model DocumentFile {
+  id         String   @id @default(uuid())
+  documentId String
+  filename   String
+  mimeType   String
+  size       Int
+  storedName String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploader User     @relation(fields: [uploadedBy], references: [id])
+
+  @@index([documentId])
 }
 
 // One row per (viewer, day), upserted with an incrementing `count` — repeat

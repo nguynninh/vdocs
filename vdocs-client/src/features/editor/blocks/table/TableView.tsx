@@ -278,19 +278,28 @@ export function TableView({ block }: TableViewProps) {
     updateTableCell(block.id, row, col, text);
   };
 
+  const resolvedColumnWidths = Array.from(
+    { length: columnCount },
+    (_, colIndex) => columnWidths[colIndex] ?? DEFAULT_COLUMN_WIDTH,
+  );
+  const resolvedRowHeights = rows.map((_, rowIndex) => rowHeights[rowIndex] ?? DEFAULT_ROW_HEIGHT);
+
   return (
     <div className="my-1 overflow-x-auto">
-      <table className="table-fixed border-collapse border border-border">
-        <colgroup>
-          {Array.from({ length: columnCount }, (_, colIndex) => (
-            <col key={colIndex} style={{ width: `${columnWidths[colIndex] ?? DEFAULT_COLUMN_WIDTH}px` }} />
-          ))}
-        </colgroup>
-        <tbody>
-          {rows.map((cells, rowIndex) => {
-            const rowHeight = rowHeights[rowIndex] ?? DEFAULT_ROW_HEIGHT;
-            return (
-              <tr key={rowIndex} className="border border-border" style={{ height: `${rowHeight}px` }}>
+      <div className="relative inline-block">
+        <table className="table-fixed border-collapse border border-border">
+          <colgroup>
+            {resolvedColumnWidths.map((width, colIndex) => (
+              <col key={colIndex} style={{ width: `${width}px` }} />
+            ))}
+          </colgroup>
+          <tbody>
+            {rows.map((cells, rowIndex) => (
+              <tr
+                key={rowIndex}
+                className="border border-border"
+                style={{ height: `${resolvedRowHeights[rowIndex]}px` }}
+              >
                 {cells.map((cellText, colIndex) => (
                   <td key={colIndex} className="relative border border-border p-0 align-top">
                     <TableCellEditable
@@ -307,25 +316,37 @@ export function TableView({ block }: TableViewProps) {
                       onInsertBlockAfterTable={(blockType) => insertBlockAfterFocused(block.id, blockType)}
                       onSetFile={(row, col, file) => setTableCellFile(block.id, row, col, file)}
                     />
-                    {canEdit && rowIndex === 0 && (
-                      <ColumnResizeHandle
-                        startWidth={columnWidths[colIndex] ?? DEFAULT_COLUMN_WIDTH}
-                        onResize={(nextWidth) => updateTableColumnWidth(block.id, colIndex, nextWidth)}
-                      />
-                    )}
-                    {canEdit && colIndex === 0 && (
-                      <RowResizeHandle
-                        startHeight={rowHeight}
-                        onResize={(nextHeight) => updateTableRowHeight(block.id, rowIndex, nextHeight)}
-                      />
-                    )}
                   </td>
                 ))}
               </tr>
+            ))}
+          </tbody>
+        </table>
+        {canEdit &&
+          resolvedColumnWidths.slice(0, -1).map((width, colIndex) => {
+            const left = resolvedColumnWidths.slice(0, colIndex + 1).reduce((sum, w) => sum + w, 0);
+            return (
+              <ColumnResizeHandle
+                key={`col-${colIndex}`}
+                left={left}
+                startWidth={width}
+                onResize={(nextWidth) => updateTableColumnWidth(block.id, colIndex, nextWidth)}
+              />
             );
           })}
-        </tbody>
-      </table>
+        {canEdit &&
+          resolvedRowHeights.slice(0, -1).map((height, rowIndex) => {
+            const top = resolvedRowHeights.slice(0, rowIndex + 1).reduce((sum, h) => sum + h, 0);
+            return (
+              <RowResizeHandle
+                key={`row-${rowIndex}`}
+                top={top}
+                startHeight={height}
+                onResize={(nextHeight) => updateTableRowHeight(block.id, rowIndex, nextHeight)}
+              />
+            );
+          })}
+      </div>
     </div>
   );
 }

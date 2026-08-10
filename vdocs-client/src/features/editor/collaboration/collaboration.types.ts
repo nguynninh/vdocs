@@ -110,6 +110,18 @@ export interface CollaborativeDocument {
   encodeState(): Uint8Array;
   applyRemoteUpdate(update: Uint8Array): void;
   destroy(): void;
+
+  /** Reverts the most recent local change (never a remote collaborator's). */
+  undo(): void;
+
+  /** Re-applies the most recently undone local change. */
+  redo(): void;
+
+  canUndo(): boolean;
+  canRedo(): boolean;
+
+  /** Fires whenever canUndo()/canRedo() may have changed — for toolbar UI. */
+  subscribeToHistory(listener: () => void): () => void;
 }
 
 /**

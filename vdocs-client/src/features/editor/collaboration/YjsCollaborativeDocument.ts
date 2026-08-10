@@ -18,6 +18,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
   private readonly ydoc: Y.Doc;
   private readonly blocks: Y.Array<Y.Map<unknown>>;
   private readonly metadata: Y.Map<unknown>;
+  private readonly undoManager: Y.UndoManager;
   private readonly changeListeners = new Set<() => void>();
   private readonly localUpdateListeners = new Set<(update: Uint8Array) => void>();
 
@@ -30,6 +31,15 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       Y.applyUpdate(this.ydoc, initialState, "initial-snapshot");
     }
 
+    // Tracks only transactions with the default (local) origin — every
+    // mutation method below calls `transact()` with no origin, while
+    // `applyRemoteUpdate` tags incoming changes "remote" and
+    // "initial-snapshot" tags the initial load, so neither pollutes this
+    // user's own undo/redo history.
+    this.undoManager = new Y.UndoManager([this.blocks, this.metadata], {
+      trackedOrigins: new Set([null]),
+    });
+
     this.ydoc.on("update", (update: Uint8Array, origin: unknown) => {
       if (origin === "remote") {
         return;
@@ -41,6 +51,33 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     this.ydoc.on("afterTransaction", () => {
       this.changeListeners.forEach((listener) => listener());
     });
+  }
+
+  undo(): void {
+    this.undoManager.undo();
+  }
+
+  redo(): void {
+    this.undoManager.redo();
+  }
+
+  canUndo(): boolean {
+    return this.undoManager.undoStack.length > 0;
+  }
+
+  canRedo(): boolean {
+    return this.undoManager.redoStack.length > 0;
+  }
+
+  subscribeToHistory(listener: () => void): () => void {
+    this.undoManager.on("stack-item-added", listener);
+    this.undoManager.on("stack-item-popped", listener);
+    this.undoManager.on("stack-item-updated", listener);
+    return () => {
+      this.undoManager.off("stack-item-added", listener);
+      this.undoManager.off("stack-item-popped", listener);
+      this.undoManager.off("stack-item-updated", listener);
+    };
   }
 
   /** Diffs `oldText`/`newText` down to their minimal changed span and shifts
@@ -518,6 +555,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
   destroy(): void {
     this.changeListeners.clear();
     this.localUpdateListeners.clear();
+    this.undoManager.destroy();
     this.ydoc.destroy();
   }
 }

@@ -89,6 +89,10 @@ interface EditorContextValue {
   moveBlock: (blockId: string, targetIndex: number) => void;
   clearFocus: () => void;
   restoreVersion: (versionId: string) => Promise<boolean>;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -107,6 +111,8 @@ export function EditorProvider({
   const [permission, setPermission] = useState<DocumentPermission>(
     initialPermission ?? "VIEWER",
   );
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const documentRef = useRef<CollaborativeDocument | null>(null);
   const providerRef = useRef<CollaborationProvider | null>(null);
 
@@ -130,6 +136,29 @@ export function EditorProvider({
 
     syncState();
     const unsubscribe = provider.document.subscribe(syncState);
+
+    const syncHistoryState = () => {
+      setCanUndo(provider.document.canUndo());
+      setCanRedo(provider.document.canRedo());
+    };
+    syncHistoryState();
+    const unsubscribeHistory = provider.document.subscribeToHistory(syncHistoryState);
+
+    const handleUndoRedoKeydown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (event.shiftKey) {
+        provider.document.redo();
+      } else {
+        provider.document.undo();
+      }
+    };
+    window.addEventListener("keydown", handleUndoRedoKeydown);
+
     let disposed = false;
 
     // Wait for start() (connect + join) before creating the seed block —
@@ -189,6 +218,8 @@ export function EditorProvider({
     return () => {
       disposed = true;
       unsubscribe();
+      unsubscribeHistory();
+      window.removeEventListener("keydown", handleUndoRedoKeydown);
       provider.stop();
       documentRef.current = null;
       providerRef.current = null;
@@ -551,6 +582,14 @@ export function EditorProvider({
     [],
   );
 
+  const undo = useCallback(() => {
+    documentRef.current?.undo();
+  }, []);
+
+  const redo = useCallback(() => {
+    documentRef.current?.redo();
+  }, []);
+
   const restoreVersion = useCallback(async (versionId: string) => {
     const provider = providerRef.current;
     if (!provider) return false;
@@ -611,6 +650,10 @@ export function EditorProvider({
       moveBlock,
       clearFocus,
       restoreVersion,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
     }),
     [
       documentId,
@@ -650,6 +693,10 @@ export function EditorProvider({
       moveBlock,
       clearFocus,
       restoreVersion,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
     ],
   );
 

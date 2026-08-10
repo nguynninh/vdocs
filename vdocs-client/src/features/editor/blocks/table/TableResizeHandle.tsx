@@ -5,15 +5,19 @@ import { useRef } from "react";
 const MIN_SIZE = 30;
 
 export interface ColumnResizeHandleProps {
+  left: number;
   startWidth: number;
   onResize: (nextWidth: number) => void;
 }
 
-// Thin absolutely-positioned strip on a column's right edge (or a row's
-// bottom edge, see RowResizeHandle) — plain mousedown/mousemove/mouseup drag
-// tracking against window listeners, no pointer-capture/touch support needed
-// for this pass.
-export function ColumnResizeHandle({ startWidth, onResize }: ColumnResizeHandleProps) {
+// Thin absolutely-positioned strip spanning the full table height on a
+// column's right edge (or the full table width on a row's bottom edge, see
+// RowResizeHandle), positioned against the table wrapper rather than a
+// single cell so the drag/hover indicator runs the whole length of the
+// boundary instead of just one row/column tall. Plain mousedown/mousemove/
+// mouseup drag tracking against window listeners, no pointer-capture/touch
+// support needed for this pass.
+export function ColumnResizeHandle({ left, startWidth, onResize }: ColumnResizeHandleProps) {
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const handleMouseDown = (event: React.MouseEvent) => {
@@ -43,17 +47,19 @@ export function ColumnResizeHandle({ startWidth, onResize }: ColumnResizeHandleP
       role="separator"
       aria-orientation="vertical"
       onMouseDown={handleMouseDown}
-      className="absolute right-[-3px] top-0 z-10 h-full w-[6px] cursor-col-resize select-none hover:bg-blue-400/50"
+      style={{ left: `${left - 3}px` }}
+      className="absolute top-0 z-10 h-full w-[6px] cursor-col-resize select-none hover:bg-blue-400/50"
     />
   );
 }
 
 export interface RowResizeHandleProps {
+  top: number;
   startHeight: number;
   onResize: (nextHeight: number) => void;
 }
 
-export function RowResizeHandle({ startHeight, onResize }: RowResizeHandleProps) {
+export function RowResizeHandle({ top, startHeight, onResize }: RowResizeHandleProps) {
   const dragState = useRef<{ startY: number; startHeight: number } | null>(null);
 
   const handleMouseDown = (event: React.MouseEvent) => {
@@ -83,7 +89,8 @@ export function RowResizeHandle({ startHeight, onResize }: RowResizeHandleProps)
       role="separator"
       aria-orientation="horizontal"
       onMouseDown={handleMouseDown}
-      className="absolute bottom-[-3px] left-0 z-10 h-[6px] w-full cursor-row-resize select-none hover:bg-blue-400/50"
+      style={{ top: `${top - 3}px` }}
+      className="absolute left-0 z-10 h-[6px] w-full cursor-row-resize select-none hover:bg-blue-400/50"
     />
   );
 }

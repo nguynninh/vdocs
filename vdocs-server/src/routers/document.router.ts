@@ -123,6 +123,7 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
       title: document.title,
       icon: document.icon,
       updatedAt: document.updatedAt.toISOString(),
+      favorite: document.favorite,
     }));
 
     sendSuccess(res, response);
@@ -130,6 +131,72 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
     handleError(error, res);
   }
 });
+
+documentRouter.get(
+  "/favorites/count",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const count = await documentService.getFavoritesCount(userId);
+
+      sendSuccess(res, { count });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.post(
+  "/:documentId/favorite",
+  requireAuth,
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const result = await documentService.addFavorite(
+        req.params.documentId,
+        userId
+      );
+
+      sendSuccess(res, result, "Created", 201);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.delete(
+  "/:documentId/favorite",
+  requireAuth,
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const result = await documentService.removeFavorite(
+        req.params.documentId,
+        userId
+      );
+
+      sendSuccess(res, result);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/shared/count",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const count = await documentService.getSharedCount(userId);
+
+      sendSuccess(res, { count });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
 
 documentRouter.get("/trash", requireAuth, async (req: Request, res: Response) => {
   try {

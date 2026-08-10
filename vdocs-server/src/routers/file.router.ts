@@ -1,31 +1,20 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import multer from "multer";
-import crypto from "node:crypto";
-import path from "node:path";
-import fs from "node:fs";
 import {
   requireAuth,
   type AuthenticatedRequest,
 } from "../middleware/auth.middleware.ts";
 import {
   DocumentForbiddenError,
-  DocumentNotFoundError,  
+  DocumentNotFoundError,
 } from "../services/document.service.ts";
 import { FileNotFoundError, fileService } from "../services/file.service.ts";
 import type { FileResponse } from "../dtos/response/FileResponse.ts";
 import { sendError, sendSuccess } from "../utils/apiResponse.ts";
 
-fs.mkdirSync(fileService.UPLOAD_DIR, { recursive: true });
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, fileService.UPLOAD_DIR),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `${crypto.randomUUID()}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
@@ -65,7 +54,7 @@ fileRouter.post("/documents/:documentId",
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
-        storedName: req.file.filename,
+        buffer: req.file.buffer,
       });
 
       const response: FileResponse = {
@@ -87,13 +76,15 @@ fileRouter.get(
   "/:fileId/download",
   async (req: Request<{ fileId: string }>, res: Response) => {
     try {
-      const file = await fileService.getFile(req.params.fileId);
+      const { file, stream } = await fileService.getFileStream(req.params.fileId);
 
+      res.setHeader("Content-Type", file.mimeType);
       res.setHeader(
         "Content-Disposition",
         `inline; filename="${encodeURIComponent(file.filename)}"`
       );
-      res.sendFile(path.join(fileService.UPLOAD_DIR, file.storedName));
+      stream.on("error", (error) => handleError(error, res));
+      stream.pipe(res);
     } catch (error) {
       handleError(error, res);
     }

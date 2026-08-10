@@ -178,6 +178,45 @@ function deactivateShareLinks(documentId: string) {
   });
 }
 
+function addFavorite(documentId: string, userId: string) {
+  return prisma.documentFavorite.upsert({
+    where: { documentId_userId: { documentId, userId } },
+    create: { documentId, userId },
+    update: {},
+  });
+}
+
+function removeFavorite(documentId: string, userId: string) {
+  return prisma.documentFavorite.deleteMany({
+    where: { documentId, userId },
+  });
+}
+
+function countFavorites(userId: string) {
+  return prisma.documentFavorite.count({ where: { userId } });
+}
+
+function countSharedWithUser(userId: string) {
+  return prisma.documentMember.count({
+    where: {
+      userId,
+      document: {
+        archivedAt: null,
+        ownerId: { not: userId },
+      },
+    },
+  });
+}
+
+function listFavoriteIds(userId: string, documentIds: string[]) {
+  return prisma.documentFavorite
+    .findMany({
+      where: { userId, documentId: { in: documentIds } },
+      select: { documentId: true },
+    })
+    .then((rows) => new Set(rows.map((row) => row.documentId)));
+}
+
 export const documentRepository = {
   findById,
   findMemberRole,
@@ -200,4 +239,9 @@ export const documentRepository = {
   findShareLinkByToken,
   createShareLink,
   deactivateShareLinks,
+  addFavorite,
+  removeFavorite,
+  countFavorites,
+  countSharedWithUser,
+  listFavoriteIds,
 };

@@ -1,6 +1,8 @@
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileRepository } from "../repositories/file.repository.ts";
 import { documentRepository } from "../repositories/document.repository.ts";
+import { minioClient, MINIO_BUCKET } from "../configuration/minio.ts";
 import {
   DocumentForbiddenError,
   DocumentNotFoundError,
@@ -10,7 +12,17 @@ import {
 
 export class FileNotFoundError extends Error {}
 
-const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
+function categoryFor(mimeType: string): "images" | "videos" | "files" {
+  if (mimeType.startsWith("image/")) return "images";
+  if (mimeType.startsWith("video/")) return "videos";
+  return "files";
+}
+
+function buildObjectKey(documentId: string, originalName: string, mimeType: string) {
+  const ext = path.extname(originalName);
+  const category = categoryFor(mimeType);
+  return `documents/${documentId}/${category}/${crypto.randomUUID()}${ext}`;
+}
 
 async function requireEditableDocument(documentId: string, userId: string) {
   const document = await documentRepository.findById(documentId);
@@ -37,17 +49,23 @@ async function uploadFile(
     originalName: string;
     mimeType: string;
     size: number;
-    storedName: string;
+    buffer: Buffer;
   }
 ) {
   await requireEditableDocument(documentId, userId);
+
+  const objectKey = buildObjectKey(documentId, upload.originalName, upload.mimeType);
+
+  await minioClient.putObject(MINIO_BUCKET, objectKey, upload.buffer, upload.size, {
+    "Content-Type": upload.mimeType,
+  });
 
   return fileRepository.create({
     documentId,
     filename: upload.originalName,
     mimeType: upload.mimeType,
     size: upload.size,
-    storedName: upload.storedName,
+    storedName: objectKey,
     uploadedBy: userId,
   });
 }
@@ -62,8 +80,15 @@ async function getFile(fileId: string) {
   return file;
 }
 
+async function getFileStream(fileId: string) {
+  const file = await getFile(fileId);
+  const stream = await minioClient.getObject(MINIO_BUCKET, file.storedName);
+
+  return { file, stream };
+}
+
 export const fileService = {
   uploadFile,
   getFile,
-  UPLOAD_DIR,
+  getFileStream,
 };

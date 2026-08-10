@@ -28,6 +28,7 @@ export interface DocumentSummaryResponse {
   title: string;
   icon: string | null;
   updatedAt: string;
+  favorite: boolean;
 }
 
 export interface DocumentTrashResponse {

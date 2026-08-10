@@ -143,6 +143,21 @@ async function createDocument(
   });
 }
 
+async function withFavoriteFlags<T extends { id: string }>(
+  documents: T[],
+  userId: string
+) {
+  const favoriteIds = await documentRepository.listFavoriteIds(
+    userId,
+    documents.map((document) => document.id)
+  );
+
+  return documents.map((document) => ({
+    ...document,
+    favorite: favoriteIds.has(document.id),
+  }));
+}
+
 async function listDocuments(userId: string, workspaceId?: string) {
   if (workspaceId) {
     const membership = await documentRepository.findWorkspaceMembership(
@@ -156,7 +171,8 @@ async function listDocuments(userId: string, workspaceId?: string) {
       );
     }
 
-    return documentRepository.listForWorkspaces([workspaceId]);
+    const documents = await documentRepository.listForWorkspaces([workspaceId]);
+    return withFavoriteFlags(documents, userId);
   }
 
   const membership = await documentRepository.findPersonalWorkspace(userId);
@@ -165,7 +181,29 @@ async function listDocuments(userId: string, workspaceId?: string) {
     return [];
   }
 
-  return documentRepository.listForWorkspaces([membership.workspaceId]);
+  const documents = await documentRepository.listForWorkspaces([
+    membership.workspaceId,
+  ]);
+  return withFavoriteFlags(documents, userId);
+}
+
+async function addFavorite(documentId: string, userId: string) {
+  await requireDocumentAndPermission(documentId, userId);
+  await documentRepository.addFavorite(documentId, userId);
+  return { favorited: true };
+}
+
+async function removeFavorite(documentId: string, userId: string) {
+  await documentRepository.removeFavorite(documentId, userId);
+  return { favorited: false };
+}
+
+async function getFavoritesCount(userId: string) {
+  return documentRepository.countFavorites(userId);
+}
+
+async function getSharedCount(userId: string) {
+  return documentRepository.countSharedWithUser(userId);
 }
 
 async function getDocument(documentId: string, userId: string | null) {
@@ -406,4 +444,8 @@ export const documentService = {
   getOrCreateShareLink,
   revokeShareLink,
   getDocumentByShareToken,
+  addFavorite,
+  removeFavorite,
+  getFavoritesCount,
+  getSharedCount,
 };

@@ -33,6 +33,7 @@ model User {
   documentVersions  DocumentVersion[]
   documentViews     DocumentView[]
   uploadedFiles     DocumentFile[]
+  favoriteDocuments DocumentFavorite[]
 
   @@unique([provider, providerUserId])
 }
@@ -86,8 +87,23 @@ model Document {
   versions   DocumentVersion[]
   views      DocumentView[]
   files      DocumentFile[]
+  favoritedBy DocumentFavorite[]
 
   @@index([parentId])
+}
+
+// Per-user bookmark of a document, surfaced in the sidebar/dashboard.
+model DocumentFavorite {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId])
+  @@index([userId])
 }
 
 // A file attached/embedded via the editor's "/file" block. Bytes live on

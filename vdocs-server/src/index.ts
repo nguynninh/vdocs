@@ -11,6 +11,7 @@ import { fileRouter } from "./routers/file.router.ts";
 import { createRealtimeServer } from "./realtime/createRealtimeServer.ts";
 import { scheduleDailyVersionJob } from "./jobs/dailyVersionJob.ts";
 import { env, isProduction, BASE_API } from "./configuration/dotenv.ts";
+import { ensureBucket } from "./configuration/minio.ts";
 import { sendError, sendSuccess } from "./utils/apiResponse.ts";
 import authRouter from "./routers/auth.router.ts"
 
@@ -49,6 +50,13 @@ const httpServer = http.createServer(app);
 createRealtimeServer(httpServer);
 scheduleDailyVersionJob();
 
-httpServer.listen(env.PORT, () => {
-  console.log(`Server is running at http://localhost:${env.PORT}/${BASE_API}`);
-});
+ensureBucket()
+  .then(() => {
+    httpServer.listen(env.PORT, () => {
+      console.log(`Server is running at http://localhost:${env.PORT}/${BASE_API}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to initialize MinIO bucket:", error);
+    process.exit(1);
+  });

@@ -70,6 +70,8 @@ interface EditorContextValue {
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
   setTableCellFile: (blockId: string, row: number, col: number, file: FileData | null) => void;
+  insertTableRow: (blockId: string, atIndex: number) => void;
+  insertTableColumn: (blockId: string, atIndex: number) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
   insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
   insertImageBlockAfter: (blockId: string, image: ImageData) => void;
@@ -314,6 +316,14 @@ export function EditorProvider({
     },
     [],
   );
+
+  const insertTableRow = useCallback((blockId: string, atIndex: number) => {
+    documentRef.current?.insertTableRow(blockId, atIndex);
+  }, []);
+
+  const insertTableColumn = useCallback((blockId: string, atIndex: number) => {
+    documentRef.current?.insertTableColumn(blockId, atIndex);
+  }, []);
 
   // Used by paste-detection: pasted tabular clipboard text becomes a table
   // block (with the parsed rows already filled in) inserted right after the
@@ -631,6 +641,8 @@ export function EditorProvider({
       updateTableColumnWidth,
       updateTableRowHeight,
       setTableCellFile,
+      insertTableRow,
+      insertTableColumn,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       insertImageBlockAfter,
@@ -674,6 +686,8 @@ export function EditorProvider({
       updateTableColumnWidth,
       updateTableRowHeight,
       setTableCellFile,
+      insertTableRow,
+      insertTableColumn,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       insertImageBlockAfter,

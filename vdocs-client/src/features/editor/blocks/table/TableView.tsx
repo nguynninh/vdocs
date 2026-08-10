@@ -196,7 +196,7 @@ function TableCellEditable({
         ref={ref}
         contentEditable={canEdit}
         suppressContentEditableWarning
-        className="h-full min-w-[6rem] px-3 py-2 text-sm outline-none focus:bg-accent/40"
+        className="h-full px-3 py-2 text-sm outline-none focus:bg-accent/40"
         data-table-cell={`${blockId}:${row}:${col}`}
         onInput={(event) => {
           const nextText = event.currentTarget.textContent ?? "";
@@ -251,6 +251,8 @@ export function TableView({ block }: TableViewProps) {
     updateTableColumnWidth,
     updateTableRowHeight,
     setTableCellFile,
+    insertTableRow,
+    insertTableColumn,
     insertBlockAfterFocused,
     canEdit,
   } = useEditor();
@@ -301,7 +303,7 @@ export function TableView({ block }: TableViewProps) {
                 style={{ height: `${resolvedRowHeights[rowIndex]}px` }}
               >
                 {cells.map((cellText, colIndex) => (
-                  <td key={colIndex} className="relative border border-border p-0 align-top">
+                  <td key={colIndex} className="relative overflow-hidden border border-border p-0 align-top">
                     <TableCellEditable
                       blockId={block.id}
                       documentId={documentId}
@@ -346,7 +348,62 @@ export function TableView({ block }: TableViewProps) {
               />
             );
           })}
+        {canEdit && (
+          <>
+            <AddEdgeButton
+              edge="top"
+              label="Thêm hàng phía trên"
+              onClick={() => insertTableRow(block.id, 0)}
+            />
+            <AddEdgeButton
+              edge="bottom"
+              label="Thêm hàng phía dưới"
+              onClick={() => insertTableRow(block.id, rows.length)}
+            />
+            <AddEdgeButton
+              edge="left"
+              label="Thêm cột bên trái"
+              onClick={() => insertTableColumn(block.id, 0)}
+            />
+            <AddEdgeButton
+              edge="right"
+              label="Thêm cột bên phải"
+              onClick={() => insertTableColumn(block.id, columnCount)}
+            />
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+const EDGE_CLASS: Record<"top" | "bottom" | "left" | "right", string> = {
+  top: "left-0 right-0 top-0 h-3 flex-row",
+  bottom: "left-0 right-0 bottom-0 h-3 flex-row",
+  left: "top-0 bottom-0 left-0 w-3 flex-col",
+  right: "top-0 bottom-0 right-0 w-3 flex-col",
+};
+
+function AddEdgeButton({
+  edge,
+  label,
+  onClick,
+}: {
+  edge: "top" | "bottom" | "left" | "right";
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className={`group absolute z-20 flex items-center justify-center ${EDGE_CLASS[edge]}`}
+    >
+      <span className="flex size-4 items-center justify-center rounded-full border border-border bg-background text-xs leading-none text-muted-foreground opacity-0 shadow-sm group-hover:opacity-100">
+        +
+      </span>
+    </button>
   );
 }

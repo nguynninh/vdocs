@@ -416,6 +416,72 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  insertTableRow(blockId: string, atIndex: number): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      const block = this.blocks.get(index);
+      const table = (block.get("table") as string[][] | undefined) ?? [];
+      const columnCount = table[0]?.length ?? 0;
+      const nextTable = table.map((r) => [...r]);
+      nextTable.splice(atIndex, 0, new Array(columnCount).fill(""));
+      block.set("table", nextTable);
+
+      const tableMarks = (block.get("tableMarks") as MarkRange[][][] | undefined) ?? [];
+      const nextMarks = tableMarks.map((r) => [...r]);
+      nextMarks.splice(atIndex, 0, new Array(columnCount).fill([]));
+      block.set("tableMarks", nextMarks);
+
+      const cellFiles = (block.get("cellFiles") as (FileData | null)[][] | undefined) ?? [];
+      const nextFiles = cellFiles.map((r) => [...r]);
+      nextFiles.splice(atIndex, 0, new Array(columnCount).fill(null));
+      block.set("cellFiles", nextFiles);
+
+      const rowHeights = (block.get("rowHeights") as number[] | undefined) ?? [];
+      const nextHeights = [...rowHeights];
+      nextHeights.splice(atIndex, 0, rowHeights[atIndex] ?? rowHeights[rowHeights.length - 1] ?? 40);
+      block.set("rowHeights", nextHeights);
+    });
+  }
+
+  insertTableColumn(blockId: string, atIndex: number): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      const block = this.blocks.get(index);
+      const table = (block.get("table") as string[][] | undefined) ?? [];
+      const nextTable = table.map((r) => {
+        const row = [...r];
+        row.splice(atIndex, 0, "");
+        return row;
+      });
+      block.set("table", nextTable);
+
+      const tableMarks = (block.get("tableMarks") as MarkRange[][][] | undefined) ?? [];
+      const nextMarks = table.map((_, rowIndex) => {
+        const row = [...(tableMarks[rowIndex] ?? [])];
+        row.splice(atIndex, 0, []);
+        return row;
+      });
+      block.set("tableMarks", nextMarks);
+
+      const cellFiles = (block.get("cellFiles") as (FileData | null)[][] | undefined) ?? [];
+      const nextFiles = table.map((_, rowIndex) => {
+        const row = [...(cellFiles[rowIndex] ?? [])];
+        row.splice(atIndex, 0, null);
+        return row;
+      });
+      block.set("cellFiles", nextFiles);
+
+      const columnWidths = (block.get("columnWidths") as number[] | undefined) ?? [];
+      const nextWidths = [...columnWidths];
+      nextWidths.splice(atIndex, 0, columnWidths[atIndex] ?? columnWidths[columnWidths.length - 1] ?? 160);
+      block.set("columnWidths", nextWidths);
+    });
+  }
+
   setFullWidth(fullWidth: boolean): void {
     this.ydoc.transact(() => {
       this.metadata.set("fullWidth", fullWidth);

@@ -98,6 +98,12 @@ export interface CollaborativeDocument {
   /** Embeds (or clears, with `null`) a file in a single table cell. */
   setTableCellFile(blockId: string, row: number, col: number, file: FileData | null): void;
 
+  /** Inserts a new empty row at `atIndex`, shifting later rows down. */
+  insertTableRow(blockId: string, atIndex: number): void;
+
+  /** Inserts a new empty column at `atIndex`, shifting later columns right. */
+  insertTableColumn(blockId: string, atIndex: number): void;
+
   /** Plain-object snapshot for rendering — the read half of the read path. */
   getSnapshot(): DocumentModel;
 

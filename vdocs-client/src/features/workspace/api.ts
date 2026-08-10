@@ -16,8 +16,8 @@ export interface CreateWorkspacePayload {
 }
 
 export const workspaceApi = {
-  list: () => api.get<WorkspaceApiResponse[]>("/api/workspaces"),
+  list: () => api.get<WorkspaceApiResponse[]>("/workspaces"),
 
   create: (payload: CreateWorkspacePayload) =>
-    api.post<WorkspaceApiResponse>("/api/workspaces", payload),
+    api.post<WorkspaceApiResponse>("/workspaces", payload),
 };

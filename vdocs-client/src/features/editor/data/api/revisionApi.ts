@@ -22,13 +22,13 @@ export interface VersionApiResponse extends VersionSummaryApiResponse {
 
 export const revisionApi = {
   list: (documentId: string) =>
-    api.get<VersionSummaryApiResponse[]>(`/api/documents/${documentId}/versions`),
+    api.get<VersionSummaryApiResponse[]>(`/documents/${documentId}/versions`),
 
   get: (documentId: string, versionId: string) =>
-    api.get<VersionApiResponse>(`/api/documents/${documentId}/versions/${versionId}`),
+    api.get<VersionApiResponse>(`/documents/${documentId}/versions/${versionId}`),
 
   createManual: (documentId: string, label?: string) =>
-    api.post<VersionSummaryApiResponse>(`/api/documents/${documentId}/versions`, {
+    api.post<VersionSummaryApiResponse>(`/documents/${documentId}/versions`, {
       label,
     }),
 };

@@ -24,7 +24,7 @@ export interface DocumentAnalyticsApiResponse {
 
 export const analyticsApi = {
   get: (documentId: string, rangeDays = 28) =>
-    api.get<DocumentAnalyticsApiResponse>(`/api/documents/${documentId}/analytics`, {
+    api.get<DocumentAnalyticsApiResponse>(`/documents/${documentId}/analytics`, {
       params: { days: rangeDays },
     }),
 };

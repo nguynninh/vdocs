@@ -60,88 +60,88 @@ export interface DocumentMemberApiResponse {
 
 export const documentApi = {
   create: (title?: string, workspaceId?: string, parentId?: string) =>
-    api.post<{ id: string }>("/api/documents", { title, workspaceId, parentId }),
+    api.post<{ id: string }>("/documents", { title, workspaceId, parentId }),
 
   list: (workspaceId?: string) =>
-    api.get<DocumentSummaryApiResponse[]>("/api/documents", {
+    api.get<DocumentSummaryApiResponse[]>("/documents", {
       params: workspaceId ? { workspaceId } : undefined,
     }),
 
   get: (documentId: string) =>
-    api.get<DocumentApiResponse>(`/api/documents/${documentId}`),
+    api.get<DocumentApiResponse>(`/documents/${documentId}`),
 
   update: (documentId: string, payload: UpdateDocumentPayload) =>
     api.patch<{ id: string; title: string; icon: string | null }>(
-      `/api/documents/${documentId}`,
+      `/documents/${documentId}`,
       payload,
     ),
 
   moveToTrash: (documentId: string) =>
-    api.delete<{ id: string }>(`/api/documents/${documentId}`),
+    api.delete<{ id: string }>(`/documents/${documentId}`),
 
   listTrash: (workspaceId?: string) =>
-    api.get<DocumentTrashApiResponse[]>("/api/documents/trash", {
+    api.get<DocumentTrashApiResponse[]>("/documents/trash", {
       params: workspaceId ? { workspaceId } : undefined,
     }),
 
   restore: (documentId: string) =>
-    api.post<{ id: string }>(`/api/documents/${documentId}/restore`),
+    api.post<{ id: string }>(`/documents/${documentId}/restore`),
 
   permanentlyDelete: (documentId: string) =>
-    api.delete<{ deleted: boolean }>(`/api/documents/${documentId}/permanent`),
+    api.delete<{ deleted: boolean }>(`/documents/${documentId}/permanent`),
 
   updateAccess: (documentId: string, linkAccess: LinkAccess) =>
     api.patch<{ id: string; linkAccess: LinkAccess }>(
-      `/api/documents/${documentId}/access`,
+      `/documents/${documentId}/access`,
       { linkAccess },
     ),
 
   listMembers: (documentId: string) =>
-    api.get<DocumentMemberApiResponse[]>(`/api/documents/${documentId}/members`),
+    api.get<DocumentMemberApiResponse[]>(`/documents/${documentId}/members`),
 
   inviteMember: (documentId: string, email: string, role: MemberRole) =>
-    api.post<DocumentMemberApiResponse>(`/api/documents/${documentId}/members`, {
+    api.post<DocumentMemberApiResponse>(`/documents/${documentId}/members`, {
       email,
       role,
     }),
 
   updateMemberRole: (documentId: string, memberUserId: string, role: MemberRole) =>
     api.patch<DocumentMemberApiResponse>(
-      `/api/documents/${documentId}/members/${memberUserId}`,
+      `/documents/${documentId}/members/${memberUserId}`,
       { role },
     ),
 
   removeMember: (documentId: string, memberUserId: string) =>
     api.delete<{ removed: boolean }>(
-      `/api/documents/${documentId}/members/${memberUserId}`,
+      `/documents/${documentId}/members/${memberUserId}`,
     ),
 
   createShareLink: (documentId: string) =>
-    api.post<{ token: string }>(`/api/documents/${documentId}/share`),
+    api.post<{ token: string }>(`/documents/${documentId}/share`),
 
   revokeShareLink: (documentId: string) =>
-    api.delete<{ revoked: boolean }>(`/api/documents/${documentId}/share`),
+    api.delete<{ revoked: boolean }>(`/documents/${documentId}/share`),
 
   getByShareToken: (token: string) =>
-    api.get<DocumentApiResponse>(`/api/documents/share/${token}`),
+    api.get<DocumentApiResponse>(`/documents/share/${token}`),
 
   addFavorite: (documentId: string) =>
-    api.post<{ favorited: boolean }>(`/api/documents/${documentId}/favorite`),
+    api.post<{ favorited: boolean }>(`/documents/${documentId}/favorite`),
 
   removeFavorite: (documentId: string) =>
-    api.delete<{ favorited: boolean }>(`/api/documents/${documentId}/favorite`),
+    api.delete<{ favorited: boolean }>(`/documents/${documentId}/favorite`),
 
   getFavoritesCount: () =>
-    api.get<{ count: number }>("/api/documents/favorites/count"),
+    api.get<{ count: number }>("/documents/favorites/count"),
 
   getSharedCount: () =>
-    api.get<{ count: number }>("/api/documents/shared/count"),
+    api.get<{ count: number }>("/documents/shared/count"),
 
   uploadFile: (documentId: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     return api.post<FileApiResponse>(
-      `/api/documents/${documentId}/files`,
+      `/documents/${documentId}/files`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
     );
@@ -150,5 +150,9 @@ export const documentApi = {
 
 export function resolveFileUrl(url: string): string {
   if (/^https?:\/\//.test(url)) return url;
-  return `${process.env.NEXT_PUBLIC_API_URL ?? ""}${url}`;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const path = apiUrl.endsWith("/api") && url.startsWith("/api/")
+    ? url.slice(4)
+    : url;
+  return `${apiUrl}${path}`;
 }

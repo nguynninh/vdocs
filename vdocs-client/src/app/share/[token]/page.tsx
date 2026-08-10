@@ -42,7 +42,7 @@ export default async function SharePage({ params }: SharePageProps) {
   const accessToken = cookieStore.get("accessToken")?.value;
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-  const response = await fetch(`${apiUrl}/api/documents/share/${token}`, {
+  const response = await fetch(`${apiUrl}/documents/share/${token}`, {
     cache: "no-store",
     headers: accessToken ? { Cookie: `accessToken=${accessToken}` } : {},
   });

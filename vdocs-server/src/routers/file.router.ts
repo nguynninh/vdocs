@@ -74,7 +74,7 @@ fileRouter.post(
         filename: file.filename,
         mimeType: file.mimeType,
         size: file.size,
-        url: `/api/files/${file.id}/download`,
+        url: `/files/${file.id}/download`,
       };
 
       sendSuccess(res, response, "Created", 201);

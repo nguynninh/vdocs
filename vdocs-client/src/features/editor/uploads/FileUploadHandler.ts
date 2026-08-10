@@ -22,7 +22,7 @@ export const FileUploadHandler = {
 
     try {
       const response = await api.post<UploadResultData>(
-        `/documents/${documentId}/files`,
+        `/files/documents/${documentId}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

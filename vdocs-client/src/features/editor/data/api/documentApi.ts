@@ -142,7 +142,7 @@ export const documentApi = {
     const formData = new FormData();
     formData.append("file", file);
     return api.post<FileApiResponse>(
-      `/documents/${documentId}/files`,
+      `/files/documents/${documentId}`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } },
     );

@@ -10,7 +10,7 @@ import {
 } from "../middleware/auth.middleware.ts";
 import {
   DocumentForbiddenError,
-  DocumentNotFoundError,
+  DocumentNotFoundError,  
 } from "../services/document.service.ts";
 import { FileNotFoundError, fileService } from "../services/file.service.ts";
 import type { FileResponse } from "../dtos/response/FileResponse.ts";
@@ -50,8 +50,7 @@ function handleError(error: unknown, res: Response) {
   sendError(res, 500, message);
 }
 
-fileRouter.post(
-  "/documents/:documentId/files",
+fileRouter.post("/documents/:documentId",
   requireAuth,
   upload.single("file"),
   async (req: Request<{ documentId: string }>, res: Response) => {
@@ -85,7 +84,7 @@ fileRouter.post(
 );
 
 fileRouter.get(
-  "/files/:fileId/download",
+  "/:fileId/download",
   async (req: Request<{ fileId: string }>, res: Response) => {
     try {
       const file = await fileService.getFile(req.params.fileId);

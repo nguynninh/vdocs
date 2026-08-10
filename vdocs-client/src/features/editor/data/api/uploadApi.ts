@@ -11,7 +11,7 @@ export function uploadImageFile(
   formData.append("file", file);
 
   return api
-    .post<UploadResultData>(`/documents/${documentId}/files`, formData, {
+    .post<UploadResultData>(`/files/documents/${documentId}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
       onUploadProgress: (event) => {
         if (!onProgress) return;

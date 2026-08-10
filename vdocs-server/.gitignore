@@ -1,7 +1,16 @@
-node_modules
-# Keep environment variables out of version control
+node_modules/
+
+# Environment variables - NEVER commit secrets
 .env
 .env.local
+.env.production
 
-/src/generated/prisma
-/uploads
+!.env.example
+!.env.local.example
+!.env.production.example
+
+# Prisma generated
+/src/generated/prisma/
+
+# Uploaded files
+/uploads/

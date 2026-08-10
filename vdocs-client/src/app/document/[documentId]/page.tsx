@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { VDocsEditor } from "@/features/editor";
 import type { VDocsEditorProps } from "@/features/editor";
+import { getApiBaseUrl } from "@/src/services/apiUrl";
 
 type DocumentPageProps = {
   params: Promise<{
@@ -42,8 +43,7 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("accessToken")?.value;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-  const response = await fetch(`${apiUrl}/documents/${documentId}`, {
+  const response = await fetch(`${getApiBaseUrl()}/documents/${documentId}`, {
     cache: "no-store",
     headers: accessToken ? { Cookie: `accessToken=${accessToken}` } : {},
   });

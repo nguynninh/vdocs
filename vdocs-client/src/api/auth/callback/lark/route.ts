@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
+import { getApiBaseUrl } from "@/src/services/apiUrl";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    if (!apiBaseUrl) {
+    if (!process.env.NEXT_PUBLIC_API_URL) {
       return NextResponse.json(
         { message: "Missing NEXT_PUBLIC_API_URL." },
         { status: 500 }
       );
     }
 
-    const response = await fetch(`${apiBaseUrl}/auth/social-login`, {
+    const response = await fetch(`${getApiBaseUrl()}/auth/social-login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -47,9 +47,11 @@ export function ColumnResizeHandle({ left, startWidth, onResize }: ColumnResizeH
       role="separator"
       aria-orientation="vertical"
       onMouseDown={handleMouseDown}
-      style={{ left: `${left - 3}px` }}
-      className="absolute top-0 z-10 h-full w-[6px] cursor-col-resize select-none hover:bg-blue-400/50"
-    />
+      style={{ left: `${left - 4}px` }}
+      className="group absolute top-0 z-10 flex h-full w-[8px] cursor-col-resize select-none justify-center"
+    >
+      <div className="h-full w-[2px] bg-transparent group-hover:bg-blue-400" />
+    </div>
   );
 }
 
@@ -89,8 +91,10 @@ export function RowResizeHandle({ top, startHeight, onResize }: RowResizeHandleP
       role="separator"
       aria-orientation="horizontal"
       onMouseDown={handleMouseDown}
-      style={{ top: `${top - 3}px` }}
-      className="absolute left-0 z-10 h-[6px] w-full cursor-row-resize select-none hover:bg-blue-400/50"
-    />
+      style={{ top: `${top - 4}px` }}
+      className="group absolute left-0 z-10 flex h-[8px] w-full cursor-row-resize select-none items-center"
+    >
+      <div className="h-[2px] w-full bg-transparent group-hover:bg-blue-400" />
+    </div>
   );
 }

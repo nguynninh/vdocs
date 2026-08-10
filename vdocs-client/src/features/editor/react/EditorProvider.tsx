@@ -31,15 +31,13 @@ import type {
   DocumentPermission,
 } from "../collaboration/collaboration.types";
 import { DEFAULT_CODE_LANGUAGE } from "../blocks/code-block/codeBlock.languages";
+import { getApiOrigin } from "@/src/services/apiUrl";
 
 function createDefaultTableRows(rowCount = 3, colCount = 3): string[][] {
   return Array.from({ length: rowCount }, () => Array.from({ length: colCount }, () => ""));
 }
 
-const REALTIME_URL =
-  process.env.NEXT_PUBLIC_REALTIME_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:3001";
+const REALTIME_URL = getApiOrigin() || "http://localhost:3001";
 
 export interface EditorProviderProps {
   documentId: string;

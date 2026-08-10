@@ -1,4 +1,5 @@
 import { api } from "@/src/services/axios";
+import { getApiBaseUrl } from "@/src/services/apiUrl";
 import type { DocumentPermission } from "../../collaboration/collaboration.types";
 
 export type LinkAccess = "NONE" | "VIEWER" | "COMMENTER" | "EDITOR";
@@ -150,9 +151,6 @@ export const documentApi = {
 
 export function resolveFileUrl(url: string): string {
   if (/^https?:\/\//.test(url)) return url;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-  const path = apiUrl.endsWith("/api") && url.startsWith("/api/")
-    ? url.slice(4)
-    : url;
-  return `${apiUrl}${path}`;
+  const path = url.startsWith("/api/") ? url.slice(4) : url;
+  return `${getApiBaseUrl()}${path}`;
 }

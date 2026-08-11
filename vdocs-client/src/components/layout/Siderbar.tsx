@@ -409,8 +409,11 @@ export default function Siderbar(props: Props) {
   const teamWorkspaceGroups = workspaceGroups.filter((group) => group.id !== personalWorkspace?.id);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
   const [isImportDocumentOpen, setIsImportDocumentOpen] = useState(false);
-  const [selectedWorkspace, setSelectedWorkspaceState] = useState<WorkspaceGroup | null>(null);
-  const hasRestoredRef = useRef(false);
+  const [selectedWorkspace, setSelectedWorkspaceState] = useState<WorkspaceGroup | null>(() => {
+    if (typeof window === "undefined") return null;
+    const storedId = window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY);
+    return storedId ? { id: storedId, label: "", icon: "" } : null;
+  });
   const untitledLabel = t("untitledDocument");
   const personalTree = useWorkspaceTree(personalWorkspace?.id, untitledLabel, router, pathname);
   const teamTree = useWorkspaceTree(selectedWorkspace?.id, untitledLabel, router, pathname);
@@ -426,16 +429,11 @@ export default function Siderbar(props: Props) {
   }
 
   useEffect(() => {
-    if (hasRestoredRef.current || workspaceGroups.length === 0) return;
+    if (!selectedWorkspace || selectedWorkspace.label) return;
 
-    hasRestoredRef.current = true;
-    const storedId = window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY);
-    const restored = storedId
-      ? workspaceGroups.find((group) => group.id === storedId)
-      : undefined;
-
-    if (restored) setSelectedWorkspaceState(restored);
-  }, [workspaceGroups]);
+    const hydrated = workspaceGroups.find((group) => group.id === selectedWorkspace.id);
+    if (hydrated) setSelectedWorkspaceState(hydrated);
+  }, [workspaceGroups, selectedWorkspace]);
 
   useEffect(() => {
     if (pathname === "/dashboard") setSelectedWorkspace(null);

@@ -104,6 +104,13 @@ export interface CollaborativeDocument {
   /** Inserts a new empty column at `atIndex`, shifting later columns right. */
   insertTableColumn(blockId: string, atIndex: number): void;
 
+  clearTableColumn(blockId: string, col: number): void;
+  duplicateTableColumn(blockId: string, col: number): void;
+  deleteTableColumn(blockId: string, col: number): void;
+  clearTableRow(blockId: string, row: number): void;
+  duplicateTableRow(blockId: string, row: number): void;
+  deleteTableRow(blockId: string, row: number): void;
+
   /** Plain-object snapshot for rendering — the read half of the read path. */
   getSnapshot(): DocumentModel;
 

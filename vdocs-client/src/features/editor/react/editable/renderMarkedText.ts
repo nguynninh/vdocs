@@ -39,6 +39,9 @@ export function renderMarkedText(node: HTMLElement, text: string, marks: MarkRan
         el.setAttribute("rel", "noopener noreferrer");
         el.className = "text-blue-600 underline decoration-blue-600/40 hover:decoration-blue-600";
       }
+      if (tag === "span" && range.type === "textColor" && range.data?.color) {
+        el.style.color = range.data.color;
+      }
       if (tag === "mark" && range.data?.color) {
         el.style.backgroundColor = range.data.color;
         el.className = "rounded-sm";

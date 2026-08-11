@@ -65,11 +65,34 @@ interface EditorContextValue {
   removeMark: (blockId: string, start: number, end: number, type: MarkType) => void;
   updateTableCell: (blockId: string, row: number, col: number, text: string) => void;
   toggleTableCellMark: (blockId: string, row: number, col: number, start: number, end: number, type: MarkType) => void;
+  applyTableCellMark: (
+    blockId: string,
+    row: number,
+    col: number,
+    start: number,
+    end: number,
+    type: MarkType,
+    data: MarkData,
+  ) => void;
+  removeTableCellMark: (
+    blockId: string,
+    row: number,
+    col: number,
+    start: number,
+    end: number,
+    type: MarkType,
+  ) => void;
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
   setTableCellFile: (blockId: string, row: number, col: number, file: FileData | null) => void;
   insertTableRow: (blockId: string, atIndex: number) => void;
   insertTableColumn: (blockId: string, atIndex: number) => void;
+  clearTableColumn: (blockId: string, col: number) => void;
+  duplicateTableColumn: (blockId: string, col: number) => void;
+  deleteTableColumn: (blockId: string, col: number) => void;
+  clearTableRow: (blockId: string, row: number) => void;
+  duplicateTableRow: (blockId: string, row: number) => void;
+  deleteTableRow: (blockId: string, row: number) => void;
   insertBlockAfterFocused: (blockId: string, blockType?: BlockType) => void;
   insertTableAfterBlock: (blockId: string, rows: string[][]) => void;
   insertImageBlockAfter: (blockId: string, image: ImageData) => void;
@@ -300,6 +323,30 @@ export function EditorProvider({
     [state.document],
   );
 
+  const applyTableCellMark = useCallback(
+    (blockId: string, row: number, col: number, start: number, end: number, type: MarkType, data: MarkData) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      const cellMarks = block?.table?.cellMarks?.[row]?.[col] ?? [];
+
+      const nextMarks = applyMarkRange(cellMarks, type, start, end, data);
+      documentRef.current?.setTableCellMarks(blockId, row, col, nextMarks);
+    },
+    [state.document],
+  );
+
+  const removeTableCellMark = useCallback(
+    (blockId: string, row: number, col: number, start: number, end: number, type: MarkType) => {
+      if (start === end) return;
+      const block = state.document.blocks.find((candidate) => candidate.id === blockId);
+      const cellMarks = block?.table?.cellMarks?.[row]?.[col] ?? [];
+
+      const nextMarks = removeMarkRange(cellMarks, type, start, end);
+      documentRef.current?.setTableCellMarks(blockId, row, col, nextMarks);
+    },
+    [state.document],
+  );
+
   const updateTableColumnWidth = useCallback((blockId: string, col: number, width: number) => {
     documentRef.current?.setTableColumnWidth(blockId, col, width);
   }, []);
@@ -321,6 +368,30 @@ export function EditorProvider({
 
   const insertTableColumn = useCallback((blockId: string, atIndex: number) => {
     documentRef.current?.insertTableColumn(blockId, atIndex);
+  }, []);
+
+  const clearTableColumn = useCallback((blockId: string, col: number) => {
+    documentRef.current?.clearTableColumn(blockId, col);
+  }, []);
+
+  const duplicateTableColumn = useCallback((blockId: string, col: number) => {
+    documentRef.current?.duplicateTableColumn(blockId, col);
+  }, []);
+
+  const deleteTableColumn = useCallback((blockId: string, col: number) => {
+    documentRef.current?.deleteTableColumn(blockId, col);
+  }, []);
+
+  const clearTableRow = useCallback((blockId: string, row: number) => {
+    documentRef.current?.clearTableRow(blockId, row);
+  }, []);
+
+  const duplicateTableRow = useCallback((blockId: string, row: number) => {
+    documentRef.current?.duplicateTableRow(blockId, row);
+  }, []);
+
+  const deleteTableRow = useCallback((blockId: string, row: number) => {
+    documentRef.current?.deleteTableRow(blockId, row);
   }, []);
 
   // Used by paste-detection: pasted tabular clipboard text becomes a table
@@ -636,11 +707,19 @@ export function EditorProvider({
       removeMark,
       updateTableCell,
       toggleTableCellMark,
+      applyTableCellMark,
+      removeTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
       setTableCellFile,
       insertTableRow,
       insertTableColumn,
+      clearTableColumn,
+      duplicateTableColumn,
+      deleteTableColumn,
+      clearTableRow,
+      duplicateTableRow,
+      deleteTableRow,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       insertImageBlockAfter,
@@ -681,11 +760,19 @@ export function EditorProvider({
       removeMark,
       updateTableCell,
       toggleTableCellMark,
+      applyTableCellMark,
+      removeTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
       setTableCellFile,
       insertTableRow,
       insertTableColumn,
+      clearTableColumn,
+      duplicateTableColumn,
+      deleteTableColumn,
+      clearTableRow,
+      duplicateTableRow,
+      deleteTableRow,
       insertBlockAfterFocused,
       insertTableAfterBlock,
       insertImageBlockAfter,

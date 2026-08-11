@@ -1,7 +1,20 @@
 "use client";
 
-import { Download, File as FileIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowDown,
+  ArrowUp,
+  ChevronRight,
+  CircleX,
+  Copy,
+  Download,
+  File as FileIcon,
+  PaintRoller,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { documentApi, resolveFileUrl } from "../../data/api/documentApi";
 import type { BlockNode, BlockType, FileData } from "../../engine/block/block.types";
@@ -12,22 +25,11 @@ import { SlashCommandPlugin } from "../../features/slash-command/SlashCommandPlu
 import type { SlashCommandPluginHandle } from "../../features/slash-command/SlashCommandPlugin";
 import { renderMarkedText } from "../../react/editable/renderMarkedText";
 import { useEditor } from "../../react/EditorProvider";
-import { ColumnResizeHandle, RowResizeHandle } from "./TableResizeHandle";
-
-function formatSize(bytes?: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export interface TableViewProps {
   block: BlockNode;
   isFirst: boolean;
 }
-
-const DEFAULT_COLUMN_WIDTH = 160;
-const DEFAULT_ROW_HEIGHT = 40;
 
 interface TableCellEditableProps {
   blockId: string;
@@ -42,6 +44,469 @@ interface TableCellEditableProps {
   onExit: () => void;
   onInsertBlockAfterTable: (blockType: BlockType) => void;
   onSetFile: (row: number, col: number, file: FileData | null) => void;
+}
+
+interface TableMenuState {
+  row: number;
+  col: number;
+  top: number;
+  left: number;
+}
+
+interface ColumnMenuState {
+  col: number;
+  top: number;
+  left: number;
+}
+
+interface RowMenuState {
+  row: number;
+  col: number;
+  top: number;
+  left: number;
+}
+
+const TEXT_COLORS = [
+  { label: "Default text", color: null },
+  { label: "Gray text", color: "#9B9A97" },
+  { label: "Brown text", color: "#64473A" },
+  { label: "Orange text", color: "#D9730D" },
+  { label: "Yellow text", color: "#DFAB01" },
+  { label: "Green text", color: "#0F7B6C" },
+  { label: "Blue text", color: "#0B6E99" },
+  { label: "Purple text", color: "#6940A5" },
+  { label: "Pink text", color: "#AD1A72" },
+  { label: "Red text", color: "#E03E3E" },
+];
+
+const BACKGROUND_COLORS = [
+  { label: "Default background", color: null },
+  { label: "Gray background", color: "#EBECED" },
+  { label: "Brown background", color: "#E9E5E3" },
+  { label: "Orange background", color: "#FAEBDD" },
+  { label: "Yellow background", color: "#FBF3DB" },
+  { label: "Green background", color: "#DDEDEA" },
+  { label: "Blue background", color: "#DDEBF1" },
+  { label: "Purple background", color: "#EAE4F2" },
+  { label: "Pink background", color: "#F4DFEB" },
+  { label: "Red background", color: "#FBE4E4" },
+];
+
+function TableHandle({
+  side,
+  selected,
+  onClick,
+}: {
+  side: "top" | "left" | "right";
+  selected?: boolean;
+  onClick?: (rect: DOMRect) => void;
+}) {
+  const isTop = side === "top";
+  const position =
+    side === "top"
+      ? "top-[-8px] left-1/2 -translate-x-1/2"
+      : side === "left"
+        ? "top-1/2 left-[-8px] -translate-y-1/2"
+        : "top-1/2 right-[-8px] -translate-y-1/2";
+
+  const Tag = onClick ? "button" : "span";
+
+  return (
+    <Tag
+      type={onClick ? "button" : undefined}
+      className={`group/handle pointer-events-auto absolute z-20 flex h-5 w-5 items-center justify-center ${position}`}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={(event) => {
+        if (!onClick) return;
+        event.stopPropagation();
+        onClick(event.currentTarget.getBoundingClientRect());
+      }}
+    >
+      <span
+        className={
+          isTop
+            ? `h-[3px] w-5 ${selected ? "hidden bg-[#2f80ed]" : "bg-[#9ca3af] group-hover/handle:hidden"}`
+            : `h-5 w-[3px] ${selected ? "hidden bg-[#2f80ed]" : "bg-[#9ca3af] group-hover/handle:hidden"}`
+        }
+      />
+      <span
+        className={`${selected ? "flex" : "hidden group-hover/handle:flex"} items-center justify-center rounded border shadow-sm ${
+          selected ? "border-[#2f80ed] bg-[#2f80ed]" : "border-[#cfd4dc] bg-white"
+        } ${
+          isTop ? "h-3.5 w-5" : "h-5 w-3.5"
+        }`}
+      >
+        <span className={isTop ? "grid grid-cols-3 gap-[2px]" : "grid grid-cols-2 gap-[2px]"}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <span key={index} className={`size-[2px] rounded-full ${selected ? "bg-white" : "bg-[#9ca3af]"}`} />
+          ))}
+        </span>
+      </span>
+    </Tag>
+  );
+}
+
+function getColorMenuLayout(menuTop: number, menuLeft: number, parentWidth = 224) {
+  const colorMenuWidth = 224;
+  const top = Math.max(8, Math.min(menuTop - 5, window.innerHeight - 240));
+  const left =
+    menuLeft + parentWidth + colorMenuWidth + 8 <= window.innerWidth
+      ? menuLeft + parentWidth
+      : Math.max(8, menuLeft - colorMenuWidth);
+  const maxHeight = Math.max(180, window.innerHeight - top - 8);
+
+  return { top, left, maxHeight };
+}
+
+function TableCellMenu({
+  menu,
+  onClose,
+  onColor,
+  onClear,
+}: {
+  menu: TableMenuState | null;
+  onClose: () => void;
+  onColor: (row: number, col: number, type: "textColor" | "highlight", color: string | null) => void;
+  onClear: (row: number, col: number) => void;
+}) {
+  useEffect(() => {
+    if (!menu) return;
+
+    const close = () => onClose();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menu, onClose]);
+
+  if (!menu || typeof document === "undefined") return null;
+
+  const colorMenu = getColorMenuLayout(menu.top, menu.left);
+
+  return createPortal(
+    <div
+      className="fixed z-50 w-56 rounded-lg border border-[#e1e4e8] bg-white p-1 text-sm text-[#1f2937] shadow-lg"
+      style={{ top: menu.top, left: menu.left }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="group/color relative">
+        <button
+          type="button"
+          className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-[#f7f7f5]"
+        >
+          <PaintRoller className="size-4 text-[#4b5563]" />
+          <span className="flex-1">Color</span>
+          <ChevronRight className="size-4 text-[#6b7280]" />
+        </button>
+        <div
+          className="fixed hidden w-56 overflow-y-auto rounded-lg border border-[#e1e4e8] bg-white p-2 shadow-lg group-hover/color:block"
+          style={{ top: colorMenu.top, left: colorMenu.left, maxHeight: colorMenu.maxHeight }}
+        >
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Text color</div>
+          {TEXT_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="text"
+              onClick={() => {
+                onColor(menu.row, menu.col, "textColor", item.color);
+                onClose();
+              }}
+            />
+          ))}
+          <div className="my-2 border-t border-[#eeeeec]" />
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Background color</div>
+          {BACKGROUND_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="background"
+              onClick={() => {
+                onColor(menu.row, menu.col, "highlight", item.color);
+                onClose();
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-[#f7f7f5]"
+        onClick={() => {
+          onClear(menu.row, menu.col);
+          onClose();
+        }}
+      >
+        <CircleX className="size-4 text-[#4b5563]" />
+        <span>Clear contents</span>
+      </button>
+    </div>,
+    document.body,
+  );
+}
+
+function TableColumnMenu({
+  menu,
+  onClose,
+  onColor,
+  onInsertLeft,
+  onInsertRight,
+  onDuplicate,
+  onClear,
+  onDelete,
+}: {
+  menu: ColumnMenuState | null;
+  onClose: () => void;
+  onColor: (col: number, type: "textColor" | "highlight", color: string | null) => void;
+  onInsertLeft: (col: number) => void;
+  onInsertRight: (col: number) => void;
+  onDuplicate: (col: number) => void;
+  onClear: (col: number) => void;
+  onDelete: (col: number) => void;
+}) {
+  useEffect(() => {
+    if (!menu) return;
+
+    const close = () => onClose();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menu, onClose]);
+
+  if (!menu || typeof document === "undefined") return null;
+
+  const colorMenu = getColorMenuLayout(menu.top + 32, menu.left, 208);
+  const run = (action: (col: number) => void) => {
+    action(menu.col);
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      className="fixed z-50 w-52 rounded-lg border border-[#e1e4e8] bg-white p-2 text-sm text-[#1f2937] shadow-lg"
+      style={{ top: menu.top, left: menu.left }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <input
+        autoFocus
+        placeholder="Search actions..."
+        className="mb-2 h-7 w-full rounded border border-[#2f80ed] px-2 text-xs outline-none"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onClose();
+        }}
+      />
+      <div className="group/color relative">
+        <ColumnMenuButton icon={<PaintRoller className="size-4" />} label="Color" trailing={<ChevronRight className="size-4" />} />
+        <div
+          className="fixed hidden w-56 overflow-y-auto rounded-lg border border-[#e1e4e8] bg-white p-2 shadow-lg group-hover/color:block"
+          style={{ top: colorMenu.top, left: colorMenu.left, maxHeight: colorMenu.maxHeight }}
+        >
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Text color</div>
+          {TEXT_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="text"
+              onClick={() => {
+                onColor(menu.col, "textColor", item.color);
+                onClose();
+              }}
+            />
+          ))}
+          <div className="my-2 border-t border-[#eeeeec]" />
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Background color</div>
+          {BACKGROUND_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="background"
+              onClick={() => {
+                onColor(menu.col, "highlight", item.color);
+                onClose();
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <ColumnMenuButton icon={<ArrowLeft className="size-4" />} label="Insert left" onClick={() => run(onInsertLeft)} />
+      <ColumnMenuButton icon={<ArrowRight className="size-4" />} label="Insert right" onClick={() => run(onInsertRight)} />
+      <ColumnMenuButton icon={<Copy className="size-4" />} label="Duplicate" trailing={<span className="text-xs text-[#9ca3af]">⌘D</span>} onClick={() => run(onDuplicate)} />
+      <ColumnMenuButton icon={<CircleX className="size-4" />} label="Clear contents" onClick={() => run(onClear)} />
+      <ColumnMenuButton icon={<Trash2 className="size-4" />} label="Delete" onClick={() => run(onDelete)} />
+    </div>,
+    document.body,
+  );
+}
+
+function TableRowMenu({
+  menu,
+  onClose,
+  onColor,
+  onInsertAbove,
+  onInsertBelow,
+  onDuplicate,
+  onClear,
+  onDelete,
+}: {
+  menu: RowMenuState | null;
+  onClose: () => void;
+  onColor: (row: number, type: "textColor" | "highlight", color: string | null) => void;
+  onInsertAbove: (row: number) => void;
+  onInsertBelow: (row: number) => void;
+  onDuplicate: (row: number) => void;
+  onClear: (row: number) => void;
+  onDelete: (row: number) => void;
+}) {
+  useEffect(() => {
+    if (!menu) return;
+
+    const close = () => onClose();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menu, onClose]);
+
+  if (!menu || typeof document === "undefined") return null;
+
+  const colorMenu = getColorMenuLayout(menu.top + 32, menu.left, 208);
+  const run = (action: (row: number) => void) => {
+    action(menu.row);
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      className="fixed z-50 w-52 rounded-lg border border-[#e1e4e8] bg-white p-2 text-sm text-[#1f2937] shadow-lg"
+      style={{ top: menu.top, left: menu.left }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <input
+        autoFocus
+        placeholder="Search actions..."
+        className="mb-2 h-7 w-full rounded border border-[#2f80ed] px-2 text-xs outline-none"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onClose();
+        }}
+      />
+      <div className="group/color relative">
+        <ColumnMenuButton icon={<PaintRoller className="size-4" />} label="Color" trailing={<ChevronRight className="size-4" />} />
+        <div
+          className="fixed hidden w-56 overflow-y-auto rounded-lg border border-[#e1e4e8] bg-white p-2 shadow-lg group-hover/color:block"
+          style={{ top: colorMenu.top, left: colorMenu.left, maxHeight: colorMenu.maxHeight }}
+        >
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Text color</div>
+          {TEXT_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="text"
+              onClick={() => {
+                onColor(menu.row, "textColor", item.color);
+                onClose();
+              }}
+            />
+          ))}
+          <div className="my-2 border-t border-[#eeeeec]" />
+          <div className="px-1.5 pb-1 text-xs text-[#6b7280]">Background color</div>
+          {BACKGROUND_COLORS.map((item) => (
+            <ColorMenuItem
+              key={item.label}
+              label={item.label}
+              color={item.color}
+              type="background"
+              onClick={() => {
+                onColor(menu.row, "highlight", item.color);
+                onClose();
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <ColumnMenuButton icon={<ArrowUp className="size-4" />} label="Insert above" onClick={() => run(onInsertAbove)} />
+      <ColumnMenuButton icon={<ArrowDown className="size-4" />} label="Insert below" onClick={() => run(onInsertBelow)} />
+      <ColumnMenuButton icon={<Copy className="size-4" />} label="Duplicate" trailing={<span className="text-xs text-[#9ca3af]">⌘D</span>} onClick={() => run(onDuplicate)} />
+      <ColumnMenuButton icon={<CircleX className="size-4" />} label="Clear contents" onClick={() => run(onClear)} />
+      <ColumnMenuButton icon={<Trash2 className="size-4" />} label="Delete" onClick={() => run(onDelete)} />
+      <div className="mt-2 border-t border-[#eeeeec] pt-1 text-xs text-[#9ca3af]">
+        <div>Last edited by Nguyễn Ninh</div>
+        <div>Today at 2:29 PM</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ColumnMenuButton({
+  icon,
+  label,
+  trailing,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  trailing?: ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex h-7 w-full items-center gap-2 rounded-md px-1.5 text-left hover:bg-[#f7f7f5]"
+      onClick={onClick}
+    >
+      <span className="text-[#4b5563]">{icon}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {trailing}
+    </button>
+  );
+}
+
+function ColorMenuItem({
+  label,
+  color,
+  type,
+  onClick,
+}: {
+  label: string;
+  color: string | null;
+  type: "text" | "background";
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className="flex h-7 w-full items-center gap-2 rounded-md px-1.5 text-left hover:bg-[#f7f7f5]" onClick={onClick}>
+      <span
+        className="flex size-5 shrink-0 items-center justify-center rounded border border-[#e5e7eb] text-sm"
+        style={type === "background" && color ? { backgroundColor: color } : undefined}
+      >
+        {type === "text" && <span style={color ? { color } : undefined}>A</span>}
+      </span>
+      <span className="truncate">{label}</span>
+    </button>
+  );
 }
 
 // Mirrors EditableText's contentEditable pattern (uncontrolled DOM node kept
@@ -196,7 +661,7 @@ function TableCellEditable({
         ref={ref}
         contentEditable={canEdit}
         suppressContentEditableWarning
-        className="h-full px-3 py-2 text-sm outline-none focus:bg-accent/40"
+        className="min-h-7 h-full px-3 py-1 text-sm outline-none"
         data-table-cell={`${blockId}:${row}:${col}`}
         onInput={(event) => {
           const nextText = event.currentTarget.textContent ?? "";
@@ -248,25 +713,32 @@ export function TableView({ block }: TableViewProps) {
     documentId,
     updateTableCell,
     toggleTableCellMark,
-    updateTableColumnWidth,
-    updateTableRowHeight,
+    applyTableCellMark,
+    removeTableCellMark,
     setTableCellFile,
-    insertTableRow,
     insertTableColumn,
+    insertTableRow,
+    clearTableColumn,
+    duplicateTableColumn,
+    deleteTableColumn,
+    clearTableRow,
+    duplicateTableRow,
+    deleteTableRow,
     insertBlockAfterFocused,
     canEdit,
   } = useEditor();
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
+  const [menu, setMenu] = useState<TableMenuState | null>(null);
+  const [columnMenu, setColumnMenu] = useState<ColumnMenuState | null>(null);
+  const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
   const rows = block.table?.rows ?? [];
   const cellMarks = block.table?.cellMarks ?? [];
-  const columnWidths = block.table?.columnWidths ?? [];
-  const rowHeights = block.table?.rowHeights ?? [];
   const cellFiles = block.table?.cellFiles ?? [];
 
   if (rows.length === 0) {
     return null;
   }
-
-  const columnCount = rows[0]?.length ?? 0;
 
   const onCellChange = (row: number, col: number, text: string) => {
     const inlineCode = matchInlineCode(text);
@@ -280,30 +752,171 @@ export function TableView({ block }: TableViewProps) {
     updateTableCell(block.id, row, col, text);
   };
 
-  const resolvedColumnWidths = Array.from(
-    { length: columnCount },
-    (_, colIndex) => columnWidths[colIndex] ?? DEFAULT_COLUMN_WIDTH,
-  );
-  const resolvedRowHeights = rows.map((_, rowIndex) => rowHeights[rowIndex] ?? DEFAULT_ROW_HEIGHT);
+  const clearCell = (row: number, col: number) => {
+    const length = rows[row]?.[col]?.length ?? 0;
+    removeTableCellMark(block.id, row, col, 0, length, "textColor");
+    removeTableCellMark(block.id, row, col, 0, length, "highlight");
+    updateTableCell(block.id, row, col, "");
+    setTableCellFile(block.id, row, col, null);
+  };
+
+  const colorCell = (row: number, col: number, type: "textColor" | "highlight", color: string | null) => {
+    const length = rows[row]?.[col]?.length ?? 0;
+    if (color) {
+      applyTableCellMark(block.id, row, col, 0, length, type, { color });
+      return;
+    }
+    removeTableCellMark(block.id, row, col, 0, length, type);
+  };
+
+  const colorColumn = (col: number, type: "textColor" | "highlight", color: string | null) => {
+    rows.forEach((row, rowIndex) => {
+      const length = row[col]?.length ?? 0;
+      if (color) {
+        applyTableCellMark(block.id, rowIndex, col, 0, length, type, { color });
+        return;
+      }
+      removeTableCellMark(block.id, rowIndex, col, 0, length, type);
+    });
+  };
+
+  const colorRow = (row: number, type: "textColor" | "highlight", color: string | null) => {
+    rows[row]?.forEach((cell, colIndex) => {
+      const length = cell.length;
+      if (color) {
+        applyTableCellMark(block.id, row, colIndex, 0, length, type, { color });
+        return;
+      }
+      removeTableCellMark(block.id, row, colIndex, 0, length, type);
+    });
+  };
 
   return (
-    <div className="my-1 overflow-x-auto">
-      <div className="relative inline-block">
-        <table className="table-fixed border-collapse border border-border">
-          <colgroup>
-            {resolvedColumnWidths.map((width, colIndex) => (
-              <col key={colIndex} style={{ width: `${width}px` }} />
-            ))}
-          </colgroup>
-          <tbody>
-            {rows.map((cells, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="border border-border"
-                style={{ height: `${resolvedRowHeights[rowIndex]}px` }}
-              >
-                {cells.map((cellText, colIndex) => (
-                  <td key={colIndex} className="relative overflow-hidden border border-border p-0 align-top">
+    <div className="my-1 overflow-x-auto px-2 pt-2">
+      <TableCellMenu menu={menu} onClose={() => setMenu(null)} onColor={colorCell} onClear={clearCell} />
+      <TableColumnMenu
+        menu={columnMenu}
+        onClose={() => setColumnMenu(null)}
+        onColor={colorColumn}
+        onInsertLeft={(col) => insertTableColumn(block.id, col)}
+        onInsertRight={(col) => insertTableColumn(block.id, col + 1)}
+        onDuplicate={(col) => duplicateTableColumn(block.id, col)}
+        onClear={(col) => clearTableColumn(block.id, col)}
+        onDelete={(col) => deleteTableColumn(block.id, col)}
+      />
+      <TableRowMenu
+        menu={rowMenu}
+        onClose={() => setRowMenu(null)}
+        onColor={colorRow}
+        onInsertAbove={(row) => insertTableRow(block.id, row)}
+        onInsertBelow={(row) => insertTableRow(block.id, row + 1)}
+        onDuplicate={(row) => duplicateTableRow(block.id, row)}
+        onClear={(row) => clearTableRow(block.id, row)}
+        onDelete={(row) => deleteTableRow(block.id, row)}
+      />
+      <table className="w-full table-fixed border-collapse border border-[#e1e4e8]">
+        <tbody>
+          {rows.map((cells, rowIndex) => (
+            <tr key={rowIndex}>
+              {cells.map((cellText, colIndex) => {
+                const isMenuCell = menu?.row === rowIndex && menu.col === colIndex;
+                const isFocusedCell = focusedCell?.row === rowIndex && focusedCell.col === colIndex;
+                const isColumnSelected = columnMenu?.col === colIndex;
+                const isRowSelected = rowMenu?.row === rowIndex;
+                const isTopHandle =
+                  (activeCell?.col === colIndex ||
+                    focusedCell?.col === colIndex ||
+                    menu?.col === colIndex ||
+                    rowMenu?.col === colIndex ||
+                    isColumnSelected) &&
+                  rowIndex === 0;
+                const isLeftHandle =
+                  (activeCell?.row === rowIndex || menu?.row === rowIndex || isRowSelected) && colIndex === 0;
+                const isRightHandle = isFocusedCell || isMenuCell;
+                const selectedColumnClass = isColumnSelected
+                  ? `${rowIndex === 0 ? "border-t-[#2f80ed]" : ""} ${
+                      rowIndex === rows.length - 1 ? "border-b-[#2f80ed]" : ""
+                    } border-x-[#2f80ed] bg-[#eaf2ff]/70`
+                  : "";
+                const selectedRowClass = isRowSelected
+                  ? `${colIndex === 0 ? "border-l-[#2f80ed]" : ""} ${
+                      colIndex === cells.length - 1 ? "border-r-[#2f80ed]" : ""
+                    } border-y-[#2f80ed] bg-[#eaf2ff]/70`
+                  : "";
+
+                return (
+                  <td
+                    key={colIndex}
+                    className={`relative min-w-28 border border-[#e1e4e8] p-0 align-top focus-within:z-10 focus-within:outline-2 focus-within:outline-offset-[-1px] focus-within:outline-[#2f80ed] ${selectedColumnClass} ${selectedRowClass}`}
+                    onMouseEnter={() => setActiveCell({ row: rowIndex, col: colIndex })}
+                    onMouseLeave={() => {
+                      if (!menu && !columnMenu && !rowMenu) setActiveCell(null);
+                    }}
+                    onFocus={() => {
+                      setActiveCell({ row: rowIndex, col: colIndex });
+                      setFocusedCell({ row: rowIndex, col: colIndex });
+                    }}
+                    onBlur={(event) => {
+                      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
+                        return;
+                      }
+                      if (!menu && !columnMenu && !rowMenu) setFocusedCell(null);
+                    }}
+                  >
+                    {isTopHandle && (
+                      <TableHandle
+                        side="top"
+                        selected={isColumnSelected}
+                        onClick={
+                          canEdit
+                            ? (rect) => {
+                                setMenu(null);
+                                setRowMenu(null);
+                                setColumnMenu({
+                                  col: colIndex,
+                                  top: rect.bottom + 4,
+                                  left: Math.max(4, Math.min(rect.left, window.innerWidth - 432)),
+                                });
+                              }
+                            : undefined
+                        }
+                      />
+                    )}
+                    {isLeftHandle && (
+                      <TableHandle
+                        side="left"
+                        selected={isRowSelected}
+                        onClick={
+                          canEdit
+                            ? (rect) => {
+                                setMenu(null);
+                                setColumnMenu(null);
+                                setRowMenu({
+                                  row: rowIndex,
+                                  col: colIndex,
+                                  top: Math.max(8, Math.min(rect.top, window.innerHeight - 280)),
+                                  left: Math.max(4, Math.min(rect.left + 12, window.innerWidth - 216)),
+                                });
+                              }
+                            : undefined
+                        }
+                      />
+                    )}
+                    {isRightHandle && canEdit && (
+                      <TableHandle
+                        side="right"
+                        onClick={(rect) => {
+                          setColumnMenu(null);
+                          setRowMenu(null);
+                          setMenu({
+                            row: rowIndex,
+                            col: colIndex,
+                            top: rect.bottom + 4,
+                            left: Math.max(4, Math.min(rect.left, window.innerWidth - 456)),
+                          });
+                        }}
+                      />
+                    )}
                     <TableCellEditable
                       blockId={block.id}
                       documentId={documentId}
@@ -319,91 +932,12 @@ export function TableView({ block }: TableViewProps) {
                       onSetFile={(row, col, file) => setTableCellFile(block.id, row, col, file)}
                     />
                   </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {canEdit &&
-          resolvedColumnWidths.slice(0, -1).map((width, colIndex) => {
-            const left = resolvedColumnWidths.slice(0, colIndex + 1).reduce((sum, w) => sum + w, 0);
-            return (
-              <ColumnResizeHandle
-                key={`col-${colIndex}`}
-                left={left}
-                startWidth={width}
-                onResize={(nextWidth) => updateTableColumnWidth(block.id, colIndex, nextWidth)}
-              />
-            );
-          })}
-        {canEdit &&
-          resolvedRowHeights.slice(0, -1).map((height, rowIndex) => {
-            const top = resolvedRowHeights.slice(0, rowIndex + 1).reduce((sum, h) => sum + h, 0);
-            return (
-              <RowResizeHandle
-                key={`row-${rowIndex}`}
-                top={top}
-                startHeight={height}
-                onResize={(nextHeight) => updateTableRowHeight(block.id, rowIndex, nextHeight)}
-              />
-            );
-          })}
-        {canEdit && (
-          <>
-            <AddEdgeButton
-              edge="top"
-              label="Thêm hàng phía trên"
-              onClick={() => insertTableRow(block.id, 0)}
-            />
-            <AddEdgeButton
-              edge="bottom"
-              label="Thêm hàng phía dưới"
-              onClick={() => insertTableRow(block.id, rows.length)}
-            />
-            <AddEdgeButton
-              edge="left"
-              label="Thêm cột bên trái"
-              onClick={() => insertTableColumn(block.id, 0)}
-            />
-            <AddEdgeButton
-              edge="right"
-              label="Thêm cột bên phải"
-              onClick={() => insertTableColumn(block.id, columnCount)}
-            />
-          </>
-        )}
-      </div>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
-  );
-}
-
-const EDGE_CLASS: Record<"top" | "bottom" | "left" | "right", string> = {
-  top: "left-0 right-0 top-0 h-3 flex-row",
-  bottom: "left-0 right-0 bottom-0 h-3 flex-row",
-  left: "top-0 bottom-0 left-0 w-3 flex-col",
-  right: "top-0 bottom-0 right-0 w-3 flex-col",
-};
-
-function AddEdgeButton({
-  edge,
-  label,
-  onClick,
-}: {
-  edge: "top" | "bottom" | "left" | "right";
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      className={`group absolute z-20 flex items-center justify-center ${EDGE_CLASS[edge]}`}
-    >
-      <span className="flex size-4 items-center justify-center rounded-full border border-border bg-background text-xs leading-none text-muted-foreground opacity-0 shadow-sm group-hover:opacity-100">
-        +
-      </span>
-    </button>
   );
 }

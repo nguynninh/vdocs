@@ -5,6 +5,7 @@ export type MarkType =
   | "strikethrough"
   | "code"
   | "link"
+  | "textColor"
   | "highlight";
 
 export interface MarkData {

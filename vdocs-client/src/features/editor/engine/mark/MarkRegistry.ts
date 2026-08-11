@@ -3,7 +3,7 @@ import type { MarkType } from "./mark.types";
 export interface MarkDefinition {
   type: MarkType;
   hotkey: string;
-  tag: "strong" | "em" | "u" | "s" | "code" | "a" | "mark";
+  tag: "strong" | "em" | "u" | "s" | "code" | "a" | "span" | "mark";
 }
 
 export const MARK_REGISTRY: Record<MarkType, MarkDefinition> = {
@@ -13,5 +13,6 @@ export const MARK_REGISTRY: Record<MarkType, MarkDefinition> = {
   strikethrough: { type: "strikethrough", hotkey: "d", tag: "s" },
   code: { type: "code", hotkey: "e", tag: "code" },
   link: { type: "link", hotkey: "k", tag: "a" },
+  textColor: { type: "textColor", hotkey: "", tag: "span" },
   highlight: { type: "highlight", hotkey: "h", tag: "mark" },
 };

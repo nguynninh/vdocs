@@ -12,25 +12,63 @@ import {
 
 export const router = Router();
 
+const authCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: "lax" as const,
+  domain: isProduction && env.COOKIE_DOMAIN ? env.COOKIE_DOMAIN : undefined,
+};
+
+function setAuthCookie(
+  res: Response,
+  name: string,
+  value: string,
+  maxAge: number
+) {
+  res.cookie(name, value, {
+    ...authCookieOptions,
+    maxAge,
+  });
+
+  if (authCookieOptions.domain) {
+    res.cookie(name, value, {
+      ...authCookieOptions,
+      domain: undefined,
+      maxAge,
+    });
+  }
+}
+
+function clearAuthCookie(res: Response, name: string) {
+  res.clearCookie(name, authCookieOptions);
+
+  if (authCookieOptions.domain) {
+    res.clearCookie(name, {
+      ...authCookieOptions,
+      domain: undefined,
+    });
+  }
+}
+
 router.post("/social-login",
   async (req: Request<unknown, unknown, SocialRequest>, res: Response) => {
     try {
       const result = await authService.socialLogin(req.body);
 
-      res.cookie("accessToken", result.auth.accessToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: env.ACCESS_TOKEN_MAX_AGE_MS,
-      });
+      setAuthCookie(
+        res,
+        "accessToken",
+        result.auth.accessToken,
+        env.ACCESS_TOKEN_MAX_AGE_MS
+      );
 
       if (result.auth.refreshToken) {
-        res.cookie("refreshToken", result.auth.refreshToken, {
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: "lax",
-          maxAge: env.REFRESH_TOKEN_MAX_AGE_MS,
-        });
+        setAuthCookie(
+          res,
+          "refreshToken",
+          result.auth.refreshToken,
+          env.REFRESH_TOKEN_MAX_AGE_MS
+        );
       }
 
       sendSuccess(res, result);
@@ -44,8 +82,8 @@ router.post("/social-login",
 
 router.post("/logout",
   (_req: Request, res: Response) => {
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+    clearAuthCookie(res, "accessToken");
+    clearAuthCookie(res, "refreshToken");
     sendSuccess(res, { ok: true });
   }
 );

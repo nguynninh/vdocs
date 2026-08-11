@@ -11,6 +11,20 @@ dotenv.config({
   path: envFile,
 });
 
+function inferCookieDomain(frontendUrl: string): string {
+  try {
+    const hostname = new URL(frontendUrl).hostname;
+
+    if (hostname.endsWith(".vtvlive.vn")) {
+      return ".vtvlive.vn";
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
 export const env = {
   NODE_ENV: nodeEnv,
 
@@ -18,6 +32,11 @@ export const env = {
 
   FRONTEND_URL:
     process.env.FRONTEND_URL ?? "http://localhost:3000",
+
+  COOKIE_DOMAIN:
+    process.env.COOKIE_DOMAIN ?? inferCookieDomain(
+      process.env.FRONTEND_URL ?? "http://localhost:3000"
+    ),
 
   ACCESS_TOKEN_MAX_AGE_MS: Number(
     process.env.ACCESS_TOKEN_MAX_AGE_MS ?? 604800000

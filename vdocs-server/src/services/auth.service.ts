@@ -6,6 +6,7 @@ import type {
   LarkTokenResponse,
   LarkUserInfoResponse,
 } from "../dtos/response/LarkResponse.ts";
+import { env } from "../configuration/dotenv.ts";
 import { generateToken } from "../utils/jwt.ts";
 import { userService } from "./user.service.ts";
 
@@ -47,7 +48,9 @@ function requireLarkClientSecret() {
 
 function requireLarkRedirectUri() {
   const redirectUri =
-    process.env.LARK_REDIRECT_URI ?? process.env.NEXT_PUBLIC_LARK_REDIRECT_URI;
+    process.env.LARK_REDIRECT_URI ??
+    process.env.NEXT_PUBLIC_LARK_REDIRECT_URI ??
+    `${env.FRONTEND_URL.replace(/\/$/, "")}/login/lark/callback`;
 
   if (!redirectUri) {
     throw new Error("Missing LARK_REDIRECT_URI or NEXT_PUBLIC_LARK_REDIRECT_URI");

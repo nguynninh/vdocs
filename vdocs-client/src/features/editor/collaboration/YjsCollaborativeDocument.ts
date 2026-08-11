@@ -297,6 +297,15 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
     });
   }
 
+  setTableHeaderRow(blockId: string, enabled: boolean): void {
+    this.ydoc.transact(() => {
+      const index = this.findBlockIndex(blockId);
+      if (index === -1) return;
+
+      this.blocks.get(index).set("tableHeaderRow", enabled);
+    });
+  }
+
   setTableCell(blockId: string, row: number, col: number, text: string): void {
     this.ydoc.transact(() => {
       const index = this.findBlockIndex(blockId);
@@ -724,6 +733,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
       const columnWidths = block.get("columnWidths") as number[] | undefined;
       const rowHeights = block.get("rowHeights") as number[] | undefined;
       const cellFiles = block.get("cellFiles") as (FileData | null)[][] | undefined;
+      const headerRow = block.get("tableHeaderRow") as boolean | undefined;
       const marks = block.get("marks") as MarkRange[] | undefined;
       const codeLanguage = block.get("codeLanguage") as string | undefined;
       const checked = block.get("checked") as boolean | undefined;
@@ -735,7 +745,7 @@ export class YjsCollaborativeDocument implements CollaborativeDocument {
         type: block.get("type") as BlockType,
         text: (block.get("text") as Y.Text | undefined)?.toString() ?? "",
         ...(marks?.length ? { marks } : {}),
-        ...(table ? { table: { rows: table, cellMarks, columnWidths, rowHeights, cellFiles } } : {}),
+        ...(table ? { table: { rows: table, headerRow, cellMarks, columnWidths, rowHeights, cellFiles } } : {}),
         ...(codeLanguage ? { codeLanguage } : {}),
         ...(checked !== undefined ? { checked } : {}),
         ...(file ? { file } : {}),

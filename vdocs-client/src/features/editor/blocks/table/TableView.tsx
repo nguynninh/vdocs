@@ -11,9 +11,10 @@ import {
   Download,
   File as FileIcon,
   PaintRoller,
+  Rows3,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { documentApi, resolveFileUrl } from "../../data/api/documentApi";
@@ -357,7 +358,9 @@ function TableColumnMenu({
 
 function TableRowMenu({
   menu,
+  headerRow,
   onClose,
+  onHeaderRow,
   onColor,
   onInsertAbove,
   onInsertBelow,
@@ -366,7 +369,9 @@ function TableRowMenu({
   onDelete,
 }: {
   menu: RowMenuState | null;
+  headerRow: boolean;
   onClose: () => void;
+  onHeaderRow: (enabled: boolean) => void;
   onColor: (row: number, type: "textColor" | "highlight", color: string | null) => void;
   onInsertAbove: (row: number) => void;
   onInsertBelow: (row: number) => void;
@@ -412,6 +417,29 @@ function TableRowMenu({
           if (event.key === "Escape") onClose();
         }}
       />
+      {menu.row === 0 && (
+        <ColumnMenuButton
+          icon={<Rows3 className="size-4" />}
+          label="Header row"
+          trailing={
+            <span
+              className={`relative h-4 w-7 rounded-full transition-colors ${
+                headerRow ? "bg-[#2f80ed]" : "bg-[#d1d5db]"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 size-3 rounded-full bg-white transition-transform ${
+                  headerRow ? "translate-x-3.5" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          }
+          onClick={() => {
+            onHeaderRow(!headerRow);
+            onClose();
+          }}
+        />
+      )}
       <div className="group/color relative">
         <ColumnMenuButton icon={<PaintRoller className="size-4" />} label="Color" trailing={<ChevronRight className="size-4" />} />
         <div
@@ -482,6 +510,32 @@ function ColumnMenuButton({
       <span className="flex-1 truncate">{label}</span>
       {trailing}
     </button>
+  );
+}
+
+function ColumnResizeGuide({
+  left,
+  active,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseDown,
+}: {
+  left: number;
+  active: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  onMouseDown: (event: ReactMouseEvent<HTMLDivElement>) => void;
+}) {
+  return (
+    <div
+      className="absolute bottom-0 top-0 z-30 w-3 -translate-x-1/2 cursor-col-resize"
+      style={{ left }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onMouseDown={onMouseDown}
+    >
+      <div className={`mx-auto h-full w-0.5 bg-[#2f80ed] ${active ? "block" : "hidden"}`} />
+    </div>
   );
 }
 
@@ -716,6 +770,8 @@ export function TableView({ block }: TableViewProps) {
     applyTableCellMark,
     removeTableCellMark,
     setTableCellFile,
+    updateTableColumnWidth,
+    setTableHeaderRow,
     insertTableColumn,
     insertTableRow,
     clearTableColumn,
@@ -732,9 +788,38 @@ export function TableView({ block }: TableViewProps) {
   const [menu, setMenu] = useState<TableMenuState | null>(null);
   const [columnMenu, setColumnMenu] = useState<ColumnMenuState | null>(null);
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [columnGuideLefts, setColumnGuideLefts] = useState<number[]>([]);
+  const [measuredColumnWidths, setMeasuredColumnWidths] = useState<number[]>([]);
+  const [hoveredResizeCol, setHoveredResizeCol] = useState<number | null>(null);
+  const [resizingCol, setResizingCol] = useState<number | null>(null);
   const rows = block.table?.rows ?? [];
+  const headerRow = block.table?.headerRow ?? false;
   const cellMarks = block.table?.cellMarks ?? [];
   const cellFiles = block.table?.cellFiles ?? [];
+  const columnWidths = block.table?.columnWidths ?? [];
+  const columnCount = rows[0]?.length ?? 0;
+  const columnWidthsKey = columnWidths.join("|");
+  const resolvedColumnWidths = Array.from(
+    { length: columnCount },
+    (_, colIndex) => columnWidths[colIndex] ?? measuredColumnWidths[colIndex] ?? 160,
+  );
+  const tableWidth = resolvedColumnWidths.reduce((total, width) => total + width, 0);
+
+  useEffect(() => {
+    const measureColumnGuides = () => {
+      const firstRowCells = tableRef.current?.querySelectorAll<HTMLTableCellElement>("tbody tr:first-child td");
+      if (!firstRowCells) return;
+
+      const cells = Array.from(firstRowCells);
+      setMeasuredColumnWidths(cells.map((cell) => cell.offsetWidth));
+      setColumnGuideLefts(cells.map((cell) => cell.offsetLeft + cell.offsetWidth));
+    };
+
+    measureColumnGuides();
+    window.addEventListener("resize", measureColumnGuides);
+    return () => window.removeEventListener("resize", measureColumnGuides);
+  }, [columnCount, columnWidthsKey]);
 
   if (rows.length === 0) {
     return null;
@@ -791,6 +876,39 @@ export function TableView({ block }: TableViewProps) {
     });
   };
 
+  const startColumnResize = (col: number, event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const table = tableRef.current;
+    const cell = table?.querySelector<HTMLTableCellElement>(`tbody tr:first-child td:nth-child(${col + 1})`);
+    if (!table || !cell) return;
+
+    const startX = event.clientX;
+    const startWidth = cell.offsetWidth;
+    setResizingCol(col);
+
+    Array.from(table.querySelectorAll<HTMLTableCellElement>("tbody tr:first-child td")).forEach(
+      (headerCell, colIndex) => {
+        if (columnWidths[colIndex] === undefined) {
+          updateTableColumnWidth(block.id, colIndex, headerCell.offsetWidth);
+        }
+      },
+    );
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateTableColumnWidth(block.id, col, Math.max(80, startWidth + moveEvent.clientX - startX));
+    };
+    const handleMouseUp = () => {
+      setResizingCol(null);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   return (
     <div className="my-1 overflow-x-auto px-2 pt-2">
       <TableCellMenu menu={menu} onClose={() => setMenu(null)} onColor={colorCell} onClear={clearCell} />
@@ -806,7 +924,9 @@ export function TableView({ block }: TableViewProps) {
       />
       <TableRowMenu
         menu={rowMenu}
+        headerRow={headerRow}
         onClose={() => setRowMenu(null)}
+        onHeaderRow={(enabled) => setTableHeaderRow(block.id, enabled)}
         onColor={colorRow}
         onInsertAbove={(row) => insertTableRow(block.id, row)}
         onInsertBelow={(row) => insertTableRow(block.id, row + 1)}
@@ -814,11 +934,21 @@ export function TableView({ block }: TableViewProps) {
         onClear={(row) => clearTableRow(block.id, row)}
         onDelete={(row) => deleteTableRow(block.id, row)}
       />
-      <table className="w-full table-fixed border-collapse border border-[#e1e4e8]">
-        <tbody>
-          {rows.map((cells, rowIndex) => (
-            <tr key={rowIndex}>
-              {cells.map((cellText, colIndex) => {
+      <div className="relative inline-block align-top">
+        <table
+          ref={tableRef}
+          className="table-fixed border-collapse border border-[#e1e4e8]"
+          style={{ width: `${tableWidth}px` }}
+        >
+          <colgroup>
+            {Array.from({ length: columnCount }).map((_, colIndex) => (
+              <col key={colIndex} style={{ width: `${resolvedColumnWidths[colIndex]}px` }} />
+            ))}
+          </colgroup>
+          <tbody>
+            {rows.map((cells, rowIndex) => (
+              <tr key={rowIndex}>
+                {cells.map((cellText, colIndex) => {
                 const isMenuCell = menu?.row === rowIndex && menu.col === colIndex;
                 const isFocusedCell = focusedCell?.row === rowIndex && focusedCell.col === colIndex;
                 const isColumnSelected = columnMenu?.col === colIndex;
@@ -833,6 +963,7 @@ export function TableView({ block }: TableViewProps) {
                 const isLeftHandle =
                   (activeCell?.row === rowIndex || menu?.row === rowIndex || isRowSelected) && colIndex === 0;
                 const isRightHandle = isFocusedCell || isMenuCell;
+                const headerRowClass = headerRow && rowIndex === 0 ? "bg-[#f7f7f5] font-semibold" : "";
                 const selectedColumnClass = isColumnSelected
                   ? `${rowIndex === 0 ? "border-t-[#2f80ed]" : ""} ${
                       rowIndex === rows.length - 1 ? "border-b-[#2f80ed]" : ""
@@ -844,25 +975,25 @@ export function TableView({ block }: TableViewProps) {
                     } border-y-[#2f80ed] bg-[#eaf2ff]/70`
                   : "";
 
-                return (
-                  <td
-                    key={colIndex}
-                    className={`relative min-w-28 border border-[#e1e4e8] p-0 align-top focus-within:z-10 focus-within:outline-2 focus-within:outline-offset-[-1px] focus-within:outline-[#2f80ed] ${selectedColumnClass} ${selectedRowClass}`}
-                    onMouseEnter={() => setActiveCell({ row: rowIndex, col: colIndex })}
-                    onMouseLeave={() => {
-                      if (!menu && !columnMenu && !rowMenu) setActiveCell(null);
-                    }}
-                    onFocus={() => {
-                      setActiveCell({ row: rowIndex, col: colIndex });
-                      setFocusedCell({ row: rowIndex, col: colIndex });
-                    }}
-                    onBlur={(event) => {
-                      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
-                        return;
-                      }
-                      if (!menu && !columnMenu && !rowMenu) setFocusedCell(null);
-                    }}
-                  >
+                  return (
+                    <td
+                      key={colIndex}
+                      className={`relative min-w-28 border border-[#e1e4e8] p-0 align-top focus-within:z-10 focus-within:outline-2 focus-within:outline-offset-[-1px] focus-within:outline-[#2f80ed] ${headerRowClass} ${selectedColumnClass} ${selectedRowClass}`}
+                      onMouseEnter={() => setActiveCell({ row: rowIndex, col: colIndex })}
+                      onMouseLeave={() => {
+                        if (!menu && !columnMenu && !rowMenu) setActiveCell(null);
+                      }}
+                      onFocus={() => {
+                        setActiveCell({ row: rowIndex, col: colIndex });
+                        setFocusedCell({ row: rowIndex, col: colIndex });
+                      }}
+                      onBlur={(event) => {
+                        if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
+                          return;
+                        }
+                        if (!menu && !columnMenu && !rowMenu) setFocusedCell(null);
+                      }}
+                    >
                     {isTopHandle && (
                       <TableHandle
                         side="top"
@@ -931,13 +1062,27 @@ export function TableView({ block }: TableViewProps) {
                       onInsertBlockAfterTable={(blockType) => insertBlockAfterFocused(block.id, blockType)}
                       onSetFile={(row, col, file) => setTableCellFile(block.id, row, col, file)}
                     />
-                  </td>
-                );
-              })}
-            </tr>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {canEdit &&
+          columnGuideLefts.map((left, colIndex) => (
+            <ColumnResizeGuide
+              key={colIndex}
+              left={left}
+              active={resizingCol === colIndex || hoveredResizeCol === colIndex}
+              onMouseEnter={() => setHoveredResizeCol(colIndex)}
+              onMouseLeave={() => {
+                if (resizingCol !== colIndex) setHoveredResizeCol(null);
+              }}
+              onMouseDown={(event) => startColumnResize(colIndex, event)}
+            />
           ))}
-        </tbody>
-      </table>
+      </div>
     </div>
   );
 }

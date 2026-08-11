@@ -84,6 +84,7 @@ interface EditorContextValue {
   ) => void;
   updateTableColumnWidth: (blockId: string, col: number, width: number) => void;
   updateTableRowHeight: (blockId: string, row: number, height: number) => void;
+  setTableHeaderRow: (blockId: string, enabled: boolean) => void;
   setTableCellFile: (blockId: string, row: number, col: number, file: FileData | null) => void;
   insertTableRow: (blockId: string, atIndex: number) => void;
   insertTableColumn: (blockId: string, atIndex: number) => void;
@@ -353,6 +354,10 @@ export function EditorProvider({
 
   const updateTableRowHeight = useCallback((blockId: string, row: number, height: number) => {
     documentRef.current?.setTableRowHeight(blockId, row, height);
+  }, []);
+
+  const setTableHeaderRow = useCallback((blockId: string, enabled: boolean) => {
+    documentRef.current?.setTableHeaderRow(blockId, enabled);
   }, []);
 
   const setTableCellFile = useCallback(
@@ -711,6 +716,7 @@ export function EditorProvider({
       removeTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
+      setTableHeaderRow,
       setTableCellFile,
       insertTableRow,
       insertTableColumn,
@@ -764,6 +770,7 @@ export function EditorProvider({
       removeTableCellMark,
       updateTableColumnWidth,
       updateTableRowHeight,
+      setTableHeaderRow,
       setTableCellFile,
       insertTableRow,
       insertTableColumn,

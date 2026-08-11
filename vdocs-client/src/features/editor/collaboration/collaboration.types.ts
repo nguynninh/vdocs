@@ -83,6 +83,8 @@ export interface CollaborativeDocument {
    * into a table, to seed its default rows). */
   setTableData(blockId: string, rows: string[][]): void;
 
+  setTableHeaderRow(blockId: string, enabled: boolean): void;
+
   /** Updates a single cell's text within a table block's grid. */
   setTableCell(blockId: string, row: number, col: number, text: string): void;
 

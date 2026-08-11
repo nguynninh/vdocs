@@ -22,6 +22,7 @@ export type BlockType =
  * undefined/missing entries fall back to even auto-sizing. */
 export interface TableData {
   rows: string[][];
+  headerRow?: boolean;
   cellMarks?: MarkRange[][][];
   columnWidths?: number[];
   rowHeights?: number[];

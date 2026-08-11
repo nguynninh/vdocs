@@ -48,11 +48,11 @@ export default async function DocumentPage({ params }: DocumentPageProps) {
     headers: accessToken ? { Cookie: `accessToken=${accessToken}` } : {},
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 || (response.status === 403 && !accessToken)) {
     redirect("/login");
   }
 
-  if (response.status === 404) {
+  if (response.status === 404 || response.status === 403) {
     notFound();
   }
 

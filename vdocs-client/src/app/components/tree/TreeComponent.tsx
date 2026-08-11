@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useMemo, useState } from 'react';
 import LeafComponent from './leaf/LeafCompoment';
 import css from './TreeComponent.module.css';
@@ -11,6 +11,7 @@ type DropMode = "before" | "child";
 export interface TreeDataNode {
     key: React.Key;
     title: React.ReactNode | ((node: TreeDataNode) => React.ReactNode);
+    icon?: React.ReactNode;
     link?: string;
     isLeaf?: boolean;
     children?: TreeDataNode[];
@@ -35,6 +36,7 @@ interface TreeComponentProps {
 const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
     const { treeData, onParentChange, onReorder, onExpandChange, onNodeClick, onAdd, renderMoreMenu } = props;
     const pathname = usePathname();
+    const router = useRouter();
     const [nodeState, setNodeState] = useState({ source: treeData, nodes: treeData });
 
     if (nodeState.source !== treeData) {
@@ -67,8 +69,8 @@ const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
     }, [nodes, treeData, onParentChange, onReorder]);
 
     const leafTreeData = useMemo(
-        () => renderLeafComponents(nodes, pathname, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu),
-        [nodes, pathname, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu]
+        () => renderLeafComponents(nodes, pathname, router, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu),
+        [nodes, pathname, router, handleMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu]
     );
 
     return (
@@ -81,6 +83,7 @@ const App: React.FC<TreeComponentProps> = (props: TreeComponentProps) => {
 const renderLeafComponents = (
     nodes: TreeDataNode[],
     pathname: string,
+    router: ReturnType<typeof useRouter>,
     onMove?: (dragId: React.Key, targetId: React.Key, mode: DropMode) => void,
     onExpandChange?: (id: React.Key, expanded: boolean) => void,
     onNodeClick?: (id: React.Key) => void,
@@ -90,7 +93,7 @@ const renderLeafComponents = (
     nodes.map((node) => {
         const children = node.children?.length ? (
             <div className={css.children}>
-                {renderLeafComponents(node.children, pathname, onMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu)}
+                {renderLeafComponents(node.children, pathname, router, onMove, onExpandChange, onNodeClick, onAdd, renderMoreMenu)}
             </div>
         ) : undefined;
         const title = typeof node.title === "function" ? node.title(node) : node.title;
@@ -106,10 +109,15 @@ const renderLeafComponents = (
                 key={node.key}
                 id={node.key}
                 label={label}
+                icon={node.icon}
                 active={active}
                 onMove={onMove}
                 onExpandChange={onExpandChange}
                 onAdd={onAdd}
+                onClick={() => {
+                    if (node.link && node.link !== pathname) router.push(node.link);
+                    onNodeClick?.(node.key);
+                }}
                 renderMoreMenu={renderMoreMenu}
                 styles={{ width: "100%" }}>
                 {children}

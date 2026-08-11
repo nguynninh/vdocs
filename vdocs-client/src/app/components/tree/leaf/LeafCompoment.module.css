@@ -52,7 +52,7 @@
   background: #e5e5e5;
 }
 
-.active > .leafCollapse :global(.ant-collapse-header) {
+.active > .leafCollapse > :global(.ant-collapse-item) > :global(.ant-collapse-header) {
   background: #eef2ff;
   color: #4f46e5;
   font-weight: 600;
@@ -97,7 +97,7 @@
   color: #374151;
 }
 
-.dragging > .leafCollapse :global(.ant-collapse-header) {
+.dragging > .leafCollapse > :global(.ant-collapse-item) > :global(.ant-collapse-header) {
   opacity: 0.55;
 }
 

@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardShell from "@/src/components/layout/DashboardShell";
 import {
   documentApi,
   type DocumentTrashApiResponse,
@@ -117,8 +116,7 @@ export default function TrashPage() {
   const hasDocuments = Boolean(documents && documents.length > 0);
 
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6 py-6">
+    <div className="flex flex-col gap-6 py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
@@ -221,6 +219,5 @@ export default function TrashPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
   );
 }

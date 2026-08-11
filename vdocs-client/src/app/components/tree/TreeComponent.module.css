@@ -6,6 +6,11 @@
   padding-left: 12px;
 }
 
-.treeLink {
-  color: inherit;
+.treeLink,
+.treeLink:link,
+.treeLink:visited,
+.treeLink:hover,
+.treeLink:active {
+  color: inherit !important;
+  text-decoration: none;
 }

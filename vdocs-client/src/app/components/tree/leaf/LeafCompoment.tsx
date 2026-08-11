@@ -16,6 +16,7 @@ type DropMode = "before" | "child";
 type LeafComponentProps = {
     id: React.Key;
     label: React.ReactNode;
+    icon?: React.ReactNode;
     children?: React.ReactNode;
     items?: LeafItem;
     styles?: React.CSSProperties;
@@ -37,7 +38,7 @@ function isInteractiveTarget(target: EventTarget | null) {
 }
 
 const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) => {
-    const { id, label, children, items, styles, active, onClick, onMore, onAdd, onMove, onExpandChange, renderMoreMenu } = props;
+    const { id, label, icon, children, items, styles, active, onClick, onMore, onAdd, onMove, onExpandChange, renderMoreMenu } = props;
     const [moreOpen, setMoreOpen] = useState(false);
     const collapseItem = items ?? { key: id ?? String(label), label, children };
     const itemKey = collapseItem.key ?? id;
@@ -175,9 +176,11 @@ const LeafComponent: React.FC<LeafComponentProps> = (props: LeafComponentProps) 
                             style={{ fontSize: 12 }}
                         />
                     ) : (
+                        icon ?? (
                         <FileOutlined
                             style={{ fontSize: 12, color: "black" }}
                         />
+                        )
                     )
                 )}
                 items={[

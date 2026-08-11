@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardShell from "@/src/components/layout/DashboardShell";
 import { getMe } from "@/src/features/auth/api";
 import type { AuthUser } from "@/src/features/auth/types";
 import { documentApi } from "@/src/features/editor/data/api/documentApi";
@@ -109,8 +108,7 @@ const DashboardPage = () => {
   const recentActivity = (documents ?? []).slice(0, 5);
 
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-8 py-6">
+    <div className="flex flex-col gap-8 py-6">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#EEF1FE] via-background to-background p-6 sm:p-8">
           <div className="pointer-events-none absolute -right-6 -top-6 size-32 rounded-full bg-[#4F6DF5]/10 blur-2xl sm:size-40" />
 
@@ -224,7 +222,6 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-    </DashboardShell>
   );
 };
 

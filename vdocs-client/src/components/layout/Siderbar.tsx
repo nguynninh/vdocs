@@ -61,8 +61,34 @@ import {
 } from "@/src/features/editor/data/api/documentApi";
 import TreeComponent, { type TreeDataNode, type TreeReorderUpdate } from '@/src/app/components/tree/TreeComponent'
 import { onDocumentMetadataUpdated } from "@/src/features/editor/data/documentEvents";
+import type { PageIcon } from "@/src/features/editor/ui/icon-picker/PageIcon";
+import { PageIconGlyph } from "@/src/features/editor/ui/icon-picker/PageIconGlyph";
 
 const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
+
+function safeParseIcon(raw: string | null): PageIcon | undefined {
+  if (!raw) return undefined;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function renderDocumentIcon(raw: string | null) {
+  const icon = safeParseIcon(raw);
+  if (!icon) return undefined;
+
+  return (
+    <PageIconGlyph
+      icon={icon}
+      emojiClassName="text-sm leading-none"
+      iconClassName="size-3.5"
+      imageClassName="size-4 rounded object-cover"
+    />
+  );
+}
 
 function buildDocumentTree(
   documents: DocumentSummaryApiResponse[],
@@ -74,6 +100,7 @@ function buildDocumentTree(
       {
         key: document.id,
         title: document.title || untitledLabel,
+        icon: renderDocumentIcon(document.icon),
         link: `/document/${document.id}`,
         isLeaf: true,
         children: [],
@@ -137,11 +164,18 @@ function useWorkspaceTree(
   }, [workspaceId, pathname]);
 
   useEffect(() => {
-    return onDocumentMetadataUpdated(({ documentId, title }) => {
-      if (title === undefined) return;
+    return onDocumentMetadataUpdated(({ documentId, title, icon }) => {
+      if (title === undefined && icon === undefined) return;
+
       setDocuments((prev) =>
         prev.map((document) =>
-          document.id === documentId ? { ...document, title } : document
+          document.id === documentId
+            ? {
+                ...document,
+                title: title ?? document.title,
+                icon: icon === undefined ? document.icon : icon || null,
+              }
+            : document
         )
       );
     });

@@ -313,7 +313,7 @@ function useWorkspaceTree(
 
 function SidebarResizeHandle() {
   const { setWidth, commitWidth, setIsResizing } = useSidebarWidth();
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, toggleSidebar } = useSidebar();
   const draggingRef = useRef(false);
   const lastWidthRef = useRef<number | null>(null);
 
@@ -403,7 +403,7 @@ export default function Siderbar(props: Props) {
     onCreateWorkspace,
     onImportDocument,
   } = props;
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const personalWorkspaceLabel = `${user.name}'s workspace`;
   const personalWorkspace = workspaceGroups.find((group) => group.label === personalWorkspaceLabel);
   const teamWorkspaceGroups = workspaceGroups.filter((group) => group.id !== personalWorkspace?.id);
@@ -511,7 +511,7 @@ export default function Siderbar(props: Props) {
   }
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <SidebarGroup className="flex h-12 flex-col items-center justify-center p-0">
           <SidebarMenu className={state === "collapsed" ? "items-center" : undefined}>
@@ -553,7 +553,36 @@ export default function Siderbar(props: Props) {
                               {selectedWorkspace.label}
                             </span>
                           </span>
-                          <ChevronsUpDown className="ml-auto size-4" />
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSidebar();
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleSidebar();
+                              }
+                            }}
+                            className="ml-auto flex shrink-0 items-center justify-center"
+                          >
+                            <Image
+                              src="/svgs/ic_double_chevron.svg"
+                              alt=""
+                              width={16}
+                              height={16}
+                              className="size-4 rotate-180 opacity-50"
+                            />
+                          </span>
                         </>
                       )}
                     </SidebarMenuButton>

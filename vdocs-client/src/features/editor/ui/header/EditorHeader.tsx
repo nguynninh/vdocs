@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Link as LinkIcon, Lock, MoreHorizontal, Star, Globe } from "lucide-react";
+import { ChevronDown, Link as LinkIcon, Lock, MoreHorizontal, Star, Globe, MenuIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLayoutEffect, useRef, useState } from "react";
 
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useSidebar } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import ImportDocumentDialog from "@/src/components/layout/ImportDocumentDialog";
 import { importDocumentFile } from "@/src/features/editor/import/importDocumentFile";
@@ -81,6 +82,7 @@ export function EditorHeader(props: EditorHeaderProps) {
     canEdit = true,
   } = props;
 
+  const { state: sidebarState, toggleSidebar } = useSidebar();
   const t = useTranslations("editorHeader");
   const [starred, setStarred] = useState(isStarred);
   const [updatesSidebarOpen, setUpdatesSidebarOpen] = useState(false);
@@ -112,6 +114,17 @@ export function EditorHeader(props: EditorHeaderProps) {
     <>
     <header className="flex h-11 items-center justify-between gap-2 border-b border-border bg-background px-4 text-sm">
       <div className="flex min-w-0 items-center gap-1">
+        {sidebarState === "collapsed" && (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={t("toggleSidebar")}
+            className="shrink-0 rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <MenuIcon className="h-5 w-5" />
+          </button>
+        )}
+
         {icon && (
           <span className="shrink-0 leading-none">
             <PageIconGlyph

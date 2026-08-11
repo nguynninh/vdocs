@@ -63,6 +63,9 @@ export function useShellData() {
             id: workspace.id,
             label: workspace.name,
             icon: workspace.icon,
+            description: workspace.description,
+            role: workspace.role,
+            createdAt: workspace.createdAt,
           }))
         );
       })
@@ -81,7 +84,14 @@ export function useShellData() {
 
     setWorkspaceGroups((prev) => [
       ...prev,
-      { id: workspace.id, label: workspace.name, icon: workspace.icon },
+      {
+        id: workspace.id,
+        label: workspace.name,
+        icon: workspace.icon,
+        description: workspace.description,
+        role: workspace.role,
+        createdAt: workspace.createdAt,
+      },
     ]);
   }
 

@@ -64,7 +64,7 @@ import { onDocumentMetadataUpdated } from "@/src/features/editor/data/documentEv
 import type { PageIcon } from "@/src/features/editor/ui/icon-picker/PageIcon";
 import { PageIconGlyph } from "@/src/features/editor/ui/icon-picker/PageIconGlyph";
 
-const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
+export const SELECTED_WORKSPACE_STORAGE_KEY = "vdocs.selectedWorkspaceId";
 
 function safeParseIcon(raw: string | null): PageIcon | undefined {
   if (!raw) return undefined;
@@ -377,6 +377,9 @@ export interface WorkspaceGroup {
   id: string,
   label: string,
   icon: string,
+  description?: string | null,
+  role?: string,
+  createdAt?: string,
 }
 
 export interface Props {
@@ -519,7 +522,12 @@ export default function Siderbar(props: Props) {
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <SidebarMenuButton size="lg">
+                    <SidebarMenuButton
+                      size="lg"
+                      onClick={() => {
+                        if (selectedWorkspace) router.push("/document");
+                      }}
+                    >
                       {!selectedWorkspace ? (
                         <div
                           className={

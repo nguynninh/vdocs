@@ -30,7 +30,111 @@ function listForUser(userId: string) {
   });
 }
 
+function findMembership(workspaceId: string, userId: string) {
+  return prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId } },
+  });
+}
+
+function listMembers(workspaceId: string) {
+  return prisma.workspaceMember.findMany({
+    where: { workspaceId },
+    include: { user: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+function findUserByEmail(email: string) {
+  return prisma.user.findFirst({ where: { email } });
+}
+
+async function searchUsers(input: {
+  workspaceId: string;
+  query?: string;
+  page: number;
+  pageSize: number;
+}) {
+  const where = {
+    workspaceMembers: { none: { workspaceId: input.workspaceId } },
+    ...(input.query
+      ? {
+          OR: [
+            { name: { contains: input.query, mode: "insensitive" as const } },
+            { email: { contains: input.query, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (input.page - 1) * input.pageSize,
+      take: input.pageSize,
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { items, total };
+}
+
+function findUsersByIds(userIds: string[]) {
+  return prisma.user.findMany({ where: { id: { in: userIds } } });
+}
+
+function upsertUserFromLark(input: {
+  larkUserId: string;
+  name: string;
+  email: string | null;
+  avatar: string | null;
+}) {
+  return prisma.user.upsert({
+    where: { provider_providerUserId: { provider: "lark", providerUserId: input.larkUserId } },
+    update: { name: input.name, email: input.email, avatar: input.avatar },
+    create: {
+      provider: "lark",
+      providerUserId: input.larkUserId,
+      name: input.name,
+      email: input.email,
+      avatar: input.avatar,
+    },
+  });
+}
+
+function upsertMember(workspaceId: string, userId: string, role: string) {
+  return prisma.workspaceMember.upsert({
+    where: { workspaceId_userId: { workspaceId, userId } },
+    create: { workspaceId, userId, role },
+    update: { role },
+    include: { user: true },
+  });
+}
+
+function updateMemberRole(workspaceId: string, userId: string, role: string) {
+  return prisma.workspaceMember.update({
+    where: { workspaceId_userId: { workspaceId, userId } },
+    data: { role },
+    include: { user: true },
+  });
+}
+
+function removeMember(workspaceId: string, userId: string) {
+  return prisma.workspaceMember.delete({
+    where: { workspaceId_userId: { workspaceId, userId } },
+  });
+}
+
 export const workspaceRepository = {
   create,
   listForUser,
+  findMembership,
+  listMembers,
+  findUserByEmail,
+  searchUsers,
+  findUsersByIds,
+  upsertUserFromLark,
+  upsertMember,
+  updateMemberRole,
+  removeMember,
 };

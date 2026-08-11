@@ -18,3 +18,49 @@ export interface LarkUserInfoResponse {
     mobile?: string;
   };
 }
+
+export interface LarkTenantAccessTokenResponse {
+  code: number;
+  msg?: string;
+  tenant_access_token?: string;
+  expire?: number;
+}
+
+export interface LarkDepartment {
+  department_id: string;
+  open_department_id?: string;
+  name: string;
+  parent_department_id: string;
+  member_count?: number;
+}
+
+export interface LarkDepartmentListResponse {
+  code: number;
+  msg?: string;
+  data?: {
+    items?: LarkDepartment[];
+    page_token?: string;
+    has_more?: boolean;
+  };
+}
+
+export interface LarkDirectoryUser {
+  user_id?: string;
+  open_id?: string;
+  name: string;
+  email?: string;
+  mobile?: string;
+  job_title?: string;
+  department_ids?: string[];
+  avatar?: { avatar_240?: string; avatar_origin?: string };
+}
+
+export interface LarkUserListResponse {
+  code: number;
+  msg?: string;
+  data?: {
+    items?: LarkDirectoryUser[];
+    page_token?: string;
+    has_more?: boolean;
+  };
+}

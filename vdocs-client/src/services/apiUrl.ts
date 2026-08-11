@@ -4,5 +4,6 @@ export function getApiOrigin(): string {
 }
 
 export function getApiBaseUrl(): string {
-  return `${getApiOrigin()}/api`;
+  const origin = getApiOrigin();
+  return process.env.NODE_ENV === "production" ? origin : `${origin}/api`;
 }

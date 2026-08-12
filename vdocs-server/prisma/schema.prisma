@@ -25,15 +25,16 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  ownedWorkspaces   Workspace[]       @relation("WorkspaceOwner")
-  workspaceMembers  WorkspaceMember[]
-  ownedDocuments    Document[]        @relation("DocumentOwner")
-  documentMembers   DocumentMember[]
-  createdShareLinks ShareLink[]
-  documentVersions  DocumentVersion[]
-  documentViews     DocumentView[]
-  uploadedFiles     DocumentFile[]
-  favoriteDocuments DocumentFavorite[]
+  ownedWorkspaces            Workspace[]          @relation("WorkspaceOwner")
+  workspaceMembers           WorkspaceMember[]
+  ownedDocuments             Document[]           @relation("DocumentOwner")
+  documentMembers            DocumentMember[]
+  createdShareLinks          ShareLink[]
+  createdWorkspaceShareLinks WorkspaceShareLink[]
+  documentVersions           DocumentVersion[]
+  documentViews              DocumentView[]
+  uploadedFiles              DocumentFile[]
+  favoriteDocuments          DocumentFavorite[]
 
   @@unique([provider, providerUserId])
 }
@@ -46,9 +47,26 @@ model Workspace {
   ownerId     String
   createdAt   DateTime @default(now())
 
-  owner     User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  members   WorkspaceMember[]
-  documents Document[]
+  owner      User                 @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members    WorkspaceMember[]
+  documents  Document[]
+  shareLinks WorkspaceShareLink[]
+}
+
+// The public, revocable stand-in for a workspace's real UUID — same shape
+// as ShareLink, but grants VIEWER access to every document in the
+// workspace instead of just one. Only OWNER/FULL_ACCESS can create/revoke.
+model WorkspaceShareLink {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  workspaceId String
+  isActive    Boolean   @default(true)
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator   User      @relation(fields: [createdBy], references: [id])
 }
 
 enum WorkspaceMemberRole {
@@ -61,11 +79,11 @@ enum WorkspaceMemberRole {
 }
 
 model WorkspaceMember {
-  id        String   @id @default(uuid())
+  id          String              @id @default(uuid())
   workspaceId String
   userId      String
   role        WorkspaceMemberRole @default(BLOCK)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime            @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id])
@@ -88,15 +106,15 @@ model Document {
   updatedAt      DateTime  @updatedAt
   archivedAt     DateTime?
 
-  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  parent     Document?         @relation("DocumentTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children   Document[]        @relation("DocumentTree")
-  owner      User              @relation("DocumentOwner", fields: [ownerId], references: [id])
-  members    DocumentMember[]
-  shareLinks ShareLink[]
-  versions   DocumentVersion[]
-  views      DocumentView[]
-  files      DocumentFile[]
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent      Document?          @relation("DocumentTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Document[]         @relation("DocumentTree")
+  owner       User               @relation("DocumentOwner", fields: [ownerId], references: [id])
+  members     DocumentMember[]
+  shareLinks  ShareLink[]
+  versions    DocumentVersion[]
+  views       DocumentView[]
+  files       DocumentFile[]
   favoritedBy DocumentFavorite[]
 
   @@index([parentId])
@@ -141,11 +159,11 @@ model DocumentFile {
 // (sum of count) and unique viewers (distinct rows) per day without
 // unbounded row growth.
 model DocumentView {
-  id         String   @id @default(uuid())
-  documentId String
-  viewerId   String
-  viewDate   String // "YYYY-MM-DD", server-local — the dedup key
-  count      Int      @default(1)
+  id           String   @id @default(uuid())
+  documentId   String
+  viewerId     String
+  viewDate     String // "YYYY-MM-DD", server-local — the dedup key
+  count        Int      @default(1)
   lastViewedAt DateTime @default(now())
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)

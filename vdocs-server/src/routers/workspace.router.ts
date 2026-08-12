@@ -20,6 +20,7 @@ import {
   UserNotFoundError,
   WorkspaceForbiddenError,
   WorkspaceNameRequiredError,
+  WorkspaceShareLinkNotFoundError,
   workspaceService,
   type WorkspaceMemberRole,
 } from "../services/workspace.service.ts";
@@ -27,8 +28,6 @@ import { larkService } from "../services/lark.service.ts";
 import { sendError, sendSuccess } from "../utils/apiResponse.ts";
 
 export const workspaceRouter = Router();
-
-workspaceRouter.use(requireAuth);
 
 function getUserId(req: Request): string {
   return (req as unknown as AuthenticatedRequest).user.id;
@@ -50,10 +49,39 @@ function handleError(error: unknown, res: Response) {
     return;
   }
 
+  if (error instanceof WorkspaceShareLinkNotFoundError) {
+    sendError(res, 404, error.message);
+    return;
+  }
+
   const message =
     error instanceof Error ? error.message : "Internal server error";
   sendError(res, 500, message);
 }
+
+// Public — resolves a workspace share link without requiring auth. Must be
+// registered before the `requireAuth` gate below.
+workspaceRouter.get(
+  "/share/:token",
+  async (req: Request<{ token: string }>, res: Response) => {
+    try {
+      const { workspace, permission } = await workspaceService.resolveWorkspaceShareToken(
+        req.params.token
+      );
+
+      sendSuccess(res, {
+        id: workspace.id,
+        name: workspace.name,
+        icon: workspace.icon,
+        permission,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+workspaceRouter.use(requireAuth);
 
 workspaceRouter.post(
   "/",
@@ -308,6 +336,37 @@ workspaceRouter.patch(
       );
 
       sendSuccess(res, toMemberResponse(member));
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+workspaceRouter.post(
+  "/:workspaceId/share",
+  async (req: Request<{ workspaceId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      const shareLink = await workspaceService.getOrCreateShareLink(
+        req.params.workspaceId,
+        userId
+      );
+
+      sendSuccess(res, { token: shareLink.token }, "Created", 201);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+workspaceRouter.delete(
+  "/:workspaceId/share",
+  async (req: Request<{ workspaceId: string }>, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      await workspaceService.revokeShareLink(req.params.workspaceId, userId);
+
+      sendSuccess(res, { revoked: true });
     } catch (error) {
       handleError(error, res);
     }

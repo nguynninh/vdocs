@@ -121,4 +121,10 @@ export const workspaceApi = {
       larkUserIds,
       role,
     }),
+
+  createShareLink: (workspaceId: string) =>
+    api.post<{ token: string }>(`/workspaces/${workspaceId}/share`),
+
+  revokeShareLink: (workspaceId: string) =>
+    api.delete<{ revoked: boolean }>(`/workspaces/${workspaceId}/share`),
 };

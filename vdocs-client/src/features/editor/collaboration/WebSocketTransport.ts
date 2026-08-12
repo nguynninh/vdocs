@@ -51,13 +51,18 @@ export class WebSocketTransport implements CollaborationTransport {
     });
   }
 
-  joinDocument(documentId: string, _knownVersion: number, shareToken?: string): Promise<JoinResult> {
+  joinDocument(
+    documentId: string,
+    _knownVersion: number,
+    shareToken?: string,
+    workspaceShareToken?: string
+  ): Promise<JoinResult> {
     this.documentId = documentId;
 
     return new Promise((resolve, reject) => {
       this.connectionManager
         .getSocket()
-        .emit("document:join", shareToken ? { documentId, shareToken } : { documentId }, (ack: JoinAck) => {
+        .emit("document:join", { documentId, shareToken, workspaceShareToken }, (ack: JoinAck) => {
           if (!ack.success) {
             reject(new Error(ack.error?.message ?? "Failed to join document"));
             return;

@@ -12,6 +12,7 @@ export interface CollaborationProviderOptions {
   realtimeUrl: string;
   documentId: string;
   shareToken?: string;
+  workspaceShareToken?: string;
   initialState?: Uint8Array;
   onConnectionStateChange?: (state: ConnectionState) => void;
   onPermission?: (permission: DocumentPermission) => void;
@@ -95,7 +96,11 @@ export class CollaborationProvider {
         return;
       }
 
-      await this.roomManager.join(this.options.documentId, this.options.shareToken);
+      await this.roomManager.join(
+        this.options.documentId,
+        this.options.shareToken,
+        this.options.workspaceShareToken
+      );
     } catch (error) {
       if (!this.stopped) {
         this.options.onError?.(error);

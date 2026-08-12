@@ -42,6 +42,7 @@ const REALTIME_URL = getApiOrigin() || "http://localhost:3001";
 export interface EditorProviderProps {
   documentId: string;
   shareToken?: string;
+  workspaceShareToken?: string;
   initialContent?: Uint8Array;
   initialPermission?: DocumentPermission;
   children?: ReactNode;
@@ -125,6 +126,7 @@ const EditorContext = createContext<EditorContextValue | null>(null);
 export function EditorProvider({
   documentId,
   shareToken,
+  workspaceShareToken,
   initialContent,
   initialPermission,
   children,
@@ -147,6 +149,7 @@ export function EditorProvider({
       realtimeUrl: REALTIME_URL,
       documentId,
       shareToken,
+      workspaceShareToken,
       initialState: initialContent,
       onConnectionStateChange: setConnectionState,
       onPermission: setPermission,

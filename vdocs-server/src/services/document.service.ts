@@ -5,6 +5,7 @@ import type {
 } from "../dtos/response/DocumentPermission.ts";
 import { documentRepository } from "../repositories/document.repository.ts";
 import { generateShareToken } from "../utils/shareToken.ts";
+import { resolveWorkspaceShareToken } from "./workspace.service.ts";
 
 export class DocumentNotFoundError extends Error {}
 export class DocumentForbiddenError extends Error {}
@@ -595,11 +596,54 @@ export async function resolveDescendantViaShareToken(
   };
 }
 
+/**
+ * Same idea as resolveDescendantViaShareToken, but for a workspace-wide
+ * share link: any document belonging to that workspace is reachable, not
+ * just descendants of one shared root.
+ */
+export async function resolveDocumentViaWorkspaceShareToken(
+  documentId: string,
+  workspaceToken: string,
+  userId: string | null
+) {
+  const { workspace } = await resolveWorkspaceShareToken(workspaceToken);
+
+  const document = await documentRepository.findById(documentId);
+
+  if (!document) {
+    throw new DocumentNotFoundError(`Document ${documentId} not found`);
+  }
+
+  if (document.workspaceId !== workspace.id) {
+    throw new DocumentForbiddenError(
+      `Document ${documentId} does not belong to workspace ${workspace.id}`
+    );
+  }
+
+  const permission = await getDocumentPermission(document, userId);
+
+  return {
+    document,
+    permission: permission && !isBlocked(permission) ? permission : "VIEWER",
+  };
+}
+
+/**
+ * Lists every non-archived document in the workspace behind a valid
+ * workspace share link — used to build the share page's full-workspace
+ * table of contents.
+ */
+async function listDocumentsViaWorkspaceShareToken(workspaceToken: string) {
+  const { workspace } = await resolveWorkspaceShareToken(workspaceToken);
+  return documentRepository.listForWorkspaces([workspace.id]);
+}
+
 export const documentService = {
   createDocument,
   listDocuments,
   getDocument,
   getDocumentChildren,
+  listDocumentsViaWorkspaceShareToken,
   updateDocument,
   trashDocument,
   listTrash,

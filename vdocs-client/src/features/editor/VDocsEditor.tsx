@@ -22,6 +22,7 @@ export interface VDocsEditorProps {
   documentId: string;
   workspaceId?: string;
   shareToken?: string;
+  workspaceShareToken?: string;
   initialTitle?: string;
   initialIcon?: PageIcon;
   initialContent?: Uint8Array;
@@ -35,6 +36,7 @@ export function VDocsEditor({
   documentId,
   workspaceId,
   shareToken,
+  workspaceShareToken,
   initialTitle = "",
   initialIcon,
   initialContent,
@@ -218,6 +220,7 @@ export function VDocsEditor({
       <EditorProvider
         documentId={documentId}
         shareToken={shareToken}
+        workspaceShareToken={workspaceShareToken}
         initialContent={initialContent}
         initialPermission={initialPermission}
       >

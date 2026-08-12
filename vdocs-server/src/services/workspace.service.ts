@@ -1,5 +1,6 @@
 import { workspaceRepository } from "../repositories/workspace.repository.ts";
 import { larkService } from "./lark.service.ts";
+import { generateShareToken } from "../utils/shareToken.ts";
 import type { WorkspaceMemberRole } from "../generated/prisma/client.js";
 
 export type { WorkspaceMemberRole };
@@ -8,6 +9,8 @@ export class WorkspaceNameRequiredError extends Error {}
 export class WorkspaceForbiddenError extends Error {}
 export class WorkspaceMemberNotFoundError extends Error {}
 export class UserNotFoundError extends Error {}
+export class WorkspaceNotFoundError extends Error {}
+export class WorkspaceShareLinkNotFoundError extends Error {}
 
 async function createWorkspace(
   ownerId: string,
@@ -172,6 +175,47 @@ async function removeMember(
   await workspaceRepository.removeMember(workspaceId, targetUserId);
 }
 
+async function getOrCreateShareLink(workspaceId: string, userId: string) {
+  await requireOwner(workspaceId, userId);
+
+  const existing = await workspaceRepository.findActiveShareLink(workspaceId);
+
+  if (existing) {
+    return existing;
+  }
+
+  return workspaceRepository.createShareLink({
+    workspaceId,
+    token: generateShareToken(),
+    createdBy: userId,
+  });
+}
+
+async function revokeShareLink(workspaceId: string, userId: string) {
+  await requireOwner(workspaceId, userId);
+  await workspaceRepository.deactivateShareLinks(workspaceId);
+}
+
+/**
+ * Resolves a valid, active workspace share link — grants VIEWER access to
+ * the whole workspace (used to gate both the public workspace listing and,
+ * transitively, every document inside it via resolveDocumentViaWorkspaceShareToken
+ * in document.service.ts).
+ */
+export async function resolveWorkspaceShareToken(token: string) {
+  const shareLink = await workspaceRepository.findShareLinkByToken(token);
+
+  if (!shareLink || !shareLink.isActive) {
+    throw new WorkspaceShareLinkNotFoundError(`Workspace share link ${token} not found`);
+  }
+
+  if (shareLink.expiresAt && shareLink.expiresAt.getTime() < Date.now()) {
+    throw new WorkspaceShareLinkNotFoundError(`Workspace share link ${token} has expired`);
+  }
+
+  return { workspace: shareLink.workspace, permission: "VIEWER" as const };
+}
+
 export const workspaceService = {
   createWorkspace,
   listWorkspaces,
@@ -182,4 +226,7 @@ export const workspaceService = {
   inviteLarkMembers,
   updateMemberRole,
   removeMember,
+  getOrCreateShareLink,
+  revokeShareLink,
+  resolveWorkspaceShareToken,
 };

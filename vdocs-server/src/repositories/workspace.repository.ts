@@ -126,6 +126,45 @@ function removeMember(workspaceId: string, userId: string) {
   });
 }
 
+function findById(workspaceId: string) {
+  return prisma.workspace.findUnique({ where: { id: workspaceId } });
+}
+
+function findActiveShareLink(workspaceId: string) {
+  return prisma.workspaceShareLink.findFirst({
+    where: { workspaceId, isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+function findShareLinkByToken(token: string) {
+  return prisma.workspaceShareLink.findUnique({
+    where: { token },
+    include: { workspace: true },
+  });
+}
+
+function createShareLink(input: {
+  workspaceId: string;
+  token: string;
+  createdBy: string;
+}) {
+  return prisma.workspaceShareLink.create({
+    data: {
+      workspaceId: input.workspaceId,
+      token: input.token,
+      createdBy: input.createdBy,
+    },
+  });
+}
+
+function deactivateShareLinks(workspaceId: string) {
+  return prisma.workspaceShareLink.updateMany({
+    where: { workspaceId, isActive: true },
+    data: { isActive: false },
+  });
+}
+
 export const workspaceRepository = {
   create,
   listForUser,
@@ -138,4 +177,9 @@ export const workspaceRepository = {
   upsertMember,
   updateMemberRole,
   removeMember,
+  findById,
+  findActiveShareLink,
+  findShareLinkByToken,
+  createShareLink,
+  deactivateShareLinks,
 };

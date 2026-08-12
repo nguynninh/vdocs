@@ -29,8 +29,10 @@ import {
   ShareLinkNotFoundError,
   UserNotFoundError,
   documentService,
+  resolveDocumentViaWorkspaceShareToken,
   type MemberRole,
 } from "../services/document.service.ts";
+import { WorkspaceShareLinkNotFoundError } from "../services/workspace.service.ts";
 import {
   VersionNotFoundError,
   versionService,
@@ -75,6 +77,11 @@ function handleError(error: unknown, res: Response) {
   }
 
   if (error instanceof ShareLinkNotFoundError) {
+    sendError(res, 404, error.message);
+    return;
+  }
+
+  if (error instanceof WorkspaceShareLinkNotFoundError) {
     sendError(res, 404, error.message);
     return;
   }
@@ -261,6 +268,64 @@ documentRouter.get(
     try {
       const userId = getOptionalUserId(req);
       const { document, permission } = await documentService.getDocumentByShareToken(
+        req.params.token,
+        userId
+      );
+
+      const response: DocumentResponse = {
+        id: document.id,
+        workspaceId: document.workspaceId,
+        title: document.title,
+        icon: document.icon,
+        permission,
+        linkAccess: document.linkAccess as LinkAccess,
+        contentVersion: document.contentVersion,
+        content: document.ydocState
+          ? Buffer.from(document.ydocState).toString("base64")
+          : null,
+        createdAt: document.createdAt.toISOString(),
+        updatedAt: document.updatedAt.toISOString(),
+      };
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/share/workspace/:token",
+  async (req: Request<{ token: string }>, res: Response) => {
+    try {
+      const documents = await documentService.listDocumentsViaWorkspaceShareToken(
+        req.params.token
+      );
+
+      const response: DocumentSummaryResponse[] = documents.map((document) => ({
+        id: document.id,
+        parentId: document.parentId,
+        order: document.order,
+        title: document.title,
+        icon: document.icon,
+        updatedAt: document.updatedAt.toISOString(),
+        favorite: false,
+      }));
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/share/workspace/:token/:documentId",
+  async (req: Request<{ token: string; documentId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const { document, permission } = await resolveDocumentViaWorkspaceShareToken(
+        req.params.documentId,
         req.params.token,
         userId
       );

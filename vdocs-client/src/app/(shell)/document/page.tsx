@@ -11,7 +11,6 @@ import {
   Edit3,
   FileText,
   Link as LinkIcon,
-  Lock,
   MoreHorizontal,
   Plus,
   RefreshCw,
@@ -98,6 +97,11 @@ export default function DocumentIndexPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMemberIndex, setSelectedMemberIndex] = useState<number | null>(null);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [workspaceShareToken, setWorkspaceShareToken] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -234,6 +238,62 @@ export default function DocumentIndexPage() {
     }
   };
 
+  const handleCreateWorkspaceShareLink = async () => {
+    if (!workspace) return;
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      const response = await workspaceApi.createShareLink(workspace.id);
+      setWorkspaceShareToken(response.data.token);
+    } catch (error) {
+      console.error("Failed to create workspace share link", error);
+      setShareError("Không thể tạo liên kết chia sẻ. Vui lòng thử lại.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevokeWorkspaceShareLink = async () => {
+    if (!workspace) return;
+    setShareLoading(true);
+    setShareError(null);
+    try {
+      await workspaceApi.revokeShareLink(workspace.id);
+      setWorkspaceShareToken(null);
+    } catch (error) {
+      console.error("Failed to revoke workspace share link", error);
+      setShareError("Không thể thu hồi liên kết chia sẻ. Vui lòng thử lại.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleCopyWorkspaceShareLink = async (url: string) => {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch (error) {
+        console.error("Failed to copy workspace share link", error);
+      }
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      } catch (error) {
+        console.error("Failed to copy workspace share link", error);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    setShareLinkCopied(true);
+    window.setTimeout(() => setShareLinkCopied(false), 1200);
+  };
+
   const workspaceUrl = useMemo(() => {
     if (!workspace || typeof window === "undefined") return "";
     const slug = workspace.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -241,11 +301,16 @@ export default function DocumentIndexPage() {
   }, [workspace]);
 
   if (workspace) {
+    const canManageWorkspaceShare =
+      workspace.role === "OWNER" || workspace.role === "FULL_ACCESS";
+    const workspaceShareUrl =
+      workspaceShareToken && typeof window !== "undefined"
+        ? `${window.location.origin}/share/workspace/${workspaceShareToken}`
+        : "";
     const { icon: WorkspaceIcon, className } = getWorkspaceIconOption(workspace.icon);
     const navigationItems: Array<{ key: string; icon: LucideIcon; label: string }> = [
       { key: "overview", icon: Box, label: "Tổng quan" },
       { key: "members", icon: Users, label: "Thành viên" },
-      { key: "roles", icon: Lock, label: "Vai trò & quyền hạn" },
       { key: "integrations", icon: Sparkles, label: "Tích hợp" },
       { key: "security", icon: Shield, label: "Bảo mật" },
       { key: "advanced", icon: Settings, label: "Nâng cao" },
@@ -286,13 +351,6 @@ export default function DocumentIndexPage() {
         description: `${workspace.role === "OWNER" ? "Bạn là chủ sở hữu workspace này." : "Quản lý thành viên trong workspace."}`,
         action: "Quản lý thành viên",
         color: "text-blue-600",
-      },
-      {
-        icon: Crown,
-        title: "Vai trò & quyền hạn",
-        description: "Quản lý các vai trò, quyền hạn và chính sách trong workspace.",
-        action: "Cấu hình",
-        color: "text-amber-500",
       },
       {
         icon: Sparkles,
@@ -591,6 +649,26 @@ export default function DocumentIndexPage() {
                 </section>
               ))}
 
+              <section className="flex items-center gap-4 rounded-lg border p-4">
+                <LinkIcon className="size-5 text-violet-600" />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold">Chia sẻ liên kết</h2>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {canManageWorkspaceShare
+                      ? "Tạo một liên kết công khai để chia sẻ toàn bộ workspace."
+                      : "Chỉ chủ sở hữu hoặc người có toàn quyền mới có thể chia sẻ workspace."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManageWorkspaceShare}
+                  onClick={() => setIsShareOpen(true)}
+                >
+                  Cấu hình
+                </Button>
+              </section>
+
               <section className="flex items-center gap-4 rounded-lg border border-red-100 bg-red-50/70 p-4">
                 <AlertTriangle className="size-5 text-red-500" />
                 <div className="min-w-0 flex-1">
@@ -794,6 +872,70 @@ export default function DocumentIndexPage() {
                     </div>
                   </aside>
                 </div>
+              </div>
+            </section>
+          </div>
+        )}
+        {isShareOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+            <section className="w-full max-w-md rounded-lg bg-background p-6 shadow-xl">
+              <div className="flex items-start justify-between">
+                <h2 className="text-lg font-semibold">Chia sẻ liên kết Workspace</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsShareOpen(false)}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Đóng"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Bất kỳ ai có liên kết này đều có thể xem toàn bộ tài liệu trong workspace.
+              </p>
+
+              {shareError && <p className="mt-3 text-sm text-red-600">{shareError}</p>}
+
+              <div className="mt-5">
+                {workspaceShareToken ? (
+                  <>
+                    <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <LinkIcon className="size-4 shrink-0 text-violet-600" />
+                      <span className="min-w-0 flex-1 truncate">{workspaceShareUrl}</span>
+                      <button
+                        type="button"
+                        aria-label="Sao chép đường dẫn"
+                        onClick={() => handleCopyWorkspaceShareLink(workspaceShareUrl)}
+                      >
+                        {shareLinkCopied ? (
+                          <Check className="size-4 text-emerald-600" />
+                        ) : (
+                          <Copy className="size-4" />
+                        )}
+                      </button>
+                    </div>
+                    {shareLinkCopied && (
+                      <p className="mt-2 text-xs text-emerald-600">Đã sao chép liên kết</p>
+                    )}
+                    <Button
+                      variant="destructive"
+                      className="mt-4 w-full"
+                      disabled={shareLoading}
+                      onClick={handleRevokeWorkspaceShareLink}
+                    >
+                      <Trash2 className="size-4" />
+                      Thu hồi liên kết
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    className="w-full"
+                    disabled={shareLoading}
+                    onClick={handleCreateWorkspaceShareLink}
+                  >
+                    {shareLoading ? "Đang tạo liên kết..." : "Tạo liên kết chia sẻ"}
+                  </Button>
+                )}
               </div>
             </section>
           </div>

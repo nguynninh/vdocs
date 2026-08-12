@@ -6,6 +6,7 @@ import {
   getDocumentPermission,
   isBlocked,
   resolveDescendantViaShareToken,
+  resolveDocumentViaWorkspaceShareToken,
   resolveShareToken,
 } from "../services/document.service.ts";
 import type { DocumentPermission } from "../dtos/response/DocumentPermission.ts";
@@ -28,6 +29,7 @@ const MAX_UPDATE_BYTES = 64 * 1024;
 interface JoinPayload {
   documentId: string;
   shareToken?: string;
+  workspaceShareToken?: string;
 }
 
 interface UpdatePayload {
@@ -111,6 +113,20 @@ export function createRealtimeServer(httpServer: http.Server) {
             } catch {
               // Invalid/expired share token, or documentId isn't reachable via
               // it — fall through to the FORBIDDEN below.
+            }
+          }
+
+          if (isBlocked(permission) && payload.workspaceShareToken) {
+            try {
+              const resolved = await resolveDocumentViaWorkspaceShareToken(
+                payload.documentId,
+                payload.workspaceShareToken,
+                userId
+              );
+              permission = resolved.permission;
+            } catch {
+              // Invalid/expired workspace share token, or documentId isn't in
+              // that workspace — fall through to the FORBIDDEN below.
             }
           }
 

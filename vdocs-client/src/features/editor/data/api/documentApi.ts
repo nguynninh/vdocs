@@ -131,6 +131,12 @@ export const documentApi = {
   getByShareToken: (token: string) =>
     api.get<DocumentApiResponse>(`/documents/share/${token}`),
 
+  listByWorkspaceShareToken: (token: string) =>
+    api.get<DocumentSummaryApiResponse[]>(`/documents/share/workspace/${token}`),
+
+  getByWorkspaceShareToken: (token: string, documentId: string) =>
+    api.get<DocumentApiResponse>(`/documents/share/workspace/${token}/${documentId}`),
+
   addFavorite: (documentId: string) =>
     api.post<{ favorited: boolean }>(`/documents/${documentId}/favorite`),
 

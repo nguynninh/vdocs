@@ -4,7 +4,7 @@ export default {
     display: "hidden",
   },
   introduction: "Introduction",
-  authentication: "Authentication",
+  quickstart: "Authentication",
   documents: "Documents",
   errors: "Error Codes",
   guide: "Guide",

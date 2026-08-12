@@ -4,7 +4,7 @@ export default {
     display: "hidden",
   },
   introduction: "Giới thiệu",
-  authentication: "Xác thực",
+  quickstart: "BẮT ĐẦU TÍCH HỢP",
   documents: "Tài liệu",
   errors: "Mã lỗi",
   guide: "Hướng dẫn",

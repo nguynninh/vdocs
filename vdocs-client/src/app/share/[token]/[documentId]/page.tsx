@@ -4,9 +4,10 @@ import { VDocsEditor } from "@/features/editor";
 import type { VDocsEditorProps } from "@/features/editor";
 import { getApiBaseUrl } from "@/src/services/apiUrl";
 
-type SharePageProps = {
+type SharedChildPageProps = {
   params: Promise<{
     token: string;
+    documentId: string;
   }>;
 };
 
@@ -37,15 +38,18 @@ function safeParseIcon(raw: string): VDocsEditorProps["initialIcon"] {
   }
 }
 
-export default async function SharePage({ params }: SharePageProps) {
-  const { token } = await params;
+export default async function SharedChildPage({ params }: SharedChildPageProps) {
+  const { token, documentId } = await params;
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("accessToken")?.value;
 
-  const response = await fetch(`${getApiBaseUrl()}/documents/share/${token}`, {
-    cache: "no-store",
-    headers: accessToken ? { Cookie: `accessToken=${accessToken}` } : {},
-  });
+  const response = await fetch(
+    `${getApiBaseUrl()}/documents/share/${token}/${documentId}`,
+    {
+      cache: "no-store",
+      headers: accessToken ? { Cookie: `accessToken=${accessToken}` } : {},
+    }
+  );
 
   if (response.status === 404 || response.status === 403) {
     notFound();

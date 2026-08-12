@@ -71,6 +71,11 @@ export const documentApi = {
   get: (documentId: string) =>
     api.get<DocumentApiResponse>(`/documents/${documentId}`),
 
+  listChildren: (documentId: string, shareToken?: string) =>
+    api.get<DocumentSummaryApiResponse[]>(`/documents/${documentId}/children`, {
+      params: shareToken ? { shareToken } : undefined,
+    }),
+
   update: (documentId: string, payload: UpdateDocumentPayload) =>
     api.patch<{ id: string; title: string; icon: string | null }>(
       `/documents/${documentId}`,

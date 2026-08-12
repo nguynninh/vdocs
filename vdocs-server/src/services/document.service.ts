@@ -247,6 +247,64 @@ async function getDocument(documentId: string, userId: string | null) {
   return requireDocumentAndPermission(documentId, userId);
 }
 
+/**
+ * Lists every descendant of `documentId` (its full subtree), for populating
+ * the share page's table of contents. Access follows the same rule as the
+ * document itself: a valid `shareToken` elevates an otherwise-blocked
+ * visitor to VIEWER, mirroring resolveShareToken.
+ */
+async function getDocumentChildren(
+  documentId: string,
+  userId: string | null,
+  shareToken?: string
+) {
+  const document = await documentRepository.findById(documentId);
+
+  if (!document) {
+    throw new DocumentNotFoundError(`Document ${documentId} not found`);
+  }
+
+  let permission = await getDocumentPermission(document, userId);
+
+  if (isBlocked(permission) && shareToken) {
+    const resolved = await resolveShareToken(shareToken, userId);
+    if (resolved.document.id === documentId) {
+      permission = resolved.permission;
+    }
+  }
+
+  if (isBlocked(permission)) {
+    throw new DocumentForbiddenError(
+      `${userId ? `User ${userId}` : "Anonymous visitor"} has no access to document ${documentId}`
+    );
+  }
+
+  const workspaceDocuments = await documentRepository.listForWorkspaces([
+    document.workspaceId,
+  ]);
+
+  const childrenByParentId = new Map<string, typeof workspaceDocuments>();
+  for (const candidate of workspaceDocuments) {
+    if (!candidate.parentId) continue;
+    const siblings = childrenByParentId.get(candidate.parentId) ?? [];
+    siblings.push(candidate);
+    childrenByParentId.set(candidate.parentId, siblings);
+  }
+
+  const descendants: typeof workspaceDocuments = [];
+  const queue = [documentId];
+  while (queue.length) {
+    const parentId = queue.shift() as string;
+    const children = childrenByParentId.get(parentId) ?? [];
+    for (const child of children) {
+      descendants.push(child);
+      queue.push(child.id);
+    }
+  }
+
+  return descendants;
+}
+
 async function updateDocument(
   documentId: string,
   userId: string,
@@ -454,7 +512,14 @@ async function revokeShareLink(documentId: string, userId: string) {
   await documentRepository.deactivateShareLinks(documentId);
 }
 
-async function getDocumentByShareToken(token: string, userId: string | null) {
+/**
+ * Resolves a valid, active share link's document and permission — a valid
+ * link always grants at least VIEWER access, on top of whatever stronger
+ * access the visitor already has (ownership, membership, or linkAccess).
+ * Used by both the REST share route and the Socket.IO join handler so a
+ * share-link viewer's live editor session and initial fetch never diverge.
+ */
+export async function resolveShareToken(token: string, userId: string | null) {
   const shareLink = await documentRepository.findShareLinkByToken(token);
 
   if (!shareLink || !shareLink.isActive) {
@@ -467,19 +532,74 @@ async function getDocumentByShareToken(token: string, userId: string | null) {
 
   const permission = await getDocumentPermission(shareLink.document, userId);
 
-  if (isBlocked(permission)) {
+  return {
+    document: shareLink.document,
+    permission: permission && !isBlocked(permission) ? permission : "VIEWER",
+  };
+}
+
+async function getDocumentByShareToken(token: string, userId: string | null) {
+  return resolveShareToken(token, userId);
+}
+
+/**
+ * Same as resolveShareToken, but for a document nested under the shared
+ * root (a child/grandchild page reached from the share page's sidebar).
+ * Walks the target's parentId chain to confirm it descends from the
+ * share link's document before granting VIEWER access.
+ */
+export async function resolveDescendantViaShareToken(
+  documentId: string,
+  token: string,
+  userId: string | null
+) {
+  const shareLink = await documentRepository.findShareLinkByToken(token);
+
+  if (!shareLink || !shareLink.isActive) {
+    throw new ShareLinkNotFoundError(`Share link ${token} not found`);
+  }
+
+  if (shareLink.expiresAt && shareLink.expiresAt.getTime() < Date.now()) {
+    throw new ShareLinkNotFoundError(`Share link ${token} has expired`);
+  }
+
+  const document = await documentRepository.findById(documentId);
+
+  if (!document) {
+    throw new DocumentNotFoundError(`Document ${documentId} not found`);
+  }
+
+  let currentId: string | null = documentId;
+  let isDescendant = false;
+  while (currentId) {
+    if (currentId === shareLink.documentId) {
+      isDescendant = true;
+      break;
+    }
+    const current: { parentId: string | null } | null =
+      await documentRepository.findById(currentId);
+    currentId = current?.parentId ?? null;
+  }
+
+  if (!isDescendant) {
     throw new DocumentForbiddenError(
-      `${userId ? `User ${userId}` : "Anonymous visitor"} has no access via share link ${token}`
+      `Document ${documentId} is not reachable via share link ${token}`
     );
   }
 
-  return { document: shareLink.document, permission };
+  const permission = await getDocumentPermission(document, userId);
+
+  return {
+    document,
+    permission: permission && !isBlocked(permission) ? permission : "VIEWER",
+  };
 }
 
 export const documentService = {
   createDocument,
   listDocuments,
   getDocument,
+  getDocumentChildren,
   updateDocument,
   trashDocument,
   listTrash,
@@ -493,6 +613,7 @@ export const documentService = {
   getOrCreateShareLink,
   revokeShareLink,
   getDocumentByShareToken,
+  resolveDescendantViaShareToken,
   addFavorite,
   removeFavorite,
   getFavoritesCount,

@@ -11,6 +11,7 @@ import type {
 export interface CollaborationProviderOptions {
   realtimeUrl: string;
   documentId: string;
+  shareToken?: string;
   initialState?: Uint8Array;
   onConnectionStateChange?: (state: ConnectionState) => void;
   onPermission?: (permission: DocumentPermission) => void;
@@ -94,7 +95,7 @@ export class CollaborationProvider {
         return;
       }
 
-      await this.roomManager.join(this.options.documentId);
+      await this.roomManager.join(this.options.documentId, this.options.shareToken);
     } catch (error) {
       if (!this.stopped) {
         this.options.onError?.(error);

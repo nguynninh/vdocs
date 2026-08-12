@@ -21,6 +21,7 @@ import type { DocumentPermission } from "./collaboration/collaboration.types";
 export interface VDocsEditorProps {
   documentId: string;
   workspaceId?: string;
+  shareToken?: string;
   initialTitle?: string;
   initialIcon?: PageIcon;
   initialContent?: Uint8Array;
@@ -33,6 +34,7 @@ export interface VDocsEditorProps {
 export function VDocsEditor({
   documentId,
   workspaceId,
+  shareToken,
   initialTitle = "",
   initialIcon,
   initialContent,
@@ -215,6 +217,7 @@ export function VDocsEditor({
     <div className="flex h-dvh flex-col">
       <EditorProvider
         documentId={documentId}
+        shareToken={shareToken}
         initialContent={initialContent}
         initialPermission={initialPermission}
       >

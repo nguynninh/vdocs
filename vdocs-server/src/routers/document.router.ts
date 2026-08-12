@@ -287,6 +287,39 @@ documentRouter.get(
   }
 );
 
+documentRouter.get(
+  "/share/:token/:documentId",
+  async (req: Request<{ token: string; documentId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const { document, permission } = await documentService.resolveDescendantViaShareToken(
+        req.params.documentId,
+        req.params.token,
+        userId
+      );
+
+      const response: DocumentResponse = {
+        id: document.id,
+        workspaceId: document.workspaceId,
+        title: document.title,
+        icon: document.icon,
+        permission,
+        linkAccess: document.linkAccess as LinkAccess,
+        contentVersion: document.contentVersion,
+        content: document.ydocState
+          ? Buffer.from(document.ydocState).toString("base64")
+          : null,
+        createdAt: document.createdAt.toISOString(),
+        updatedAt: document.updatedAt.toISOString(),
+      };
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
 documentRouter.post(
   "/:documentId/share",
   requireAuth,
@@ -350,6 +383,36 @@ documentRouter.get(
           console.error("Failed to record document view", error);
         });
       }
+
+      sendSuccess(res, response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  }
+);
+
+documentRouter.get(
+  "/:documentId/children",
+  async (req: Request<{ documentId: string }>, res: Response) => {
+    try {
+      const userId = getOptionalUserId(req);
+      const shareToken =
+        typeof req.query.shareToken === "string" ? req.query.shareToken : undefined;
+      const children = await documentService.getDocumentChildren(
+        req.params.documentId,
+        userId,
+        shareToken
+      );
+
+      const response: DocumentSummaryResponse[] = children.map((document) => ({
+        id: document.id,
+        parentId: document.parentId,
+        order: document.order,
+        title: document.title,
+        icon: document.icon,
+        updatedAt: document.updatedAt.toISOString(),
+        favorite: false,
+      }));
 
       sendSuccess(res, response);
     } catch (error) {

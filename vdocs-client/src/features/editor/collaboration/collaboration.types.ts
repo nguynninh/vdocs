@@ -145,7 +145,7 @@ export interface CollaborativeDocument {
  */
 export interface CollaborationTransport {
   connect(): Promise<void>;
-  joinDocument(documentId: string, knownVersion: number): Promise<JoinResult>;
+  joinDocument(documentId: string, knownVersion: number, shareToken?: string): Promise<JoinResult>;
   sendUpdate(update: Uint8Array): Promise<UpdateAck>;
   onRemoteUpdate(listener: (update: Uint8Array) => void): () => void;
 

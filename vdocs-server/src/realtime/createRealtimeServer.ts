@@ -1,7 +1,13 @@
 import type http from "node:http";
 import { Server, type DefaultEventsMap } from "socket.io";
 import { documentRepository } from "../repositories/document.repository.ts";
-import { canEdit, getDocumentPermission, isBlocked } from "../services/document.service.ts";
+import {
+  canEdit,
+  getDocumentPermission,
+  isBlocked,
+  resolveDescendantViaShareToken,
+  resolveShareToken,
+} from "../services/document.service.ts";
 import type { DocumentPermission } from "../dtos/response/DocumentPermission.ts";
 import { versionRepository } from "../repositories/version.repository.ts";
 import {
@@ -21,6 +27,7 @@ const MAX_UPDATE_BYTES = 64 * 1024;
 
 interface JoinPayload {
   documentId: string;
+  shareToken?: string;
 }
 
 interface UpdatePayload {
@@ -85,10 +92,27 @@ export function createRealtimeServer(httpServer: http.Server) {
             return;
           }
 
-          const permission = await getDocumentPermission(
-            document,
-            socket.data.user?.id ?? null
-          );
+          const userId = socket.data.user?.id ?? null;
+          let permission = await getDocumentPermission(document, userId);
+
+          if (isBlocked(permission) && payload.shareToken) {
+            try {
+              const resolved = await resolveShareToken(payload.shareToken, userId);
+              if (resolved.document.id === payload.documentId) {
+                permission = resolved.permission;
+              } else {
+                const descendant = await resolveDescendantViaShareToken(
+                  payload.documentId,
+                  payload.shareToken,
+                  userId
+                );
+                permission = descendant.permission;
+              }
+            } catch {
+              // Invalid/expired share token, or documentId isn't reachable via
+              // it — fall through to the FORBIDDEN below.
+            }
+          }
 
           if (isBlocked(permission)) {
             callback({

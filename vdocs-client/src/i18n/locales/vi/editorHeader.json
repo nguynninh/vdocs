@@ -40,7 +40,8 @@
       "title": "Hoạt động",
       "editedBy": "Sửa bởi",
       "createdBy": "Tạo bởi",
-      "justNow": "Vừa xong"
+      "justNow": "Vừa xong",
+      "unknownUser": "Không xác định"
     },
     "updatesPanel": {
       "tabs": {

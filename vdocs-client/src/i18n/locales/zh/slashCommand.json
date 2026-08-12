@@ -25,6 +25,7 @@
       "callout": "标注",
       "quote": "引用",
       "table": "表格",
+      "childDocuments": "子列表",
       "divider": "分割线",
       "linkToPage": "链接到页面",
       "image": "图片",

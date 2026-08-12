@@ -1,6 +1,7 @@
 "use client";
 
 import { CodeBlock } from "../../blocks/code-block/CodeBlock";
+import { ChildDocumentsView } from "../../blocks/child-documents/ChildDocumentsView";
 import { DividerView } from "../../blocks/divider/DividerView";
 import { FileBlock } from "../../blocks/file/FileBlock";
 import { ImageBlock } from "../../blocks/image/ImageBlock";
@@ -30,6 +31,8 @@ export function BlockRenderer({ block, isFirst }: BlockRendererProps) {
       return <DividerView block={block} isFirst={isFirst} />;
     case "table":
       return <TableView block={block} isFirst={isFirst} />;
+    case "childDocuments":
+      return <ChildDocumentsView block={block} />;
     case "file":
       return <FileBlock block={block} isFirst={isFirst} />;
     case "image":

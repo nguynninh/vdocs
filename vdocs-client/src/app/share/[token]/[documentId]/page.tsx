@@ -19,6 +19,7 @@ interface DocumentApiResponse {
   linkAccess: NonNullable<VDocsEditorProps["initialLinkAccess"]>;
   contentVersion: number;
   content: string | null;
+  owner: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +82,7 @@ export default async function SharedChildPage({ params }: SharedChildPageProps) 
       initialContent={initialContent}
       initialPermission={document.permission}
       initialLinkAccess={document.linkAccess}
+      initialOwnerName={document.owner?.name}
       initialCreatedAt={document.createdAt}
       initialUpdatedAt={document.updatedAt}
     />

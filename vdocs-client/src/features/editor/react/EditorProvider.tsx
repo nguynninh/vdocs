@@ -50,6 +50,8 @@ export interface EditorProviderProps {
 
 interface EditorContextValue {
   documentId: string;
+  shareToken?: string;
+  workspaceShareToken?: string;
   state: EditorState;
   connectionState: ConnectionState;
   permission: DocumentPermission;
@@ -701,6 +703,8 @@ export function EditorProvider({
   const value = useMemo<EditorContextValue>(
     () => ({
       documentId,
+      shareToken,
+      workspaceShareToken,
       state,
       connectionState,
       permission,
@@ -758,6 +762,8 @@ export function EditorProvider({
     }),
     [
       documentId,
+      shareToken,
+      workspaceShareToken,
       state,
       connectionState,
       permission,

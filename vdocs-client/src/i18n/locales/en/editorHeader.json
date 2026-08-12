@@ -40,7 +40,8 @@
       "title": "Activity",
       "editedBy": "Edited by",
       "createdBy": "Created by",
-      "justNow": "Just now"
+      "justNow": "Just now",
+      "unknownUser": "Unknown"
     },
     "updatesPanel": {
       "tabs": {

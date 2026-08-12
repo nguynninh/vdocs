@@ -13,6 +13,7 @@ export interface DocumentApiResponse {
   linkAccess: LinkAccess;
   contentVersion: number;
   content: string | null;
+  owner: { id: string; name: string } | null;
 }
 
 export interface DocumentSummaryApiResponse {
@@ -21,6 +22,7 @@ export interface DocumentSummaryApiResponse {
   order: number;
   title: string;
   icon: string | null;
+  owner: { id: string; name: string } | null;
   updatedAt: string;
   favorite?: boolean;
   shared?: boolean;

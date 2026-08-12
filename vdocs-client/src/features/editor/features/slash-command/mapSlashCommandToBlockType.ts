@@ -13,6 +13,7 @@ const BLOCK_TYPE_BY_SLASH_COMMAND: Partial<Record<SlashCommandBlockType, BlockTy
   divider: "divider",
   code: "codeBlock",
   table: "table",
+  childDocuments: "childDocuments",
   file: "file",
   image: "image",
 };

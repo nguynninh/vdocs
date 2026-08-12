@@ -12,6 +12,7 @@ export type BlockType =
   | "divider"
   | "codeBlock"
   | "table"
+  | "childDocuments"
   | "file"
   | "image";
 

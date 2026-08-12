@@ -40,7 +40,8 @@
       "title": "活动",
       "editedBy": "编辑者",
       "createdBy": "创建者",
-      "justNow": "刚刚"
+      "justNow": "刚刚",
+      "unknownUser": "未知"
     },
     "updatesPanel": {
       "tabs": {

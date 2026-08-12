@@ -167,6 +167,12 @@ const basicBlocks = createSlashCommandGroup("basic-blocks", "Basic blocks", [
     icon: Table,
   }),
   createSlashCommandItem({
+    id: "childDocuments",
+    label: "Child documents",
+    keywords: ["child", "children", "sub-list", "subpage", "danh sach con"],
+    icon: Rows3,
+  }),
+  createSlashCommandItem({
     id: "divider",
     label: "Divider",
     keywords: ["divider", "separator", "line", "hr"],

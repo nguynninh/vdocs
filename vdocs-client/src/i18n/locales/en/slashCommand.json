@@ -25,6 +25,7 @@
       "callout": "Callout",
       "quote": "Quote",
       "table": "Table",
+      "childDocuments": "Child documents",
       "divider": "Divider",
       "linkToPage": "Link to page",
       "image": "Image",

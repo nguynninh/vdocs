@@ -129,6 +129,7 @@ documentRouter.get("/", requireAuth, async (req: Request, res: Response) => {
       order: document.order,
       title: document.title,
       icon: document.icon,
+      owner: document.owner,
       updatedAt: document.updatedAt.toISOString(),
       favorite: document.favorite,
     }));
@@ -283,6 +284,7 @@ documentRouter.get(
         content: document.ydocState
           ? Buffer.from(document.ydocState).toString("base64")
           : null,
+        owner: document.owner,
         createdAt: document.createdAt.toISOString(),
         updatedAt: document.updatedAt.toISOString(),
       };
@@ -308,6 +310,7 @@ documentRouter.get(
         order: document.order,
         title: document.title,
         icon: document.icon,
+        owner: document.owner,
         updatedAt: document.updatedAt.toISOString(),
         favorite: false,
       }));
@@ -341,6 +344,7 @@ documentRouter.get(
         content: document.ydocState
           ? Buffer.from(document.ydocState).toString("base64")
           : null,
+        owner: document.owner,
         createdAt: document.createdAt.toISOString(),
         updatedAt: document.updatedAt.toISOString(),
       };
@@ -374,6 +378,7 @@ documentRouter.get(
         content: document.ydocState
           ? Buffer.from(document.ydocState).toString("base64")
           : null,
+        owner: document.owner,
         createdAt: document.createdAt.toISOString(),
         updatedAt: document.updatedAt.toISOString(),
       };
@@ -439,6 +444,7 @@ documentRouter.get(
         content: document.ydocState
           ? Buffer.from(document.ydocState).toString("base64")
           : null,
+        owner: document.owner,
         createdAt: document.createdAt.toISOString(),
         updatedAt: document.updatedAt.toISOString(),
       };
@@ -475,6 +481,7 @@ documentRouter.get(
         order: document.order,
         title: document.title,
         icon: document.icon,
+        owner: document.owner,
         updatedAt: document.updatedAt.toISOString(),
         favorite: false,
       }));

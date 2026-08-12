@@ -9,6 +9,7 @@ export interface DocumentResponse {
   linkAccess: LinkAccess;
   contentVersion: number;
   content: string | null;
+  owner: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +28,7 @@ export interface DocumentSummaryResponse {
   order: number;
   title: string;
   icon: string | null;
+  owner: { id: string; name: string } | null;
   updatedAt: string;
   favorite: boolean;
 }

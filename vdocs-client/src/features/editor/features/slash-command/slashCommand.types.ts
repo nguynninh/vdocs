@@ -14,6 +14,7 @@ export type SlashCommandBlockType =
   | "callout"
   | "quote"
   | "table"
+  | "childDocuments"
   | "divider"
   | "linkToPage"
   | "image"

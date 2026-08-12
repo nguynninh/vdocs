@@ -30,6 +30,7 @@ export interface VDocsEditorProps {
   initialLinkAccess?: LinkAccess;
   initialCreatedAt?: string;
   initialUpdatedAt?: string;
+  initialOwnerName?: string;
 }
 
 export function VDocsEditor({
@@ -44,6 +45,7 @@ export function VDocsEditor({
   initialLinkAccess = "NONE",
   initialCreatedAt,
   initialUpdatedAt,
+  initialOwnerName,
 }: VDocsEditorProps) {
   const t = useTranslations("editorHeader");
   const tActivity = useTranslations("editorHeader.activity");
@@ -233,6 +235,7 @@ export function VDocsEditor({
           onTitleChange={handleTitleChange}
           initialUpdatedAt={initialUpdatedAt}
           initialCreatedAt={initialCreatedAt}
+          ownerName={initialOwnerName}
           format={format}
           tActivity={tActivity}
           members={members}
@@ -275,6 +278,7 @@ interface EditorHeaderWithWordCountProps {
   onTitleChange: (title: string) => void;
   initialUpdatedAt?: string;
   initialCreatedAt?: string;
+  ownerName?: string;
   format: ReturnType<typeof useFormatter>;
   tActivity: ReturnType<typeof useTranslations>;
   members: ShareMember[];
@@ -296,6 +300,7 @@ function EditorHeaderWithWordCount({
   onTitleChange,
   initialUpdatedAt,
   initialCreatedAt,
+  ownerName,
   format,
   tActivity,
   members,
@@ -321,13 +326,13 @@ function EditorHeaderWithWordCount({
       canEdit={canEdit}
       wordCount={wordCount}
       editedBy={{
-        actorName: "Nguyễn Ninh",
+        actorName: ownerName || tActivity("unknownUser"),
         timeLabel: initialUpdatedAt
           ? format.dateTime(new Date(initialUpdatedAt), { dateStyle: "medium", timeStyle: "short" })
           : tActivity("justNow"),
       }}
       createdBy={{
-        actorName: "Nguyễn Ninh",
+        actorName: ownerName || tActivity("unknownUser"),
         timeLabel: initialCreatedAt
           ? format.dateTime(new Date(initialCreatedAt), { dateStyle: "medium" })
           : tActivity("justNow"),

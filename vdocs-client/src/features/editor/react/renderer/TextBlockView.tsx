@@ -32,6 +32,7 @@ const TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   codeBlock: "",
   divider: "",
   table: "",
+  childDocuments: "",
   file: "",
   image: "",
 };
@@ -52,6 +53,7 @@ const SMALL_TYPOGRAPHY_CLASS_NAMES: Record<BlockType, string> = {
   codeBlock: "",
   divider: "",
   table: "",
+  childDocuments: "",
   file: "",
   image: "",
 };
@@ -102,7 +104,15 @@ export function TextBlockView({ block }: TextBlockViewProps) {
           className="pointer-events-none absolute inset-0 z-10 py-1 text-base leading-7"
           style={{ color: "#9ca3af" }}
         >
-          {t("placeholderPrefix")} <span className="underline">{t("placeholderLink")}</span>
+          {t("placeholderPrefix")}{" "}
+          <button
+            type="button"
+            className="pointer-events-auto underline"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => convertBlockType(block.id, "childDocuments")}
+          >
+            {t("placeholderLink")}
+          </button>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { prisma } from "../configuration/prisma.ts";
 function findById(documentId: string) {
   return prisma.document.findUnique({
     where: { id: documentId },
+    include: { owner: { select: { id: true, name: true } } },
   });
 }
 
@@ -85,6 +86,9 @@ function listForWorkspaces(workspaceIds: string[]) {
     where: {
       workspaceId: { in: workspaceIds },
       archivedAt: null,
+    },
+    include: {
+      owner: { select: { id: true, name: true } },
     },
     orderBy: { order: "asc" },
   });
@@ -181,7 +185,7 @@ function findActiveShareLink(documentId: string) {
 function findShareLinkByToken(token: string) {
   return prisma.shareLink.findUnique({
     where: { token },
-    include: { document: true },
+    include: { document: { include: { owner: { select: { id: true, name: true } } } } },
   });
 }
 

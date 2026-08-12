@@ -17,7 +17,7 @@ export function ActivityPanel(props: ActivityPanelProps) {
   const t = useTranslations("editorHeader.activity");
 
   return (
-    <div className="w-64 p-3 text-sm">
+    <div className="w-80 p-3 text-sm">
       <div className="mb-2 text-xs font-medium text-muted-foreground">{t("title")}</div>
 
       <ul className="flex flex-col gap-2">
@@ -36,7 +36,7 @@ function ActivityRow({ label, entry }: { label: string; entry: ActivityEntry }) 
   return (
     <li className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-foreground">
+        <span className="text-foreground">
           {label} <span className="font-medium">{entry.actorName}</span>
         </span>
       </div>

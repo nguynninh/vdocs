@@ -658,7 +658,15 @@ export default function DocumentIndexPage() {
                     <h2 className="text-sm font-semibold">{title}</h2>
                     <p className="truncate text-xs text-muted-foreground">{description}</p>
                   </div>
-                  <Button variant="outline" size="sm" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={title !== "Thành viên"}
+                    onClick={() => {
+                      setSelectedMemberIndex(null);
+                      setActiveTab("members");
+                    }}
+                  >
                     {action}
                   </Button>
                 </section>

@@ -238,6 +238,21 @@ export default function DocumentIndexPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isShareOpen || !workspace) return;
+    setShareLoading(true);
+    setShareError(null);
+    workspaceApi
+      .createShareLink(workspace.id)
+      .then((response) => setWorkspaceShareToken(response.data.token))
+      .catch((error) => {
+        console.error("Failed to load workspace share link", error);
+        setShareError("Không thể tải liên kết chia sẻ. Vui lòng thử lại.");
+      })
+      .finally(() => setShareLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isShareOpen, workspace?.id]);
+
   const handleCreateWorkspaceShareLink = async () => {
     if (!workspace) return;
     setShareLoading(true);

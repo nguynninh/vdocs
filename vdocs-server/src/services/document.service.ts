@@ -356,7 +356,13 @@ async function updateMemberRole(
   targetUserId: string,
   role: MemberRole
 ) {
-  await requireManageAccess(documentId, userId);
+  const document = await requireManageAccess(documentId, userId);
+
+  if (targetUserId === document.ownerId) {
+    throw new DocumentForbiddenError(
+      `User ${userId} cannot change the role of the owner of document ${documentId}`
+    );
+  }
 
   return documentRepository.updateMemberRole(documentId, targetUserId, role);
 }
@@ -366,7 +372,13 @@ async function removeMember(
   userId: string,
   targetUserId: string
 ) {
-  await requireManageAccess(documentId, userId);
+  const document = await requireManageAccess(documentId, userId);
+
+  if (targetUserId === document.ownerId) {
+    throw new DocumentForbiddenError(
+      `User ${userId} cannot remove the owner of document ${documentId}`
+    );
+  }
 
   await documentRepository.removeMember(documentId, targetUserId);
 }

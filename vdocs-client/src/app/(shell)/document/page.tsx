@@ -209,7 +209,6 @@ export default function DocumentIndexPage() {
       { key: "overview", icon: Box, label: "Tổng quan" },
       { key: "members", icon: Users, label: "Thành viên" },
       { key: "roles", icon: Lock, label: "Vai trò & quyền hạn" },
-      { key: "billing", icon: FileText, label: "Thanh toán" },
       { key: "integrations", icon: Sparkles, label: "Tích hợp" },
       { key: "security", icon: Shield, label: "Bảo mật" },
       { key: "advanced", icon: Settings, label: "Nâng cao" },
@@ -257,13 +256,6 @@ export default function DocumentIndexPage() {
         description: "Quản lý các vai trò, quyền hạn và chính sách trong workspace.",
         action: "Cấu hình",
         color: "text-amber-500",
-      },
-      {
-        icon: Box,
-        title: "Thanh toán",
-        description: "Gói hiện tại: Professional",
-        action: "Quản lý gói",
-        color: "text-violet-600",
       },
       {
         icon: Sparkles,

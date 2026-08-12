@@ -54,7 +54,6 @@ import type { AuthUser } from "@/src/features/auth/types";
 import { useSidebarWidth } from "@/src/components/layout/sidebar-width";
 import { getWorkspaceIconOption } from "@/src/components/layout/workspace-icons";
 import Image from "next/image";
-import Home from "@/src/app/page";
 import {
   documentApi,
   type DocumentSummaryApiResponse,
@@ -689,6 +688,25 @@ export default function Siderbar(props: Props) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
+
+        {selectedWorkspace && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname === "/dashboard"}
+                    tooltip={t("home")}
+                    render={<Link href="/dashboard" onClick={() => setSelectedWorkspace(null)} />}
+                  >
+                    <HomeIcon className="text-[#4F6DF5]" strokeWidth={2.25} />
+                    <h3>{t("home")}</h3>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
 
         {selectedWorkspace && (

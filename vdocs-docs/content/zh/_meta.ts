@@ -3,26 +3,26 @@ const meta = {
     display: "hidden",
   },
   docs: {
-    title: "Tài liệu",
+    title: "文档",
     type: "page",
   },
   itr: {
-    title: "ITR",
+    title: "交互式文档",
     type: "page",
     href: "/itr",
   },
   blog: {
-    title: "Blog",
+    title: "博客",
     type: "page",
     href: "/blog",
   },
   showcase: {
-    title: "Trưng bày",
+    title: "展示",
     type: "page",
     href: "/showcase",
   },
   community: {
-    title: "Cộng đồng",
+    title: "社区",
     type: "page",
     href: "/community",
   },
@@ -42,13 +42,13 @@ const meta = {
     },
   },
   about: {
-    title: "Về",
+    title: "关于",
     type: "page",
     href: "/about",
     display: "hidden",
   },
   sponsors: {
-    title: "Nhà tài trợ",
+    title: "赞助商",
     type: "page",
     href: "/sponsors",
     display: "hidden",

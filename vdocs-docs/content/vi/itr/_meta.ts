@@ -3,6 +3,7 @@ export default {
     title: "Tổng quan",
     display: "hidden",
   },
+  introduction: "Giới thiệu",
   authentication: "Xác thực",
   documents: "Tài liệu",
   errors: "Mã lỗi",

@@ -1,0 +1,43 @@
+---
+title: 简介
+---
+
+# 简介
+
+**VDocs** 是一个基于 Next.js 构建的框架，可让你构建以内容为中心的网站。它拥有 Next.js 的所有强大特性，并额外提供了基于 Markdown 轻松创建内容的能力。
+
+## 快速开始
+
+要开始使用 VDocs，首先请选择一个主题：
+
+<div className="theme-grid">
+  <a className="theme-card" href="/docs">
+    <span className="theme-shot docs-shot" />
+    <strong>文档主题 →</strong>
+  </a>
+  <a className="theme-card" href="/docs">
+    <span className="theme-shot blog-shot" />
+    <strong>博客主题 →</strong>
+  </a>
+</div>
+
+如果你想在不使用内置主题的情况下使用 VDocs，可以参考 <a href="/docs">自定义主题</a> 文档。
+
+## 常见问题
+
+VDocs 常见问题是关于本项目的一系列实用问答。如果你的问题在这里没有得到解答，欢迎<a href="https://github.com/">发起一个讨论 ↗</a>。
+
+<details className="faq-item">
+  <summary>我可以在 Next.js <code>pages</code> 路由下使用 VDocs 吗？</summary>
+  <p>VDocs 4 仅支持 <code>app</code> 路由。较旧版本支持 <code>pages</code> 路由。</p>
+</details>
+
+<details className="faq-item">
+  <summary>我可以在 VDocs 中使用 X 吗？</summary>
+  <p>可以，绝大多数 React 库都能使用。VDocs 本质上仍是一个 Next.js 插件，因此常见的集成方式都适用。</p>
+</details>
+
+<details className="faq-item">
+  <summary>如何在 VDocs 中添加可实时编辑的代码组件？</summary>
+  <p>你可以在 MDX 中直接使用 Sandpack 或 react-live 之类的库。</p>
+</details>

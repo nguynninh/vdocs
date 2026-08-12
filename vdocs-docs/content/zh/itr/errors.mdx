@@ -1,0 +1,28 @@
+---
+title: 错误代码
+---
+
+# 错误代码
+
+发生错误时，API 会返回 `success: false`，并附带错误代码和描述信息。
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Token 无效或已过期"
+  }
+}
+```
+
+## 错误代码表
+
+| 代码 | HTTP 状态码 | 说明 |
+| --- | --- | --- |
+| `UNAUTHORIZED` | 401 | Token 无效或已过期 |
+| `FORBIDDEN` | 403 | 无权访问该资源 |
+| `NOT_FOUND` | 404 | 未找到资源 |
+| `VALIDATION_ERROR` | 422 | 提交的数据不合法 |
+| `INTERNAL_ERROR` | 500 | 系统内部错误 |

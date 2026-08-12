@@ -1,0 +1,115 @@
+---
+title: ITR
+---
+
+# ITR — API 参考文档
+
+## 简介
+
+**ITR**（Integration & Reference — 集成与 API 参考文档）是一套完整描述 `vdocs-server` 所提供全部 API 的参考文档。本文档适用于希望：
+
+- 将 VDocs 集成到自己的系统、网站或应用中。
+- 构建与 VDocs 文档交互的客户端 / 机器人 / 自动化服务。
+- 深入了解请求/响应结构、身份验证机制以及可能遇到的错误代码。
+
+的开发者。
+
+## 适用读者
+
+本文档适合：
+
+- 需要调用 VDocs API 的后端/前端开发人员。
+- 需要将 VDocs 集成到内部流水线中的 DevOps 团队。
+- 通过公开 API 进行集成的第三方合作伙伴。
+
+## 架构概览
+
+```
+客户端 / 你的应用
+        │
+        │  HTTPS + Bearer Token
+        ▼
+   vdocs-server（ITR API）
+        │
+        ▼
+   VDocs 数据库
+```
+
+`vdocs-server` 是核心的 API 与 socket 服务器，负责身份验证、存储以及文档的实时同步（基于 Yjs 实现）。
+
+## 基础 URL
+
+| 环境 | URL |
+| --- | --- |
+| 生产环境 | `https://api.vdocs.example.com` |
+| 预发布环境 | `https://api.staging.vdocs.example.com` |
+
+本文档中的所有接口路径均相对于基础 URL，例如 `/itr/documents` 对应 `https://api.vdocs.example.com/itr/documents`。
+
+## 快速开始
+
+1. 注册账号 / 从 VDocs 管理员处获取登录凭证。
+2. 调用 [身份验证](/itr/authentication) API 获取访问 token。
+3. 使用该 token 调用 [文档](/itr/documents) API 或其他 API 组。
+4. 如果请求失败，请参考 [错误代码](/itr/errors) 表进行处理。
+
+### 快速 cURL 示例
+
+```bash
+# 1. 登录以获取 token
+curl -X POST https://api.vdocs.example.com/itr/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"your-password"}'
+
+# 2. 使用 token 获取文档列表
+curl https://api.vdocs.example.com/itr/documents \
+  -H "Authorization: Bearer <token>"
+```
+
+## 请求格式
+
+- 所有请求/响应体均使用 `Content-Type: application/json`。
+- 日期时间遵循 ISO 8601 标准，例如 `2026-08-12T10:30:00Z`。
+- 资源 ID 为 UUID 字符串。
+
+## 响应格式
+
+所有 API 响应均返回统一结构的 JSON：
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+出错时：
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "提交的数据不合法"
+  }
+}
+```
+
+## 请求频率限制（Rate limiting）
+
+| 账户类型 | 限制 |
+| --- | --- |
+| 免费 | 60 次请求/分钟 |
+| 付费 | 600 次请求/分钟 |
+
+超出限制时，API 会返回 HTTP `429 Too Many Requests`。
+
+## 接下来
+
+选择左侧边栏中的一项查看详情：
+
+- **[身份验证](/itr/authentication)** — 如何获取并使用访问 token。
+- **[文档](/itr/documents)** — 文档管理相关 API（创建、读取、修改、删除）。
+- **[错误代码](/itr/errors)** — 错误代码列表及处理方式。

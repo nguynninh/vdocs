@@ -1,0 +1,42 @@
+---
+title: 身份验证
+---
+
+# 身份验证
+
+vdocs-server 使用 Bearer Token 对 API 请求进行身份验证。
+
+## 获取 token
+
+```
+POST /itr/auth/login
+```
+
+**请求体**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**响应**
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 3600
+  }
+}
+```
+
+## 使用 token
+
+在后续请求的 `Authorization` 请求头中携带该 token：
+
+```
+Authorization: Bearer <token>
+```

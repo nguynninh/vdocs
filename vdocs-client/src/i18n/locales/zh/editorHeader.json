@@ -33,6 +33,7 @@
       "remove": "移除访问权限",
       "learnAboutSharing": "了解分享",
       "copyLink": "复制链接",
+      "linkCopied": "已复制",
       "publishPlaceholder": "将此页面发布到网络。"
     },
     "activity": {

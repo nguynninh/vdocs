@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { VDocsEditor } from "@/features/editor";
 import type { VDocsEditorProps } from "@/features/editor";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { getApiBaseUrl } from "@/src/services/apiUrl";
 
 type SharePageProps = {
@@ -70,16 +71,18 @@ export default async function SharePage({ params }: SharePageProps) {
 
   return (
     <main>
-      <VDocsEditor
-        documentId={document.id}
-        initialTitle={document.title}
-        initialIcon={initialIcon}
-        initialContent={initialContent}
-        initialPermission={document.permission}
-        initialLinkAccess={document.linkAccess}
-        initialCreatedAt={document.createdAt}
-        initialUpdatedAt={document.updatedAt}
-      />
+      <SidebarProvider defaultOpen={false}>
+        <VDocsEditor
+          documentId={document.id}
+          initialTitle={document.title}
+          initialIcon={initialIcon}
+          initialContent={initialContent}
+          initialPermission={document.permission}
+          initialLinkAccess={document.linkAccess}
+          initialCreatedAt={document.createdAt}
+          initialUpdatedAt={document.updatedAt}
+        />
+      </SidebarProvider>
     </main>
   );
 }

@@ -81,6 +81,13 @@ export function SharePanel(props: SharePanelProps) {
   const [tab, setTab] = useState<"share" | "publish">("share");
   const [inviteValue, setInviteValue] = useState("");
   const [inviteRole, setInviteRole] = useState<AssignableRole>("EDITOR");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLinkClick = () => {
+    onCopyLink?.();
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div className="w-96 p-3 text-sm">
@@ -278,9 +285,13 @@ export function SharePanel(props: SharePanelProps) {
             <a href="#" className="text-xs text-muted-foreground hover:underline">
               {t("learnAboutSharing")}
             </a>
-            <Button variant="outline" size="sm" onClick={onCopyLink}>
-              <LinkIcon className="h-3.5 w-3.5" />
-              {t("copyLink")}
+            <Button variant="outline" size="sm" onClick={handleCopyLinkClick}>
+              {copied ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <LinkIcon className="h-3.5 w-3.5" />
+              )}
+              {copied ? t("linkCopied") : t("copyLink")}
             </Button>
           </div>
         </>

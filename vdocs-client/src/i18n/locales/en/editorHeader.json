@@ -33,6 +33,7 @@
       "remove": "Remove access",
       "learnAboutSharing": "Learn about sharing",
       "copyLink": "Copy link",
+      "linkCopied": "Copied",
       "publishPlaceholder": "Publish this page to the web."
     },
     "activity": {

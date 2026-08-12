@@ -12,7 +12,12 @@ export class NoWorkspaceError extends Error {}
 export class UserNotFoundError extends Error {}
 export class ShareLinkNotFoundError extends Error {}
 
-export type MemberRole = "FULL_ACCESS" | "EDITOR" | "COMMENTER" | "VIEWER";
+export type MemberRole =
+  | "FULL_ACCESS"
+  | "EDITOR"
+  | "COMMENTER"
+  | "VIEWER"
+  | "BLOCK";
 
 /**
  * Single source of truth for document access — used by both the REST
@@ -27,10 +32,16 @@ export async function getDocumentPermission(
       return "OWNER";
     }
 
-    const member = await documentRepository.findMemberRole(document.id, userId);
+    // A DocumentMember row set on this document, or on the nearest ancestor
+    // that has one, always wins — that's how a page overrides the access it
+    // would otherwise inherit from its parent (or, ultimately, the workspace).
+    const inheritedRole = await documentRepository.findInheritedMemberRole(
+      document.id,
+      userId
+    );
 
-    if (member) {
-      return member.role as DocumentPermission;
+    if (inheritedRole) {
+      return inheritedRole as DocumentPermission;
     }
 
     const workspaceMember = await documentRepository.findWorkspaceMembership(
@@ -39,7 +50,7 @@ export async function getDocumentPermission(
     );
 
     if (workspaceMember) {
-      return "EDITOR";
+      return mapWorkspaceRoleToDocumentPermission(workspaceMember.role);
     }
   }
 
@@ -54,6 +65,32 @@ export async function getDocumentPermission(
   }
 
   return null;
+}
+
+function mapWorkspaceRoleToDocumentPermission(
+  workspaceRole: string
+): DocumentPermission {
+  switch (workspaceRole) {
+    case "OWNER":
+    case "FULL_ACCESS":
+      return "FULL_ACCESS";
+    case "EDITOR":
+      return "EDITOR";
+    case "COMMENTER":
+      return "COMMENTER";
+    case "BLOCK":
+      return "BLOCK";
+    default:
+      return "VIEWER";
+  }
+}
+
+// "BLOCK" is a real, truthy permission value (an explicit deny), not the
+// absence of one — callers must check for it alongside `null`.
+export function isBlocked(
+  permission: DocumentPermission | null
+): permission is null | "BLOCK" {
+  return permission === null || permission === "BLOCK";
 }
 
 export function canEdit(permission: DocumentPermission): boolean {
@@ -80,7 +117,7 @@ async function requireDocumentAndPermission(
 
   const permission = await getDocumentPermission(document, userId);
 
-  if (!permission) {
+  if (isBlocked(permission)) {
     throw new DocumentForbiddenError(
       `${userId ? `User ${userId}` : "Anonymous visitor"} has no access to document ${documentId}`
     );
@@ -430,7 +467,7 @@ async function getDocumentByShareToken(token: string, userId: string | null) {
 
   const permission = await getDocumentPermission(shareLink.document, userId);
 
-  if (!permission) {
+  if (isBlocked(permission)) {
     throw new DocumentForbiddenError(
       `${userId ? `User ${userId}` : "Anonymous visitor"} has no access via share link ${token}`
     );

@@ -1,7 +1,8 @@
 import { workspaceRepository } from "../repositories/workspace.repository.ts";
 import { larkService } from "./lark.service.ts";
+import type { WorkspaceMemberRole } from "../generated/prisma/client.js";
 
-export type WorkspaceMemberRole = "OWNER" | "MEMBER";
+export type { WorkspaceMemberRole };
 
 export class WorkspaceNameRequiredError extends Error {}
 export class WorkspaceForbiddenError extends Error {}
@@ -50,7 +51,7 @@ async function requireMembership(workspaceId: string, userId: string) {
 async function requireOwner(workspaceId: string, userId: string) {
   const membership = await requireMembership(workspaceId, userId);
 
-  if (membership.role !== "OWNER") {
+  if (membership.role !== "OWNER" && membership.role !== "FULL_ACCESS") {
     throw new WorkspaceForbiddenError(
       `User ${userId} cannot manage members for workspace ${workspaceId}`
     );

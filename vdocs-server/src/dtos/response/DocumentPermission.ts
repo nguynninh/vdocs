@@ -3,6 +3,7 @@ export type DocumentPermission =
   | "FULL_ACCESS"
   | "EDITOR"
   | "COMMENTER"
-  | "VIEWER";
+  | "VIEWER"
+  | "BLOCK";
 
 export type LinkAccess = "NONE" | "VIEWER" | "COMMENTER" | "EDITOR";

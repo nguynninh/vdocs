@@ -28,6 +28,34 @@ function findWorkspaceMembership(workspaceId: string, userId: string) {
   });
 }
 
+// Walks the document tree from `documentId` up to the root, returning the
+// role of the nearest ancestor (including the document itself) that has an
+// explicit DocumentMember row for this user. A closer override always wins
+// over one set further up the chain.
+async function findInheritedMemberRole(documentId: string, userId: string) {
+  let currentId: string | null = documentId;
+
+  while (currentId) {
+    const member = await prisma.documentMember.findUnique({
+      where: { documentId_userId: { documentId: currentId, userId } },
+    });
+
+    if (member) {
+      return member.role;
+    }
+
+    const current: { parentId: string | null } | null =
+      await prisma.document.findUnique({
+        where: { id: currentId },
+        select: { parentId: true },
+      });
+
+    currentId = current?.parentId ?? null;
+  }
+
+  return null;
+}
+
 function findPersonalWorkspace(userId: string) {
   return prisma.workspaceMember.findFirst({
     where: { userId },
@@ -220,6 +248,7 @@ function listFavoriteIds(userId: string, documentIds: string[]) {
 export const documentRepository = {
   findById,
   findMemberRole,
+  findInheritedMemberRole,
   findWorkspaceMembership,
   findPersonalWorkspace,
   create,

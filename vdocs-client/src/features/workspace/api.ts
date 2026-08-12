@@ -15,7 +15,13 @@ export interface CreateWorkspacePayload {
   icon?: string;
 }
 
-export type WorkspaceMemberRole = "OWNER" | "MEMBER";
+export type WorkspaceMemberRole =
+  | "OWNER"
+  | "FULL_ACCESS"
+  | "EDITOR"
+  | "COMMENTER"
+  | "VIEWER"
+  | "BLOCK";
 
 export interface WorkspaceMemberApiResponse {
   userId: string;

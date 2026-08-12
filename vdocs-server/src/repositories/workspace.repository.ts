@@ -1,4 +1,5 @@
 import { prisma } from "../configuration/prisma.ts";
+import type { WorkspaceMemberRole } from "../generated/prisma/client.js";
 
 function create(input: {
   ownerId: string;
@@ -102,7 +103,7 @@ function upsertUserFromLark(input: {
   });
 }
 
-function upsertMember(workspaceId: string, userId: string, role: string) {
+function upsertMember(workspaceId: string, userId: string, role: WorkspaceMemberRole) {
   return prisma.workspaceMember.upsert({
     where: { workspaceId_userId: { workspaceId, userId } },
     create: { workspaceId, userId, role },
@@ -111,7 +112,7 @@ function upsertMember(workspaceId: string, userId: string, role: string) {
   });
 }
 
-function updateMemberRole(workspaceId: string, userId: string, role: string) {
+function updateMemberRole(workspaceId: string, userId: string, role: WorkspaceMemberRole) {
   return prisma.workspaceMember.update({
     where: { workspaceId_userId: { workspaceId, userId } },
     data: { role },

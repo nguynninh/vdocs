@@ -1,7 +1,7 @@
 import type http from "node:http";
 import { Server, type DefaultEventsMap } from "socket.io";
 import { documentRepository } from "../repositories/document.repository.ts";
-import { canEdit, getDocumentPermission } from "../services/document.service.ts";
+import { canEdit, getDocumentPermission, isBlocked } from "../services/document.service.ts";
 import type { DocumentPermission } from "../dtos/response/DocumentPermission.ts";
 import { versionRepository } from "../repositories/version.repository.ts";
 import {
@@ -90,7 +90,7 @@ export function createRealtimeServer(httpServer: http.Server) {
             socket.data.user?.id ?? null
           );
 
-          if (!permission) {
+          if (isBlocked(permission)) {
             callback({
               success: false,
               error: { code: "FORBIDDEN", message: "No access to this document" },

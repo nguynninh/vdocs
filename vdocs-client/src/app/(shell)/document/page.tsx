@@ -51,8 +51,45 @@ function getInitials(name: string): string {
 
 const ROLE_LABEL: Record<WorkspaceMemberRole, string> = {
   OWNER: "Chủ sở hữu",
-  MEMBER: "Thành viên",
+  FULL_ACCESS: "Toàn quyền truy cập",
+  EDITOR: "Có thể chỉnh sửa",
+  COMMENTER: "Có thể bình luận",
+  VIEWER: "Chỉ xem",
+  BLOCK: "Chặn",
 };
+
+const WORKSPACE_PERMISSION_OPTIONS: Array<{
+  value: Exclude<WorkspaceMemberRole, "OWNER" | "BLOCK">;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "FULL_ACCESS",
+    label: "Toàn quyền truy cập",
+    description: "Có toàn bộ quyền truy cập nội dung trong workspace.",
+  },
+  {
+    value: "EDITOR",
+    label: "Có thể chỉnh sửa",
+    description: "Có thể xem và chỉnh sửa nội dung được cấp quyền.",
+  },
+  {
+    value: "COMMENTER",
+    label: "Có thể bình luận",
+    description: "Có thể xem và bình luận trên nội dung được cấp quyền.",
+  },
+  {
+    value: "VIEWER",
+    label: "Chỉ xem",
+    description: "Chỉ có thể xem nội dung được cấp quyền.",
+  },
+];
+
+function toWorkspacePermissionRole(role: WorkspaceMemberRole) {
+  if (role === "OWNER" || role === "FULL_ACCESS") return "FULL_ACCESS";
+  if (role === "EDITOR" || role === "COMMENTER") return role;
+  return "VIEWER";
+}
 
 export default function DocumentIndexPage() {
   const t = useTranslations("sidebar");
@@ -64,7 +101,7 @@ export default function DocumentIndexPage() {
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
-  const [inviteRole, setInviteRole] = useState<WorkspaceMemberRole>("MEMBER");
+  const [inviteRole, setInviteRole] = useState<WorkspaceMemberRole>("VIEWER");
   const [larkSearch, setLarkSearch] = useState("");
   const [larkPage, setLarkPage] = useState(1);
   const [larkMembers, setLarkMembers] = useState<UserDirectoryApiResponse[]>([]);
@@ -215,7 +252,7 @@ export default function DocumentIndexPage() {
       { key: "danger", icon: AlertTriangle, label: "Khu vực nguy hiểm" },
     ];
     const selectedMember = selectedMemberIndex == null ? null : members[selectedMemberIndex] ?? null;
-    const ownerCount = members.filter((member) => member.role === "OWNER").length;
+    const fullAccessCount = members.filter((member) => toWorkspacePermissionRole(member.role) === "FULL_ACCESS").length;
     const memberStats: Array<{
       icon: LucideIcon;
       label: string;
@@ -224,8 +261,8 @@ export default function DocumentIndexPage() {
       color: string;
     }> = [
       { icon: Users, label: "Tổng thành viên", value: String(members.length), suffix: "thành viên", color: "text-blue-600" },
-      { icon: Crown, label: "Chủ sở hữu", value: String(ownerCount), suffix: "thành viên", color: "text-violet-600" },
-      { icon: Sparkles, label: "Thành viên", value: String(members.length - ownerCount), suffix: "thành viên", color: "text-emerald-500" },
+      { icon: Crown, label: "Toàn quyền", value: String(fullAccessCount), suffix: "thành viên", color: "text-violet-600" },
+      { icon: Sparkles, label: "Quyền hạn chế", value: String(members.length - fullAccessCount), suffix: "thành viên", color: "text-emerald-500" },
     ];
     const larkTotalPages = Math.max(1, Math.ceil(larkTotal / LARK_MEMBERS_PAGE_SIZE));
     const isLarkMemberSelected = (userId: string) =>
@@ -324,17 +361,25 @@ export default function DocumentIndexPage() {
                       <h1 className="text-xl font-semibold">{selectedMember.name}</h1>
                       <p className="mt-1 text-sm text-muted-foreground">{selectedMember.email}</p>
                       <div className="mt-4 flex gap-3">
-                        <select
-                          value={selectedMember.role}
-                          onChange={(event) =>
-                            handleRoleChange(selectedMember.userId, event.target.value as WorkspaceMemberRole)
-                          }
-                          className="flex h-9 w-40 items-center rounded-md border px-3 text-sm"
-                          disabled={selectedMember.role === "OWNER"}
-                        >
-                          <option value="OWNER">Chủ sở hữu</option>
-                          <option value="MEMBER">Thành viên</option>
-                        </select>
+                        {selectedMember.role === "OWNER" ? (
+                          <span className="flex h-9 items-center rounded-md border bg-muted/30 px-3 text-sm">
+                            Chủ sở hữu
+                          </span>
+                        ) : (
+                          <select
+                            value={toWorkspacePermissionRole(selectedMember.role)}
+                            onChange={(event) =>
+                              handleRoleChange(selectedMember.userId, event.target.value as WorkspaceMemberRole)
+                            }
+                            className="flex h-9 w-48 items-center rounded-md border px-3 text-sm"
+                          >
+                            {WORKSPACE_PERMISSION_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -349,9 +394,7 @@ export default function DocumentIndexPage() {
                     <h2 className="font-semibold">Quyền trong Workspace</h2>
                     <p className="mt-2 text-sm text-muted-foreground">Quyền xác định những gì thành viên có thể làm trong workspace này.</p>
                     <div className="mt-4 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-                      {selectedMember.role === "OWNER"
-                        ? "Chủ sở hữu có toàn quyền quản lý tài liệu, thành viên, cài đặt và tích hợp của workspace."
-                        : "Thành viên có thể truy cập tài liệu được chia sẻ trong workspace này."}
+                      {WORKSPACE_PERMISSION_OPTIONS.find((option) => option.value === toWorkspacePermissionRole(selectedMember.role))?.description}
                     </div>
                   </section>
 
@@ -438,8 +481,10 @@ export default function DocumentIndexPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="truncate font-medium">{member.name}</p>
-                            {member.role === "OWNER" && (
-                              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] text-violet-700">Chủ sở hữu</span>
+                            {(member.role === "OWNER" || member.role === "FULL_ACCESS") && (
+                              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] text-violet-700">
+                                {member.role === "OWNER" ? "Chủ sở hữu" : "Toàn quyền"}
+                              </span>
                             )}
                           </div>
                           <p className="truncate text-xs text-muted-foreground">{member.email}</p>
@@ -688,18 +733,19 @@ export default function DocumentIndexPage() {
                     <label className="mt-5 block space-y-2 text-sm">
 	                      <span>Vai trò mặc định</span>
 	                      <select
-	                        defaultValue="OWNER"
-	                        onChange={(event) =>
-	                          setInviteRole(event.target.value === "OWNER" ? "OWNER" : "MEMBER")
-	                        }
+	                        value={inviteRole}
+	                        onChange={(event) => setInviteRole(event.target.value as WorkspaceMemberRole)}
 	                        className="h-14 w-full rounded-lg border border-input bg-background px-3 text-sm"
 	                      >
-	                        <option value="OWNER">Toàn quyền</option>
-	                        <option value="EDIT">Có thể chỉnh sửa</option>
-	                        <option value="COMMENT">Có thể bình luận</option>
-	                        <option value="VIEW">Chỉ xem</option>
+                          {WORKSPACE_PERMISSION_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
 	                      </select>
-                      <span className="block text-xs text-muted-foreground">Có toàn bộ quyền quản lý và truy cập nội dung.</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {WORKSPACE_PERMISSION_OPTIONS.find((option) => option.value === inviteRole)?.description}
+                      </span>
                     </label>
                   </div>
 

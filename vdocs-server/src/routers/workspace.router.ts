@@ -103,7 +103,7 @@ workspaceRouter.get("/", async (req: Request, res: Response) => {
 
 function toMemberResponse(member: {
   userId: string;
-  role: string;
+  role: WorkspaceMemberRole;
   createdAt: Date;
   user: { name: string; email: string | null; avatar: string | null };
 }): WorkspaceMemberResponse {
@@ -112,7 +112,7 @@ function toMemberResponse(member: {
     name: member.user.name,
     email: member.user.email,
     avatar: member.user.avatar,
-    role: member.role as WorkspaceMemberRole,
+    role: member.role,
     joinedAt: member.createdAt.toISOString(),
   };
 }

@@ -1,0 +1,42 @@
+---
+title: Xác thực
+---
+
+# Xác thực
+
+vdocs-server sử dụng Bearer Token để xác thực các yêu cầu API.
+
+## Lấy token
+
+```
+POST /itr/auth/login
+```
+
+**Body**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**Phản hồi**
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 3600
+  }
+}
+```
+
+## Sử dụng token
+
+Đính kèm token vào header `Authorization` cho các yêu cầu tiếp theo:
+
+```
+Authorization: Bearer <token>
+```

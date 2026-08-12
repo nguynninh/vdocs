@@ -4,6 +4,12 @@
     {
       "name": "vdocs-client-dev",
       "url": "http://localhost:3000"
+    },
+    {
+      "name": "vdocs-docs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "vdocs-docs", "run", "dev"],
+      "port": 3100
     }
   ]
 }

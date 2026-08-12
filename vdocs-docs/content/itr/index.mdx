@@ -1,0 +1,113 @@
+---
+title: ITR
+---
+
+# ITR — Tài liệu tham chiếu API
+
+## Giới thiệu
+
+**ITR** (Integration & Reference — Tài liệu tích hợp và tham chiếu API) là bộ tài liệu mô tả đầy đủ các API mà `vdocs-server` cung cấp. Tài liệu này dành cho các nhà phát triển muốn:
+
+- Tích hợp VDocs vào hệ thống, website hoặc ứng dụng của riêng mình.
+- Xây dựng client/bot/dịch vụ tự động tương tác với tài liệu VDocs.
+- Hiểu rõ cấu trúc request/response, cơ chế xác thực và các mã lỗi có thể gặp.
+
+## Đối tượng đọc
+
+Tài liệu này phù hợp với:
+
+- Lập trình viên backend/frontend cần gọi API VDocs.
+- Đội ngũ DevOps cần tích hợp VDocs vào pipeline nội bộ.
+- Đối tác bên thứ ba tích hợp qua API công khai.
+
+## Kiến trúc tổng quan
+
+```
+Client / Ứng dụng của bạn
+        │
+        │  HTTPS + Bearer Token
+        ▼
+   vdocs-server (ITR API)
+        │
+        ▼
+   Cơ sở dữ liệu VDocs
+```
+
+`vdocs-server` đóng vai trò là API và socket server trung tâm, xử lý xác thực, lưu trữ và đồng bộ tài liệu theo thời gian thực (sử dụng Yjs).
+
+## Base URL
+
+| Môi trường | URL |
+| --- | --- |
+| Production | `https://api.vdocs.example.com` |
+| Staging | `https://api.staging.vdocs.example.com` |
+
+Tất cả endpoint trong tài liệu này đều là đường dẫn tương đối so với Base URL, ví dụ `/itr/documents` tương ứng `https://api.vdocs.example.com/itr/documents`.
+
+## Bắt đầu nhanh
+
+1. Đăng ký tài khoản / lấy thông tin đăng nhập từ quản trị viên VDocs.
+2. Gọi API [Xác thực](/itr/authentication) để lấy token truy cập.
+3. Sử dụng token để gọi các API [Tài liệu](/itr/documents) hoặc các nhóm API khác.
+4. Xử lý lỗi theo bảng [Mã lỗi](/itr/errors) nếu request không thành công.
+
+### Ví dụ nhanh với cURL
+
+```bash
+# 1. Đăng nhập để lấy token
+curl -X POST https://api.vdocs.example.com/itr/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"your-password"}'
+
+# 2. Dùng token để lấy danh sách tài liệu
+curl https://api.vdocs.example.com/itr/documents \
+  -H "Authorization: Bearer <token>"
+```
+
+## Định dạng request
+
+- Toàn bộ body request/response đều dùng `Content-Type: application/json`.
+- Ngày giờ tuân theo chuẩn ISO 8601, ví dụ `2026-08-12T10:30:00Z`.
+- ID tài nguyên là chuỗi UUID.
+
+## Định dạng phản hồi
+
+Tất cả phản hồi API trả về JSON theo cấu trúc thống nhất:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+Khi có lỗi:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Dữ liệu gửi lên không hợp lệ"
+  }
+}
+```
+
+## Giới hạn tần suất (Rate limiting)
+
+| Loại tài khoản | Giới hạn |
+| --- | --- |
+| Miễn phí | 60 request/phút |
+| Trả phí | 600 request/phút |
+
+Khi vượt giới hạn, API trả về HTTP `429 Too Many Requests`.
+
+## Các phần tiếp theo
+
+Chọn một mục ở sidebar bên trái để xem chi tiết:
+
+- **[Xác thực](/itr/authentication)** — cách lấy và sử dụng token truy cập.
+- **[Tài liệu](/itr/documents)** — các API quản lý tài liệu (tạo, đọc, sửa, xóa).
+- **[Mã lỗi](/itr/errors)** — danh sách mã lỗi và cách xử lý.

@@ -8,4 +8,5 @@ export default {
   documents: "Documents",
   errors: "Error Codes",
   guide: "Guide",
+  sdk_interactive_architecture: "SDK Interactive Architecture",
 };

@@ -8,4 +8,5 @@ export default {
   documents: "Tài liệu",
   errors: "Mã lỗi",
   guide: "Hướng dẫn",
+  sdk_interactive_architecture: "Kiến trúc SDK Interactive",
 };

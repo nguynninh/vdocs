@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
+COPY scripts/patch-nextra-layout.mjs ./scripts/patch-nextra-layout.mjs
+RUN node scripts/patch-nextra-layout.mjs
 
 COPY . .
 RUN npm run build

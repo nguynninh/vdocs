@@ -3,4 +3,6 @@ export default {
     title: "Overview",
     display: "hidden",
   },
+  android: "Android",
+  ios: "iOS",
 };

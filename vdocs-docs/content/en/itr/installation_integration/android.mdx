@@ -1,0 +1,467 @@
+# 02 — Installation & Integration
+
+[← Table of contents](README.md)
+
+---
+
+## 1. Environment requirements
+
+| Item | Value |
+|---|---|
+| `minSdk` | **21** |
+| SDK `compileSdk` / `targetSdk` | 35 |
+| Java / Kotlin JVM target | **1.8** |
+| Kotlin plugin | 1.7.10 (as used in the sample repo) |
+| AGP | 8.6.1 (the sample `app` module uses `com.android.application` 8.6.1) |
+| NDK | **28.1.13356709** (only needed when *building* the SDK, since it has a native lib) |
+| CMake | 3.22.1 (when building the SDK) |
+| Activity type | **`FragmentActivity`** (usually `AppCompatActivity`) |
+
+> The SDK contains the native library `liboverlay.so` (which hides the environment URL). When
+> integrating via the `.aar` file, the `.so` is already bundled inside the AAR — the app **does not
+> need** NDK/CMake.
+
+---
+
+## 2. Building the AAR file
+
+```bash
+./gradlew :interactive:assembleRelease
+```
+
+The output is located at `interactive/build/outputs/aar/`, with the filename following the rule in
+[interactive/build.gradle](../interactive/build.gradle):
+
+```
+Interactive_<DEVICE_TYPE>_<buildType>_<build_date>.aar
+example: Interactive_androidmobile_release_2026-07-30.aar
+```
+
+**Building for Android TV**: edit `buildConfigField("String", "DEVICE_TYPE", "\"androidtv\"")` in
+`interactive/build.gradle` and rebuild. This value affects:
+
+- the `os` socket header,
+- the `os=` query appended to the URL template,
+- the overlay's `targets` filtering condition (`Utils.isValidTargets`),
+- the `platform` / `deviceClass` fields in tracking.
+
+---
+
+## 3. Declaring dependencies
+
+### Option A — using a source module (as in the sample repo)
+
+`settings.gradle`:
+
+```gradle
+include ':interactive'
+```
+
+`app/build.gradle`:
+
+```gradle
+dependencies {
+    implementation project(":interactive")
+}
+```
+
+### Option B — using an `.aar` file
+
+Copy the AAR into `app/libs/` then:
+
+```gradle
+dependencies {
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+}
+```
+
+> ⚠️ **An AAR does not carry transitive dependencies.** When using option B, the app **must**
+> re-declare every library the SDK uses, otherwise you will get `NoClassDefFoundError` at runtime:
+
+```gradle
+dependencies {
+    // AndroidX / UI
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // Images (the Predict / Lucky button is a GIF image loaded from CDN)
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+
+    // Realtime
+    implementation("io.socket:socket.io-client:2.0.1") {
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // REST + JSON
+    implementation 'com.google.code.gson:gson:2.9.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
+}
+```
+
+The SDK also uses **Kotlin Coroutines** (`GlobalScope`, `Dispatchers.IO/Main`) and
+**AndroidX Lifecycle/LiveData**. These two are usually already available via the transitive
+dependencies of `androidx.appcompat`; if your project trims dependencies or uses a strict R8
+configuration and runs into missing-class errors, add:
+
+```gradle
+implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
+implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
+```
+
+### Required repositories
+
+```gradle
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+```
+
+---
+
+## 4. Permissions and `AndroidManifest.xml` configuration
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+<application
+    android:usesCleartextTraffic="true">   <!-- only needed when the DEV environment uses http -->
+    <activity
+        android:name=".MainActivity"
+        android:configChanges="orientation|screenSize" />  <!-- avoids recreating the Activity on rotation -->
+</application>
+```
+
+The SDK reads `Settings.Secure.ANDROID_ID` as the `deviceId` — **no permission needs to be
+declared** for this.
+
+---
+
+## 5. Adding `OverlayView` to the layout
+
+`OverlayView` must **exactly cover the video display area** (usually a 16:9 frame) and be
+**drawn on top of** the player in the drawing order (declared after the player in the same
+`ConstraintLayout`, or by using `elevation`).
+
+```xml
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Your player -->
+    <FrameLayout
+        android:id="@+id/player_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="H,16:9"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Overlay placed on top of the player, same size -->
+    <vn.interactive.widgets.OverlayView
+        android:id="@+id/overlay_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@id/player_container"
+        app:layout_constraintBottom_toBottomOf="@id/player_container"
+        app:layout_constraintStart_toStartOf="@id/player_container"
+        app:layout_constraintEnd_toEndOf="@id/player_container" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+**Why does the `OverlayView` size matter?** Overlays are positioned by *percentage* relative to
+`OverlayView` itself (`metadata.size.w/h` in the range `0..1` and `metadata.pos.x/y`). If
+`OverlayView` is larger than the video frame, the overlay will be misaligned relative to the
+picture.
+
+The sample repo recalculates the size at a 16:9 ratio in `onResume` / `onConfigurationChanged`
+(see [MainActivity.kt:151](../app/src/main/java/com/vtvlive/example/MainActivity.kt:151)):
+
+```kotlin
+private fun resizeContentView() {
+    contentView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+        override fun onPreDraw(): Boolean {
+            contentView.viewTreeObserver.removeOnPreDrawListener(this)
+            val screenWidth = contentView.width
+            val calculatedHeight = (screenWidth * 9) / 16
+            updateOverlayViewLayoutParams(screenWidth, contentView.height, calculatedHeight)
+            return true
+        }
+    })
+}
+```
+
+---
+
+## 6. Initializing the SDK
+
+```kotlin
+class MainActivity : AppCompatActivity(), DefaultOverlayEventListener {
+
+    private lateinit var overlayManager: OverlayManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        initInteractive()
+    }
+
+    private fun initInteractive() {
+        val overlayData = OverlayData.Builder()
+            .setEnvironment(EnvInteractive.PROD)   // DEV | STG | PROD, defaults to PROD
+            .setTenantId("vtvlive")                // required, issued by the Interactive team
+            .setDebug(false)                       // optional
+            .build()
+
+        overlayManager = OverlayManager(
+            /* activity  */ this,
+            /* overlayView */ findViewById(R.id.overlay_view),
+            /* overlayData */ overlayData,
+            /* listener */ this
+        )
+    }
+}
+```
+
+The constructor **does not open a network connection** — it only loads the configuration.
+The connection starts at `joinRoom()`.
+
+---
+
+## 7. Declaring the login session
+
+```kotlin
+// On successful login
+overlayManager.initToken(
+    token = accessToken,   // JWT (starting with "ey") or a cookie string
+    userId = userId,       // user identifier
+    bjName = ""            // optional: BJ/channel name, shown in the fanclub dialog
+)
+
+// On logout
+overlayManager.initToken("", "")
+```
+
+Mechanism:
+
+- A token starting with `"ey"` → the SDK automatically prepends the `Bearer ` prefix for the socket
+  and REST headers.
+- Any other token (cookie) → sent as-is.
+- If the user is currently watching **Live** and `initToken` is called, the SDK **automatically
+  rejoins the room** so the socket carries the new token.
+- Call `initToken` **before** `joinRoom` for the first join.
+
+---
+
+## 8. Entering / leaving content
+
+```kotlin
+// LIVE
+overlayManager.joinRoom(mediaId = "003c04ba-8f7d-4663-bef0-c7a971c059b6", type = 1)
+
+// VOD
+overlayManager.joinRoom(mediaId = "4357747e-004c-4190-a3f3-4a33840a3c09", type = 2)
+
+// Leaving content / destroying the screen
+overlayManager.releaseAll()
+```
+
+- `type = 1` → LIVE (`Const.VIDEO_LIVE`), `type = 2` → VOD (`Const.VIDEO_VOD`).
+- `joinRoom` automatically cleans up the previous session, so switching channels only requires
+  calling it again.
+- `releaseAll()` closes the socket (if Live), and destroys all WebViews, dialogs, floating
+  buttons, and pending tracking.
+
+**Checking whether content has interactivity before joining the room** (optional):
+
+```kotlin
+overlayManager.fetchInteractiveStatus(mediaId) { isInteractive ->
+    if (isInteractive) overlayManager.joinRoom(mediaId, type = 1)
+}
+```
+
+---
+
+## 9. VOD integration — feeding playback time
+
+For VOD, the SDK **does not automatically know** which second the player is at. The app must
+feed it in every second:
+
+```kotlin
+private val handler = Handler(Looper.getMainLooper())
+private var seconds = 0
+
+private val tick = object : Runnable {
+    override fun run() {
+        seconds = (player.currentPosition / 1000).toInt()   // player's current second
+        overlayManager.receiveTrackingTime(seconds)         // feed into the SDK
+        handler.postDelayed(this, 1000L)
+    }
+}
+
+// start after joinRoom(type = 2)
+handler.post(tick)
+
+// stop when leaving the content
+handler.removeCallbacks(tick)
+```
+
+- Unit: **seconds** (matches the `Timeline.time` format `"mm:ss"`).
+- The SDK matches the overlay marker **by exact second** (`startTimeShowOverlay == time`), so ticks
+  **must not be skipped**: if ticks are spaced more than 1 second apart, or the user seeks past a
+  marker, that marker's overlay will not appear.
+- `receiveTrackingTime` is a property of type `(Int) -> Unit`, called like a normal function.
+
+---
+
+## 10. Reporting player state to the SDK (optional, Live)
+
+The server may send a `ckst` event to ask the client whether it is playing or paused. To respond
+accurately, register:
+
+```kotlin
+overlayManager.addPlayerListener(object : PlayerChangeListener {
+    override suspend fun currentPosition(): Long = player.currentPosition
+
+    // first = isPlaying, second = state (1 = IDLE, 2 = BUFFERING, 3 = READY, 4 = ENDED)
+    override fun onPlayerStateChanged(): Pair<Boolean, Int> =
+        Pair(player.isPlaying, player.playbackState)
+})
+```
+
+SDK mapping: `1 → "idle"`, `3 → "playing"/"paused"` based on `isPlaying`, otherwise → an empty
+string.
+
+> Call `addPlayerListener` **after** `joinRoom` if you want the listener to also be attached to
+> `SocketIOManagement` (this object only exists after joining a Live room).
+
+---
+
+## 11. Receiving events from the SDK
+
+```kotlin
+class MainActivity : AppCompatActivity(), DefaultOverlayEventListener {
+
+    /** The overlay requests an action that the app must handle */
+    override fun onHandleMessage(msg: EventOverlay) {
+        when (msg) {
+            EventOverlay.NEED_LOGIN   -> showLoginScreen()   // user tapped to answer while not logged in
+            EventOverlay.NEED_PAY_ONG -> showTopUpScreen()   // server returned code PM402 (insufficient OnG)
+            else -> Unit
+        }
+    }
+
+    /** Realtime viewer count for the channel (only available on Live) */
+    override fun onHandleLiveViews(liveViews: Int) {
+        tvViewers.text = liveViews.toString()
+    }
+
+    /** Overlay opens/closes the stats section — use this to hide/show the app's UI if needed */
+    override fun onShowITR(show: Boolean) { }
+
+    /**
+     * The overlay has finished loading (takeControl = true) or failed to load (webViewError = true).
+     * overlayConfig indicates whether it's a popup or inline, aligned top/bottom, and the height ratio.
+     */
+    override fun onFocusOverlay(
+        takeControl: Boolean,
+        webViewError: Boolean,
+        overlayConfig: OverlayConfig?
+    ) {
+        if (overlayConfig?.popupOverlay == true) {
+            // e.g.: push the player controls up so they aren't covered by the overlay
+        }
+    }
+}
+```
+
+`DefaultOverlayEventListener` is just an alias for `OverlayEventListener` — you can implement
+either one, but **all 4 functions are required**.
+
+---
+
+## 12. Leaderboard
+
+```kotlin
+overlayManager.showChartsInteractive(
+    mediaId = "003c04ba-8f7d-4663-bef0-c7a971c059b6",
+    userId = "355202",
+    backgroundColorHeader = "#139DED"   // optional, header hex color code
+)
+
+if (overlayManager.isDialogCharShowing()) {
+    overlayManager.hideChartsInteractive()
+}
+```
+
+This dialog is a full-screen `DialogFragment` that automatically resizes for portrait/landscape
+and for tablets.
+
+---
+
+## 13. Handling screen rotation
+
+Declare `android:configChanges="orientation|screenSize"` so the Activity **is not recreated** —
+the overlay/socket will not be lost. The SDK's own dialogs handle their own
+`onConfigurationChanged`.
+
+> Note: `OverlayManager.onConfigurationChanged` is currently **private**, so the app cannot call
+> it directly. If the Activity is recreated on rotation, rebuild the `OverlayManager` and call
+> `joinRoom` again.
+
+---
+
+## 14. ProGuard / R8
+
+The `:interactive` module already includes `consumer-rules.pro` (automatically applied to the app
+when using the AAR), which keeps:
+
+- the Retrofit interfaces `OverlayService`, `InteractiveStatusService`,
+- all of `vn.interactive.model.**`, `retrofit2.**`, `okhttp3.**`, `okio.**`, Gson, and their
+  annotations.
+
+If the app enables `minifyEnabled true` and encounters an error where the JS bridge is not being
+called, add:
+
+```proguard
+# Keep the JS interface (WebView calls it via reflection)
+-keepclassmembers class vn.interactive.callbacks.OverlayWebViewCallBack {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepclassmembers class vn.interactive.callbacks.PostMessageListener {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Keep the native function that retrieves the environment URL
+-keepclasseswithmembernames class vn.interactive.utils.Utils {
+    native <methods>;
+}
+```
+
+---
+
+## 15. Integration checklist
+
+- [ ] Activity extends `AppCompatActivity` / `FragmentActivity`.
+- [ ] `OverlayView` is in the layout, exactly covers the video frame, and is drawn **on top of** the player.
+- [ ] `INTERNET` + `ACCESS_NETWORK_STATE` have been declared.
+- [ ] All required dependencies have been declared (if integrating via AAR).
+- [ ] `setTenantId(...)` has the correct value issued by the Interactive team.
+- [ ] `initToken()` is called on both login **and** logout.
+- [ ] `joinRoom()` is called every time a new piece of content starts being watched.
+- [ ] VOD: there is a 1-second loop calling `receiveTrackingTime()`.
+- [ ] `releaseAll()` is called when leaving content / on `onDestroy()`.
+- [ ] `EventOverlay.NEED_LOGIN` and `NEED_PAY_ONG` have been handled.
+
+---
+
+[← Architecture](01-kien-truc.md) · [Table of contents](README.md) · [Next: Operation flow →](03-luong-hoat-dong.md)

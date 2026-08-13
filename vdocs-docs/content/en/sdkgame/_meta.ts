@@ -7,7 +7,7 @@ const meta = {
   },
   files: {
     title: "File Conventions",
-    href: "/docs",
+    href: "/sdkgame",
   },
   guide: {
     title: "Guide",
@@ -15,61 +15,61 @@ const meta = {
     items: {
       markdown: {
         title: "Markdown",
-        href: "/docs",
+        href: "/sdkgame",
       },
       syntax: {
         title: "Syntax Highlighting",
-        href: "/docs",
+        href: "/sdkgame",
       },
       link: {
         title: "Next.js Link",
-        href: "/docs",
+        href: "/sdkgame",
       },
       image: {
         title: "Next.js Image",
-        href: "/docs",
+        href: "/sdkgame",
       },
       static: {
         title: "Next.js Static Rendering",
-        href: "/docs",
+        href: "/sdkgame",
       },
       i18n: {
         title: "Next.js I18n",
-        href: "/docs",
+        href: "/sdkgame",
       },
       css: {
         title: "Custom CSS",
-        href: "/docs",
+        href: "/sdkgame",
       },
       export: {
         title: "Static Export",
-        href: "/docs",
+        href: "/sdkgame",
       },
       search: {
         title: "Search",
-        href: "/docs",
+        href: "/sdkgame",
       },
       alerts: {
         title: "GitHub Alert Syntax",
-        href: "/docs",
+        href: "/sdkgame",
       },
       turbo: {
         title: "Using with Turbopack",
-        href: "/docs",
+        href: "/sdkgame",
       },
       deploy: {
         title: "Deploy ↗",
-        href: "/docs",
+        href: "/sdkgame",
       },
     },
   },
   advanced: {
     title: "Advanced",
-    href: "/docs",
+    href: "/sdkgame",
   },
   builtins: {
     title: "Built-in Components",
-    href: "/docs",
+    href: "/sdkgame",
   },
   "---": {
     type: "separator",
@@ -81,11 +81,11 @@ const meta = {
     items: {
       start: {
         title: "Getting Started",
-        href: "/docs",
+        href: "/sdkgame",
       },
       components: {
         title: "Built-in Components",
-        href: "/docs",
+        href: "/sdkgame",
       },
     },
   },

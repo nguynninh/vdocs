@@ -81,7 +81,7 @@ export default async function RootLayout({
 
   const banner = (
     <Banner storageKey="vdocs-4-release">
-      {t.bannerText} <Link href={`/${lang}/docs`}>{t.bannerLink}</Link>
+      {t.bannerText} <Link href={`/${lang}/sdkgame`}>{t.bannerLink}</Link>
     </Banner>
   );
 

@@ -1,12 +1,4 @@
 export default {
-  index: {
-    title: "Tổng quan",
-    display: "hidden",
-  },
-  introduction: "Giới thiệu",
-  quickstart: "BẮT ĐẦU TÍCH HỢP",
-  documents: "Tài liệu",
-  errors: "Mã lỗi",
-  guide: "Hướng dẫn",
   sdk_interactive_architecture: "Kiến trúc SDK Interactive",
+  installation_integration: "Cài đặt & Tích hợp",
 };

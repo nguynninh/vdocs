@@ -1,0 +1,448 @@
+# 02 — Cài đặt & Tích hợp
+
+[← Về mục lục](README.md)
+
+---
+
+## 1. Yêu cầu môi trường
+
+| Hạng mục | Giá trị |
+|---|---|
+| `minSdk` | **21** |
+| `compileSdk` / `targetSdk` của SDK | 35 |
+| Java / Kotlin JVM target | **1.8** |
+| Kotlin plugin | 1.7.10 (theo repo mẫu) |
+| AGP | 8.6.1 (module `app` mẫu dùng `com.android.application` 8.6.1) |
+| NDK | **28.1.13356709** (chỉ cần khi *build* SDK, vì có native lib) |
+| CMake | 3.22.1 (khi build SDK) |
+| Loại Activity | **`FragmentActivity`** (thường là `AppCompatActivity`) |
+
+> SDK chứa thư viện native `liboverlay.so` (giấu URL môi trường). Khi tích hợp bằng file `.aar`,
+> `.so` đã nằm sẵn trong AAR — app **không cần** NDK/CMake.
+
+---
+
+## 2. Build file AAR
+
+```bash
+./gradlew :interactive:assembleRelease
+```
+
+Kết quả nằm ở `interactive/build/outputs/aar/`, tên file được đặt theo quy tắc trong
+[interactive/build.gradle](../interactive/build.gradle):
+
+```
+Interactive_<DEVICE_TYPE>_<buildType>_<ngày build>.aar
+ví dụ: Interactive_androidmobile_release_2026-07-30.aar
+```
+
+**Build cho Android TV**: sửa `buildConfigField("String", "DEVICE_TYPE", "\"androidtv\"")` trong
+`interactive/build.gradle` rồi build lại. Giá trị này ảnh hưởng:
+
+- header socket `os`,
+- query `os=` gắn vào URL template,
+- điều kiện lọc `targets` của overlay (`Utils.isValidTargets`),
+- trường `platform` / `deviceClass` trong tracking.
+
+---
+
+## 3. Khai báo phụ thuộc
+
+### Cách A — dùng module nguồn (như repo mẫu)
+
+`settings.gradle`:
+
+```gradle
+include ':interactive'
+```
+
+`app/build.gradle`:
+
+```gradle
+dependencies {
+    implementation project(":interactive")
+}
+```
+
+### Cách B — dùng file `.aar`
+
+Chép AAR vào `app/libs/` rồi:
+
+```gradle
+dependencies {
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+}
+```
+
+> ⚠️ **AAR không mang theo phụ thuộc bắc cầu.** Khi dùng cách B, app **bắt buộc** khai báo lại
+> toàn bộ thư viện mà SDK sử dụng, nếu không sẽ `NoClassDefFoundError` lúc chạy:
+
+```gradle
+dependencies {
+    // AndroidX / UI
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // Ảnh (nút Predict / Lucky là ảnh GIF tải từ CDN)
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+
+    // Realtime
+    implementation("io.socket:socket.io-client:2.0.1") {
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // REST + JSON
+    implementation 'com.google.code.gson:gson:2.9.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.9.3'
+}
+```
+
+Ngoài ra SDK dùng **Kotlin Coroutines** (`GlobalScope`, `Dispatchers.IO/Main`) và
+**AndroidX Lifecycle/LiveData**. Hai thứ này thường đã có sẵn qua phụ thuộc bắc cầu của
+`androidx.appcompat`; nếu dự án của bạn cắt bớt hoặc dùng cấu hình R8 nghiêm ngặt và gặp lỗi thiếu
+lớp, hãy khai báo thêm:
+
+```gradle
+implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
+implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
+```
+
+### Repository cần có
+
+```gradle
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+```
+
+---
+
+## 4. Quyền và cấu hình `AndroidManifest.xml`
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+<application
+    android:usesCleartextTraffic="true">   <!-- chỉ khi môi trường DEV dùng http -->
+    <activity
+        android:name=".MainActivity"
+        android:configChanges="orientation|screenSize" />  <!-- tránh tạo lại Activity khi xoay -->
+</application>
+```
+
+SDK đọc `Settings.Secure.ANDROID_ID` làm `deviceId` — **không cần khai báo quyền** cho việc này.
+
+---
+
+## 5. Thêm `OverlayView` vào layout
+
+`OverlayView` phải **phủ đúng vùng hiển thị video** (thường là khung 16:9) và **nằm trên** player
+theo thứ tự vẽ (khai báo sau player trong cùng `ConstraintLayout`, hoặc dùng `elevation`).
+
+```xml
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Player của bạn -->
+    <FrameLayout
+        android:id="@+id/player_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="H,16:9"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Overlay đặt đè lên player, cùng kích thước -->
+    <vn.interactive.widgets.OverlayView
+        android:id="@+id/overlay_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@id/player_container"
+        app:layout_constraintBottom_toBottomOf="@id/player_container"
+        app:layout_constraintStart_toStartOf="@id/player_container"
+        app:layout_constraintEnd_toEndOf="@id/player_container" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+**Vì sao kích thước `OverlayView` quan trọng?** Overlay được đặt theo *tỉ lệ phần trăm* của chính
+`OverlayView` (`metadata.size.w/h` trong khoảng `0..1` và `metadata.pos.x/y`). Nếu `OverlayView` to
+hơn khung video, overlay sẽ lệch khỏi vùng hình.
+
+Repo mẫu tính lại kích thước theo tỉ lệ 16:9 trong `onResume` / `onConfigurationChanged`
+(xem [MainActivity.kt:151](../app/src/main/java/com/vtvlive/example/MainActivity.kt:151)):
+
+```kotlin
+private fun resizeContentView() {
+    contentView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+        override fun onPreDraw(): Boolean {
+            contentView.viewTreeObserver.removeOnPreDrawListener(this)
+            val screenWidth = contentView.width
+            val calculatedHeight = (screenWidth * 9) / 16
+            updateOverlayViewLayoutParams(screenWidth, contentView.height, calculatedHeight)
+            return true
+        }
+    })
+}
+```
+
+---
+
+## 6. Khởi tạo SDK
+
+```kotlin
+class MainActivity : AppCompatActivity(), DefaultOverlayEventListener {
+
+    private lateinit var overlayManager: OverlayManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        initInteractive()
+    }
+
+    private fun initInteractive() {
+        val overlayData = OverlayData.Builder()
+            .setEnvironment(EnvInteractive.PROD)   // DEV | STG | PROD, mặc định PROD
+            .setTenantId("vtvlive")                // bắt buộc, do đội Interactive cấp
+            .setDebug(false)                       // tuỳ chọn
+            .build()
+
+        overlayManager = OverlayManager(
+            /* activity  */ this,
+            /* overlayView */ findViewById(R.id.overlay_view),
+            /* overlayData */ overlayData,
+            /* listener */ this
+        )
+    }
+}
+```
+
+Constructor **không mở kết nối mạng** — chỉ nạp cấu hình. Kết nối bắt đầu ở `joinRoom()`.
+
+---
+
+## 7. Khai báo phiên đăng nhập
+
+```kotlin
+// Khi đăng nhập thành công
+overlayManager.initToken(
+    token = accessToken,   // JWT (bắt đầu bằng "ey") hoặc cookie chuỗi
+    userId = userId,       // id định danh người dùng
+    bjName = ""            // tuỳ chọn: tên BJ/kênh, hiển thị trong dialog fanclub
+)
+
+// Khi đăng xuất
+overlayManager.initToken("", "")
+```
+
+Cơ chế:
+
+- Token bắt đầu bằng `"ey"` → SDK tự thêm tiền tố `Bearer ` cho header socket và REST.
+- Token khác (cookie) → gửi nguyên văn.
+- Nếu đang xem **Live** mà gọi `initToken`, SDK **tự động vào lại phòng** để socket mang token mới.
+- Gọi `initToken` **trước** `joinRoom` cho lần vào đầu tiên.
+
+---
+
+## 8. Vào / rời nội dung
+
+```kotlin
+// LIVE
+overlayManager.joinRoom(mediaId = "003c04ba-8f7d-4663-bef0-c7a971c059b6", type = 1)
+
+// VOD
+overlayManager.joinRoom(mediaId = "4357747e-004c-4190-a3f3-4a33840a3c09", type = 2)
+
+// Thoát nội dung / huỷ màn hình
+overlayManager.releaseAll()
+```
+
+- `type = 1` → LIVE (`Const.VIDEO_LIVE`), `type = 2` → VOD (`Const.VIDEO_VOD`).
+- `joinRoom` tự dọn phiên trước đó, nên chuyển kênh chỉ cần gọi lại.
+- `releaseAll()` đóng socket (nếu Live), huỷ toàn bộ WebView, dialog, nút nổi và tracking đang treo.
+
+**Kiểm tra nội dung có tương tác hay không trước khi vào phòng** (tuỳ chọn):
+
+```kotlin
+overlayManager.fetchInteractiveStatus(mediaId) { isInteractive ->
+    if (isInteractive) overlayManager.joinRoom(mediaId, type = 1)
+}
+```
+
+---
+
+## 9. Tích hợp VOD — bơm thời gian phát
+
+Với VOD, SDK **không tự biết** player đang ở giây thứ mấy. App phải bơm vào mỗi giây:
+
+```kotlin
+private val handler = Handler(Looper.getMainLooper())
+private var seconds = 0
+
+private val tick = object : Runnable {
+    override fun run() {
+        seconds = (player.currentPosition / 1000).toInt()   // giây hiện tại của player
+        overlayManager.receiveTrackingTime(seconds)         // bơm vào SDK
+        handler.postDelayed(this, 1000L)
+    }
+}
+
+// bắt đầu sau khi joinRoom(type = 2)
+handler.post(tick)
+
+// dừng khi rời nội dung
+handler.removeCallbacks(tick)
+```
+
+- Đơn vị: **giây** (khớp với `Timeline.time` dạng `"mm:ss"`).
+- SDK so khớp **bằng đúng giây** của mốc overlay (`startTimeShowOverlay == time`), nên **không được
+  bỏ nhịp**: nếu tick thưa hơn 1 giây hoặc người dùng tua qua mốc, overlay của mốc đó sẽ không hiện.
+- `receiveTrackingTime` là một property kiểu `(Int) -> Unit`, gọi như hàm bình thường.
+
+---
+
+## 10. Cấp trạng thái player cho SDK (tuỳ chọn, Live)
+
+Server có thể gửi sự kiện `ckst` để hỏi client đang phát hay dừng. Muốn trả lời chính xác, đăng ký:
+
+```kotlin
+overlayManager.addPlayerListener(object : PlayerChangeListener {
+    override suspend fun currentPosition(): Long = player.currentPosition
+
+    // first = isPlaying, second = state (1 = IDLE, 2 = BUFFERING, 3 = READY, 4 = ENDED)
+    override fun onPlayerStateChanged(): Pair<Boolean, Int> =
+        Pair(player.isPlaying, player.playbackState)
+})
+```
+
+Ánh xạ của SDK: `1 → "idle"`, `3 → "playing"/"paused"` theo `isPlaying`, còn lại → chuỗi rỗng.
+
+> Gọi `addPlayerListener` **sau** `joinRoom` nếu muốn listener được gắn cả vào `SocketIOManagement`
+> (đối tượng này chỉ tồn tại sau khi vào phòng Live).
+
+---
+
+## 11. Nhận sự kiện từ SDK
+
+```kotlin
+class MainActivity : AppCompatActivity(), DefaultOverlayEventListener {
+
+    /** Overlay yêu cầu hành động mà app phải xử lý */
+    override fun onHandleMessage(msg: EventOverlay) {
+        when (msg) {
+            EventOverlay.NEED_LOGIN   -> showLoginScreen()   // người dùng bấm trả lời khi chưa đăng nhập
+            EventOverlay.NEED_PAY_ONG -> showTopUpScreen()   // server trả mã PM402 (thiếu OnG)
+            else -> Unit
+        }
+    }
+
+    /** Số người xem realtime của kênh (chỉ có ở Live) */
+    override fun onHandleLiveViews(liveViews: Int) {
+        tvViewers.text = liveViews.toString()
+    }
+
+    /** Overlay mở/đóng phần thống kê — dùng để ẩn/hiện UI của app nếu cần */
+    override fun onShowITR(show: Boolean) { }
+
+    /**
+     * Overlay đã nạp xong (takeControl = true) hoặc lỗi tải (webViewError = true).
+     * overlayConfig cho biết đây là popup hay inline, canh trên/dưới, tỉ lệ chiều cao.
+     */
+    override fun onFocusOverlay(
+        takeControl: Boolean,
+        webViewError: Boolean,
+        overlayConfig: OverlayConfig?
+    ) {
+        if (overlayConfig?.popupOverlay == true) {
+            // ví dụ: đẩy phần điều khiển player lên để không bị overlay che
+        }
+    }
+}
+```
+
+`DefaultOverlayEventListener` chỉ là alias của `OverlayEventListener` — implement cái nào cũng được,
+nhưng **cả 4 hàm đều bắt buộc**.
+
+---
+
+## 12. Bảng xếp hạng
+
+```kotlin
+overlayManager.showChartsInteractive(
+    mediaId = "003c04ba-8f7d-4663-bef0-c7a971c059b6",
+    userId = "355202",
+    backgroundColorHeader = "#139DED"   // tuỳ chọn, mã hex màu header
+)
+
+if (overlayManager.isDialogCharShowing()) {
+    overlayManager.hideChartsInteractive()
+}
+```
+
+Dialog này là `DialogFragment` toàn màn hình, tự co giãn theo dọc/ngang và theo máy tablet.
+
+---
+
+## 13. Xử lý xoay màn hình
+
+Khai báo `android:configChanges="orientation|screenSize"` để Activity **không bị tạo lại** —
+overlay/socket sẽ không bị mất. Các dialog của SDK tự xử lý `onConfigurationChanged` của chính nó.
+
+> Lưu ý: `OverlayManager.onConfigurationChanged` hiện là **private**, app không gọi trực tiếp được.
+> Nếu Activity bị recreate khi xoay, hãy dựng lại `OverlayManager` và gọi `joinRoom` lại.
+
+---
+
+## 14. ProGuard / R8
+
+Module `:interactive` đã kèm `consumer-rules.pro` (tự áp dụng cho app khi dùng AAR), giữ lại:
+
+- interface Retrofit `OverlayService`, `InteractiveStatusService`,
+- toàn bộ `vn.interactive.model.**`, `retrofit2.**`, `okhttp3.**`, `okio.**`, Gson và annotation.
+
+Nếu app bật `minifyEnabled true` và gặp lỗi JS bridge không được gọi, bổ sung:
+
+```proguard
+# Giữ JS interface (WebView gọi qua reflection)
+-keepclassmembers class vn.interactive.callbacks.OverlayWebViewCallBack {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepclassmembers class vn.interactive.callbacks.PostMessageListener {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Giữ hàm native lấy URL môi trường
+-keepclasseswithmembernames class vn.interactive.utils.Utils {
+    native <methods>;
+}
+```
+
+---
+
+## 15. Checklist tích hợp
+
+- [ ] Activity kế thừa `AppCompatActivity` / `FragmentActivity`.
+- [ ] `OverlayView` nằm trong layout, phủ đúng khung video, vẽ **trên** player.
+- [ ] Đã khai báo `INTERNET` + `ACCESS_NETWORK_STATE`.
+- [ ] Đã khai báo đủ dependency (nếu tích hợp bằng AAR).
+- [ ] `setTenantId(...)` đúng giá trị do đội Interactive cấp.
+- [ ] `initToken()` được gọi khi đăng nhập **và** khi đăng xuất.
+- [ ] `joinRoom()` được gọi mỗi khi bắt đầu xem nội dung mới.
+- [ ] VOD: có vòng lặp 1 giây gọi `receiveTrackingTime()`.
+- [ ] `releaseAll()` được gọi khi rời nội dung / `onDestroy()`.
+- [ ] Đã xử lý `EventOverlay.NEED_LOGIN` và `NEED_PAY_ONG`.
+
+---
+
+[← Kiến trúc](01-kien-truc.md) · [Về mục lục](README.md) · [Tiếp: Luồng hoạt động →](03-luong-hoat-dong.md)

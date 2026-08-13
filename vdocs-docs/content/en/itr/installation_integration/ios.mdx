@@ -1,0 +1,322 @@
+# 02 — Installation & Integration
+
+[← Back to table of contents](README.md)
+
+---
+
+## 1. Environment requirements
+
+| Item | Value |
+|---|---|
+| Platform | iOS **15.0+** (`platform :ios, '15.0'` in `Podfile`) |
+| Language | Swift |
+| Packaging | **XCFramework** (`interactive_ios_mobile1.0.1.xcframework.zip`), built with `BUILD_LIBRARY_FOR_DISTRIBUTION = YES` |
+| Linkage | `use_frameworks! :linkage => :static` (static framework) |
+| Host view type | Any `UIViewController`; requires **2 `UIView`s**: one for the minigame overlay, one for the predict/lucky button |
+
+The SDK calls APIs such as `UIScreen.main.bounds`, `identifierForVendor` (deviceId) — no special
+permission needs to be declared beyond network access.
+
+---
+
+## 2. Dependencies
+
+The SDK uses CocoaPods for the transport/JSON layer, plus bundled Rx XCFrameworks.
+
+```ruby
+# Podfile (excerpt)
+platform :ios, '15.0'
+use_frameworks! :linkage => :static
+
+target 'ISdk' do
+  pod 'Alamofire', '5.9.0'
+  pod 'SwiftyJSON', '5.0.2'
+  pod 'Socket.IO-Client-Swift', '16.1.1'
+  pod 'Starscream', '4.0.8'
+end
+```
+
+The SDK also depends on **RxSwift / RxCocoa / RxRelay** (shipped as `*.xcframework` in the repo, used
+by the `OverlayVod*` classes for VOD and some delegates that `import RxCocoa`).
+
+| Library | Role |
+|---|---|
+| `Alamofire` | All REST calls (`/api/actions`, `vip-status`, VOD script, interactive-status) |
+| `Socket.IO-Client-Swift` + `Starscream` | Realtime WebSocket connection |
+| `SwiftyJSON` | Parses the `data`/`type` payload from WebView and some socket payloads |
+| `RxSwift/RxCocoa/RxRelay` | VOD use-case/repository layer (`Single<OverlayVod>`) |
+
+> ⚠️ When integrating via a **static XCFramework**, the app **must re-declare** the above pods in its
+> own target, otherwise symbols will be missing at link/run time.
+
+---
+
+## 3. Embedding the SDK into a project
+
+**Option A — using the XCFramework** (recommended for integrating apps):
+
+1. Unzip `interactive_ios_mobile*.xcframework.zip`, drag `ISdk.xcframework` (and the Rx
+   `*.xcframework`s) into the **Frameworks, Libraries, and Embedded Content** section of the app
+   target, choosing **Embed & Sign**.
+2. In the app's `Podfile`, re-declare the pods from [section 2](#2-dependencies) then run `pod install`.
+3. `import ISdk` wherever it's needed.
+
+**Option B — build from source** (when maintaining the SDK): open `ISdk/ISdk.xcworkspace`, select the
+`BuildSDK` scheme to export the XCFramework, or the `DemoSDKITR` scheme to run the demo app.
+
+---
+
+## 4. Required configuration before use
+
+Set this **early** (e.g. in `AppDelegate.didFinishLaunching`) — before any `joinRoom` call:
+
+```swift
+import ISdk
+
+let interactiveSetting = InteractiveSetting()
+interactiveSetting.setEnableProdEnv(enableProdEnv: Enviroment.DEV.rawValue)   // "dev" | "stg" | "prod"
+interactiveSetting.setXTenantId(xTenantId: TenantIdType.VTVprime.rawValue)    // tenant issued by the Interactive team
+```
+
+> ⛔ **Very important.** These two values are read back in several places using **force-unwrap**
+> (`UserDefaults.standard.string(forKey:)!`). If you forget to call this, the SDK will:
+> - Fail to connect the socket (`connectSocket()` blocks and logs an error), and/or
+> - **Crash** when building `JoinRoomData`, calling `TelcoRepository`, `LiveLogRepository`, etc.
+>
+> (This is likely the cause behind the `[fixbug] crash` commit.)
+
+| Enum | Valid values |
+|---|---|
+| `Enviroment` | `.DEV` (`"dev"`), `.STG` (`"stg"`), `.PROD` (`"prod"`) |
+| `TenantIdType` | `.vtvlive` (`"vtvlive"`), `.onliveLiveStream` (`"onlivev2"`), `.onliveTV` (`"onlivetv"`), `.VTVprime` (`"VTVprime"`) |
+
+---
+
+## 5. Initializing `InteractiveControllerView` and attaching views
+
+You need to prepare **two `UIView`s**:
+
+- `uiView` — the area overlaid on the player to display the **minigame overlay** (usually matching
+  the video's 16:9 frame).
+- `predictView` — the area holding the **floating predict/lucky button** and dialog.
+
+```swift
+class PlayerViewController: UIViewController {
+
+    let interactive = InteractiveControllerView()
+
+    private let overlayContainer = UIView()   // overlaid on the video
+    private let predictContainer = UIView()    // holds the predict/lucky button
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // ... addSubview + layout overlayContainer to match the video frame ...
+
+        setupInteractive()
+    }
+
+    private func setupInteractive() {
+        // 1) Declare the login session (before joinRoom)
+        interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+        // 2) Attach delegates
+        interactive.overlayManagement?.setupDelegate(fanClubDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveLoginDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveViewDelegate: self)
+        interactive.overlayManagement?.setupAnswerDelegate(interactiveAnswerDelegate: self)
+        interactive.setInteractivePlayerDelegate(interactivePlayerDelegate: self)
+        interactive.setupPredictViewDelegate(interactivePredictDelegate: self)
+        interactive.setuPredictLoginDelegate(interactiveLoginDelegate: self)
+
+        // 3) Attach the 2 host views
+        interactive.initOverlay(uiView: overlayContainer, predictView: predictContainer)
+
+        // 4) Join the room
+        interactive.joinRoom(mediaId: mediaId, type: 1)   // 1 = LIVE, 2 = VOD
+    }
+}
+```
+
+> `initOverlay(uiView:predictView:)` also automatically registers a listener for **screen rotation**
+> (`orientationDidChange`) to re-align the predict button frame.
+
+---
+
+## 6. Declaring the login session
+
+```swift
+// On successful login
+interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+// On logout
+interactive.initAuthenToken(authenToken: "", userId: "", bjName: "")
+```
+
+Mechanism:
+
+- `authenToken` is set **verbatim** into the socket's `Authorization` header (it does **not**
+  automatically prepend `Bearer ` for the socket).
+- For **REST** calls (`/api/actions`, `vip-status`): if the token starts with `"ey"` (JWT) → the SDK
+  automatically prepends `Bearer `; otherwise it is sent as-is.
+- If **currently connected to Live** and `initAuthenToken` is called (with a `mediaContentId` present)
+  → the SDK **disconnects the socket and rejoins the room** so the socket carries the new token.
+- `bjName` is used for display in the fanclub dialog ("You must be a FanClub member of \<bjName\>…").
+
+---
+
+## 7. Joining / leaving content
+
+```swift
+// LIVE
+interactive.joinRoom(mediaId: "003c04ba-...", type: 1)   // ApiConst.TYPE_LIVE
+
+// VOD
+interactive.joinRoom(mediaId: "4357747e-...", type: 2)   // ApiConst.TYPE_VOD
+
+// Leave the room (keep the object to rejoin later)
+interactive.leaveRoom()
+
+// Release everything (when exiting the player screen)
+interactive.releaseAll()
+```
+
+- `joinRoom(type: 1)`: automatically calls `leaveRoom()` on the previous room if the media differs,
+  disconnects the old socket, calls `removeAllView()`, re-attaches callbacks, then connects.
+  `emit("join-room")` only runs **after the socket connects successfully**.
+- `joinRoom(type: 2)`: disconnects the socket, calls `removeAllView()`, then calls the REST API to
+  load the VOD script.
+- `releaseAll()`: calls `leaveRoom()` (if connected) → removes all delegates → `disconnection()`.
+
+**Check whether content is interactive** (optional, before joining):
+
+```swift
+interactive.fetchInteractiveStatus(mediaId: mediaId) { isInteractive in
+    if isInteractive { self.interactive.joinRoom(mediaId: mediaId, type: 1) }
+}
+```
+
+---
+
+## 8. VOD integration — feeding playback time
+
+For VOD, the SDK **does not automatically know** what second the player is at. The app must feed it
+every second via `getTimeVideo(time:)` (unit: **seconds**):
+
+```swift
+// Example with AVPlayer + periodic time observer
+let interval = CMTime(seconds: 1, preferredTimescale: 1)
+player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+    let seconds = time.seconds
+    self?.interactive.getTimeVideo(time: seconds)
+}
+```
+
+Mechanism inside the SDK (`getTimeVideo`):
+
+- Matches overlays where `timeShow == Int(time)` (exact **second** match), then calls
+  `showInteractiveVod`.
+- After showing, it **removes** the timeline entry from the list so it doesn't show again.
+
+> ⚠️ Because matching is done at the **exact second**, if the app feeds time less often than every
+> second, or the user **seeks past** a timestamp, the overlay for that moment will be missed. It is
+> recommended to call `getTimeVideo` regularly, every second.
+
+Conditions for showing the VOD overlay (`showInteractiveVod`): `allowAnonymous == true` **or**
+(`!allowAnonymous && has a token`). The URL is appended with `timelineId`, `tenantId`,
+`deviceType=IOS`.
+
+---
+
+## 9. Receiving events from the SDK (delegates)
+
+The app implements the following `protocol`s (all `@objc … : AnyObject`). See details in
+[04 — API Reference](04-api-reference.md#3-the-protocol-delegates).
+
+```swift
+extension PlayerViewController: InteractivePlayerDelegate {
+    func getPlayerState() -> Int { player.isPlaying ? 3 : 2 }   // used to respond to the ckst event
+    func showLiveView(liveView: Int) { viewersLabel.text = "\(liveView)" }  // already includes +230
+}
+
+extension PlayerViewController: InteractiveLoginDelegate {
+    func showInteractiveLogin() { presentLoginScreen() }        // triggered when the user responds while not logged in
+}
+
+extension PlayerViewController: InteractivePredictDelegate {
+    func showLayoutViewPredictRoot() { predictContainer.isHidden = false }
+    func hideLayoutViewPredictRoot() { predictContainer.isHidden = true }
+    func endLayoutViewPredictRoot()  { predictContainer.removeFromSuperview() }
+}
+
+extension PlayerViewController: InteractiveAnswerDelegate {
+    func confirmDeduction() {}            // confirm OnG deduction
+    func confirmNotEnoughMoney() {}       // insufficient OnG (PM402)
+    func confirmAnswerSuccess() {}        // answer submitted successfully
+    func showSubscibeView() {}            // opens the top-up/subscribe screen (note the "Subscibe" typo)
+}
+
+extension PlayerViewController: FanClubDelegate {
+    func btnConfirmFanClub() { presentFanClubScreen() }
+}
+```
+
+`InteractiveViewDelegate` (coordinates layout when the minigame overlay opens/closes, resizing the
+screen) is the largest delegate — implement it if you want to control player layout when the overlay
+appears. If not needed, the required functions must still be provided; `viewForPresentDialogDedution()`
+alone has a default return of `nil`.
+
+---
+
+## 10. Leaderboard
+
+```swift
+interactive.showChartsInteractive(
+    viewRoot: self.view,
+    mediaId: "003c04ba-...",
+    userid: "355202",
+    backgroundColorHeaderView: UIColor(hex: "139DED")   // optional, defaults to #489BE6
+)
+```
+
+The dialog is a `LeaderboardView` that loads an iframe from `rnkbrd.onlive.vn` (PROD) /
+`dev-rnkbrd.onplay.live` (DEV), attached to `viewRoot` with `tag = 1202`.
+
+---
+
+## 11. Player state for the `ckst` event
+
+When the server sends `ckst` to ask whether the client is currently playing or paused, the SDK calls
+`interactivePlayerDelegate.getPlayerState()` and emits the result back. Return the player state code
+(as an `Int`); the value goes directly into the `playerStatus` field of the `ckst` payload. The app
+defines the meaning of this number in agreement with the backend team.
+
+---
+
+## 12. Predict/lucky button — display control
+
+```swift
+interactive.setHiddenInteractiveButton(true)     // hide/show the floating button
+interactive.embededInteractiveContentView()      // opens the interactive content dialog (if manual triggering is needed)
+```
+
+> Note: the predict/lucky button is **disabled for tenants `vtvlive`, `onlivetv`, `VTVprime`** in the
+> current code (`receiveDataActionButtonPredict` returns early). Only the remaining tenants will show
+> the button.
+
+---
+
+## 13. Integration checklist
+
+- [ ] Call `InteractiveSetting().setEnableProdEnv(...)` **and** `setXTenantId(...)` at app startup.
+- [ ] Re-declare all required pods (`Alamofire`, `SwiftyJSON`, `Socket.IO-Client-Swift`, `Starscream`)
+      and embed the Rx `*.xcframework`s.
+- [ ] Prepare 2 `UIView`s: overlay (over the video) + predict; call `initOverlay(uiView:predictView:)`.
+- [ ] Call `initAuthenToken(...)` on login **and** on logout.
+- [ ] Call `joinRoom(mediaId:type:)` every time a new piece of content starts playing.
+- [ ] VOD: feed `getTimeVideo(time:)` **every second** (unit: seconds).
+- [ ] Implement `InteractiveLoginDelegate.showInteractiveLogin()` and `InteractiveAnswerDelegate`.
+- [ ] Call `releaseAll()` when exiting the player screen.
+
+---
+
+[← Architecture](01-kien-truc.md) · [Table of contents](README.md) · [Next: Flow →](03-luong-hoat-dong.md)

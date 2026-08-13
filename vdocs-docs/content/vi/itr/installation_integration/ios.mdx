@@ -1,0 +1,313 @@
+# 02 — Cài đặt & Tích hợp
+
+[← Về mục lục](README.md)
+
+---
+
+## 1. Yêu cầu môi trường
+
+| Hạng mục | Giá trị |
+|---|---|
+| Nền tảng | iOS **15.0+** (`platform :ios, '15.0'` trong `Podfile`) |
+| Ngôn ngữ | Swift |
+| Đóng gói | **XCFramework** (`interactive_ios_mobile1.0.1.xcframework.zip`), build với `BUILD_LIBRARY_FOR_DISTRIBUTION = YES` |
+| Liên kết | `use_frameworks! :linkage => :static` (static framework) |
+| Loại view host | `UIViewController` bất kỳ; cần **2 `UIView`**: một cho overlay minigame, một cho nút predict/lucky |
+
+SDK gọi các API như `UIScreen.main.bounds`, `identifierForVendor` (deviceId) — không cần khai báo
+quyền đặc biệt ngoài truy cập mạng.
+
+---
+
+## 2. Phụ thuộc (dependencies)
+
+SDK dùng CocoaPods cho phần transport/JSON và các XCFramework Rx đóng gói sẵn.
+
+```ruby
+# Podfile (trích)
+platform :ios, '15.0'
+use_frameworks! :linkage => :static
+
+target 'ISdk' do
+  pod 'Alamofire', '5.9.0'
+  pod 'SwiftyJSON', '5.0.2'
+  pod 'Socket.IO-Client-Swift', '16.1.1'
+  pod 'Starscream', '4.0.8'
+end
+```
+
+Ngoài ra SDK phụ thuộc **RxSwift / RxCocoa / RxRelay** (kèm dạng `*.xcframework` trong repo, phục vụ
+lớp `OverlayVod*` cho VOD và một số delegate `import RxCocoa`).
+
+| Thư viện | Vai trò |
+|---|---|
+| `Alamofire` | Mọi lời gọi REST (`/api/actions`, `vip-status`, kịch bản VOD, interactive-status) |
+| `Socket.IO-Client-Swift` + `Starscream` | Kết nối realtime WebSocket |
+| `SwiftyJSON` | Parse payload `data`/`type` từ WebView và một số payload socket |
+| `RxSwift/RxCocoa/RxRelay` | Lớp use-case/repository VOD (`Single<OverlayVod>`) |
+
+> ⚠️ Khi tích hợp bằng **XCFramework tĩnh**, app **bắt buộc khai báo lại** các pod trên trong target
+> của app, nếu không sẽ thiếu symbol lúc link/chạy.
+
+---
+
+## 3. Nhúng SDK vào dự án
+
+**Cách A — dùng XCFramework** (khuyến nghị cho app tích hợp):
+
+1. Giải nén `interactive_ios_mobile*.xcframework.zip`, kéo `ISdk.xcframework` (và các Rx `*.xcframework`)
+   vào mục **Frameworks, Libraries, and Embedded Content** của target app, chọn **Embed & Sign**.
+2. Trong `Podfile` của app, khai báo lại các pod ở [mục 2](#2-phụ-thuộc-dependencies) rồi `pod install`.
+3. `import ISdk` ở nơi cần dùng.
+
+**Cách B — build từ mã nguồn** (khi bảo trì SDK): mở `ISdk/ISdk.xcworkspace`, chọn scheme
+`BuildSDK` để xuất XCFramework, hoặc scheme `DemoSDKITR` để chạy app demo.
+
+---
+
+## 4. Cấu hình bắt buộc trước khi dùng
+
+Đặt **sớm** (ví dụ trong `AppDelegate.didFinishLaunching`) — trước mọi `joinRoom`:
+
+```swift
+import ISdk
+
+let interactiveSetting = InteractiveSetting()
+interactiveSetting.setEnableProdEnv(enableProdEnv: Enviroment.DEV.rawValue)   // "dev" | "stg" | "prod"
+interactiveSetting.setXTenantId(xTenantId: TenantIdType.VTVprime.rawValue)    // tenant do đội Interactive cấp
+```
+
+> ⛔ **Rất quan trọng.** Hai giá trị này được đọc lại ở nhiều nơi bằng **force-unwrap**
+> (`UserDefaults.standard.string(forKey:)!`). Nếu quên gọi, SDK sẽ:
+> - Không kết nối socket (`connectSocket()` chặn lại và log lỗi), và/hoặc
+> - **Crash** khi dựng `JoinRoomData`, gọi `TelcoRepository`, `LiveLogRepository`…
+>
+> (Đây nhiều khả năng là nguyên nhân của commit `[fixbug] crash`.)
+
+| Enum | Giá trị hợp lệ |
+|---|---|
+| `Enviroment` | `.DEV` (`"dev"`), `.STG` (`"stg"`), `.PROD` (`"prod"`) |
+| `TenantIdType` | `.vtvlive` (`"vtvlive"`), `.onliveLiveStream` (`"onlivev2"`), `.onliveTV` (`"onlivetv"`), `.VTVprime` (`"VTVprime"`) |
+
+---
+
+## 5. Khởi tạo `InteractiveControllerView` và gắn view
+
+Cần chuẩn bị **hai `UIView`**:
+
+- `uiView` — vùng đè lên player để hiển thị **overlay minigame** (thường trùng khung 16:9 của video).
+- `predictView` — vùng chứa **nút nổi predict/lucky** và dialog.
+
+```swift
+class PlayerViewController: UIViewController {
+
+    let interactive = InteractiveControllerView()
+
+    private let overlayContainer = UIView()   // đè lên video
+    private let predictContainer = UIView()    // chứa nút predict/lucky
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // ... addSubview + layout overlayContainer trùng khung video ...
+
+        setupInteractive()
+    }
+
+    private func setupInteractive() {
+        // 1) Khai báo phiên đăng nhập (trước joinRoom)
+        interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+        // 2) Gắn delegate
+        interactive.overlayManagement?.setupDelegate(fanClubDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveLoginDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveViewDelegate: self)
+        interactive.overlayManagement?.setupAnswerDelegate(interactiveAnswerDelegate: self)
+        interactive.setInteractivePlayerDelegate(interactivePlayerDelegate: self)
+        interactive.setupPredictViewDelegate(interactivePredictDelegate: self)
+        interactive.setuPredictLoginDelegate(interactiveLoginDelegate: self)
+
+        // 3) Gắn 2 view host
+        interactive.initOverlay(uiView: overlayContainer, predictView: predictContainer)
+
+        // 4) Vào phòng
+        interactive.joinRoom(mediaId: mediaId, type: 1)   // 1 = LIVE, 2 = VOD
+    }
+}
+```
+
+> `initOverlay(uiView:predictView:)` cũng tự đăng ký lắng nghe **xoay màn hình**
+> (`orientationDidChange`) để canh lại khung nút predict.
+
+---
+
+## 6. Khai báo phiên đăng nhập
+
+```swift
+// Khi đăng nhập thành công
+interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+// Khi đăng xuất
+interactive.initAuthenToken(authenToken: "", userId: "", bjName: "")
+```
+
+Cơ chế:
+
+- `authenToken` được đặt **nguyên văn** vào header socket `Authorization` (**không** tự thêm
+  `Bearer ` cho socket).
+- Với **REST** (`/api/actions`, `vip-status`): nếu token bắt đầu bằng `"ey"` (JWT) → SDK tự thêm
+  `Bearer `; ngược lại gửi nguyên văn.
+- Nếu đang **kết nối Live** mà gọi `initAuthenToken` (và có `mediaContentId`) → SDK **ngắt socket và
+  vào lại phòng** để socket mang token mới.
+- `bjName` dùng để hiển thị trong dialog fanclub ("Bạn phải là FanClub của \<bjName\>…").
+
+---
+
+## 7. Vào / rời nội dung
+
+```swift
+// LIVE
+interactive.joinRoom(mediaId: "003c04ba-...", type: 1)   // ApiConst.TYPE_LIVE
+
+// VOD
+interactive.joinRoom(mediaId: "4357747e-...", type: 2)   // ApiConst.TYPE_VOD
+
+// Rời phòng (giữ đối tượng để join lại)
+interactive.leaveRoom()
+
+// Giải phóng toàn bộ (khi thoát màn hình player)
+interactive.releaseAll()
+```
+
+- `joinRoom(type: 1)`: tự `leaveRoom()` phòng cũ nếu khác media, ngắt socket cũ, `removeAllView()`,
+  gắn lại callback rồi kết nối. `emit("join-room")` chỉ chạy **sau khi socket connect thành công**.
+- `joinRoom(type: 2)`: ngắt socket, `removeAllView()`, gọi REST tải kịch bản VOD.
+- `releaseAll()`: `leaveRoom()` (nếu đang connect) → gỡ mọi delegate → `disconnection()`.
+
+**Kiểm tra nội dung có tương tác không** (tuỳ chọn, trước khi join):
+
+```swift
+interactive.fetchInteractiveStatus(mediaId: mediaId) { isInteractive in
+    if isInteractive { self.interactive.joinRoom(mediaId: mediaId, type: 1) }
+}
+```
+
+---
+
+## 8. Tích hợp VOD — bơm thời gian phát
+
+Với VOD, SDK **không tự biết** player đang ở giây thứ mấy. App phải bơm mỗi giây bằng
+`getTimeVideo(time:)` (đơn vị **giây**):
+
+```swift
+// Ví dụ với AVPlayer + periodic time observer
+let interval = CMTime(seconds: 1, preferredTimescale: 1)
+player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+    let seconds = time.seconds
+    self?.interactive.getTimeVideo(time: seconds)
+}
+```
+
+Cơ chế trong SDK (`getTimeVideo`):
+
+- So khớp overlay có `timeShow == Int(time)` (đúng **giây**), gọi `showInteractiveVod`.
+- Sau khi hiện, **xoá** timeline khỏi danh sách để không hiện lại.
+
+> ⚠️ Vì so khớp **đúng giây**, nếu app bơm thưa hơn 1 giây hoặc người dùng **tua qua** mốc, overlay
+> của mốc đó sẽ bị bỏ lỡ. Nên gọi `getTimeVideo` đều đặn mỗi giây.
+
+Điều kiện hiển thị overlay VOD (`showInteractiveVod`): `allowAnonymous == true` **hoặc**
+(`!allowAnonymous && có token`). URL được ghép thêm `timelineId`, `tenantId`, `deviceType=IOS`.
+
+---
+
+## 9. Nhận sự kiện từ SDK (delegate)
+
+App implement các `protocol` sau (tất cả `@objc … : AnyObject`). Xem chi tiết ở
+[04 — API Reference](04-api-reference.md#3-các-protocol-delegate).
+
+```swift
+extension PlayerViewController: InteractivePlayerDelegate {
+    func getPlayerState() -> Int { player.isPlaying ? 3 : 2 }   // dùng để trả lời sự kiện ckst
+    func showLiveView(liveView: Int) { viewersLabel.text = "\(liveView)" }  // đã +230 sẵn
+}
+
+extension PlayerViewController: InteractiveLoginDelegate {
+    func showInteractiveLogin() { presentLoginScreen() }        // user trả lời khi chưa đăng nhập
+}
+
+extension PlayerViewController: InteractivePredictDelegate {
+    func showLayoutViewPredictRoot() { predictContainer.isHidden = false }
+    func hideLayoutViewPredictRoot() { predictContainer.isHidden = true }
+    func endLayoutViewPredictRoot()  { predictContainer.removeFromSuperview() }
+}
+
+extension PlayerViewController: InteractiveAnswerDelegate {
+    func confirmDeduction() {}            // xác nhận trừ OnG
+    func confirmNotEnoughMoney() {}       // thiếu OnG (PM402)
+    func confirmAnswerSuccess() {}        // trả lời thành công
+    func showSubscibeView() {}            // mở màn hình nạp/đăng ký (lưu ý chính tả "Subscibe")
+}
+
+extension PlayerViewController: FanClubDelegate {
+    func btnConfirmFanClub() { presentFanClubScreen() }
+}
+```
+
+`InteractiveViewDelegate` (điều phối layout khi overlay minigame mở/đóng, co giãn màn hình) là
+delegate lớn nhất — implement nếu muốn kiểm soát layout player khi overlay xuất hiện. Nếu không cần,
+vẫn phải cung cấp các hàm bắt buộc; riêng `viewForPresentDialogDedution()` có mặc định trả `nil`.
+
+---
+
+## 10. Bảng xếp hạng (Leaderboard)
+
+```swift
+interactive.showChartsInteractive(
+    viewRoot: self.view,
+    mediaId: "003c04ba-...",
+    userid: "355202",
+    backgroundColorHeaderView: UIColor(hex: "139DED")   // tuỳ chọn, mặc định #489BE6
+)
+```
+
+Dialog là một `LeaderboardView` nạp iframe từ `rnkbrd.onlive.vn` (PROD) / `dev-rnkbrd.onplay.live`
+(DEV), gắn vào `viewRoot` với `tag = 1202`.
+
+---
+
+## 11. Trạng thái player cho sự kiện `ckst`
+
+Khi server gửi `ckst` để hỏi client đang phát/dừng, SDK sẽ gọi
+`interactivePlayerDelegate.getPlayerState()` và emit lại. Trả về mã trạng thái player (kiểu `Int`);
+giá trị đi thẳng vào trường `playerStatus` của payload `ckst`. App tự quy ước ý nghĩa số này với đội
+backend.
+
+---
+
+## 12. Nút predict/lucky — điều khiển hiển thị
+
+```swift
+interactive.setHiddenInteractiveButton(true)     // ẩn/hiện nút nổi
+interactive.embededInteractiveContentView()      // mở dialog nội dung tương tác (nếu cần chủ động)
+```
+
+> Lưu ý: nút predict/lucky **bị vô hiệu cho tenant `vtvlive`, `onlivetv`, `VTVprime`** trong mã hiện
+> tại (`receiveDataActionButtonPredict` return sớm). Chỉ các tenant còn lại mới hiển thị nút.
+
+---
+
+## 13. Checklist tích hợp
+
+- [ ] Gọi `InteractiveSetting().setEnableProdEnv(...)` **và** `setXTenantId(...)` khi khởi động app.
+- [ ] Khai báo lại đầy đủ pod (`Alamofire`, `SwiftyJSON`, `Socket.IO-Client-Swift`, `Starscream`)
+      và nhúng các Rx `*.xcframework`.
+- [ ] Chuẩn bị 2 `UIView`: overlay (đè video) + predict; gọi `initOverlay(uiView:predictView:)`.
+- [ ] Gọi `initAuthenToken(...)` khi đăng nhập **và** khi đăng xuất.
+- [ ] Gọi `joinRoom(mediaId:type:)` mỗi khi bắt đầu xem nội dung mới.
+- [ ] VOD: bơm `getTimeVideo(time:)` **mỗi giây** (đơn vị giây).
+- [ ] Implement `InteractiveLoginDelegate.showInteractiveLogin()` và `InteractiveAnswerDelegate`.
+- [ ] Gọi `releaseAll()` khi thoát màn hình player.
+
+---
+
+[← Kiến trúc](01-kien-truc.md) · [Về mục lục](README.md) · [Tiếp: Luồng hoạt động →](03-luong-hoat-dong.md)

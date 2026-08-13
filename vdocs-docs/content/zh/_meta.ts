@@ -2,29 +2,14 @@ const meta = {
   index: {
     display: "hidden",
   },
-  docs: {
-    title: "文档",
+  sdkgame: {
+    title: "游戏 SDK",
     type: "page",
   },
   itr: {
     title: "交互式文档",
     type: "page",
     href: "/itr",
-  },
-  blog: {
-    title: "博客",
-    type: "page",
-    href: "/blog",
-  },
-  showcase: {
-    title: "展示",
-    type: "page",
-    href: "/showcase",
-  },
-  community: {
-    title: "社区",
-    type: "page",
-    href: "/community",
   },
   versions: {
     title: "3.8.1",
@@ -33,7 +18,7 @@ const meta = {
     items: {
       v4: {
         title: "VDocs v4",
-        href: "/docs",
+        href: "/sdkgame",
       },
       v3: {
         title: "VDocs v3",

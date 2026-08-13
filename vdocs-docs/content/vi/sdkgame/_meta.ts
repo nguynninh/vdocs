@@ -7,7 +7,7 @@ const meta = {
   },
   files: {
     title: "Quy ước tệp",
-    href: "/docs",
+    href: "/sdkgame",
   },
   guide: {
     title: "Hướng dẫn",
@@ -15,61 +15,61 @@ const meta = {
     items: {
       markdown: {
         title: "Giảm giá",
-        href: "/docs",
+        href: "/sdkgame",
       },
       syntax: {
         title: "Tô sáng cú pháp",
-        href: "/docs",
+        href: "/sdkgame",
       },
       link: {
         title: "Liên kết Next.js",
-        href: "/docs",
+        href: "/sdkgame",
       },
       image: {
         title: "Hình ảnh Next.js",
-        href: "/docs",
+        href: "/sdkgame",
       },
       static: {
         title: "Hiển thị tĩnh Next.js",
-        href: "/docs",
+        href: "/sdkgame",
       },
       i18n: {
         title: "Next.js I18n",
-        href: "/docs",
+        href: "/sdkgame",
       },
       css: {
         title: "CSS tùy chỉnh",
-        href: "/docs",
+        href: "/sdkgame",
       },
       export: {
         title: "Xuất tĩnh",
-        href: "/docs",
+        href: "/sdkgame",
       },
       search: {
         title: "Tìm kiếm",
-        href: "/docs",
+        href: "/sdkgame",
       },
       alerts: {
         title: "Cú pháp cảnh báo GitHub",
-        href: "/docs",
+        href: "/sdkgame",
       },
       turbo: {
         title: "Sử dụng với Turbopack",
-        href: "/docs",
+        href: "/sdkgame",
       },
       deploy: {
         title: "Triển khai ↗",
-        href: "/docs",
+        href: "/sdkgame",
       },
     },
   },
   advanced: {
     title: "Trình độ cao",
-    href: "/docs",
+    href: "/sdkgame",
   },
   builtins: {
     title: "Các thành phần tích hợp sẵn",
-    href: "/docs",
+    href: "/sdkgame",
   },
   "---": {
     type: "separator",
@@ -81,11 +81,11 @@ const meta = {
     items: {
       start: {
         title: "Bắt đầu",
-        href: "/docs",
+        href: "/sdkgame",
       },
       components: {
         title: "Các thành phần tích hợp sẵn",
-        href: "/docs",
+        href: "/sdkgame",
       },
     },
   },

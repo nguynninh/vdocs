@@ -1,0 +1,317 @@
+# 02 — 安装与集成
+
+[← 返回目录](README.md)
+
+---
+
+## 1. 环境要求
+
+| 项目 | 值 |
+|---|---|
+| 平台 | iOS **15.0+**（`Podfile` 中 `platform :ios, '15.0'`） |
+| 语言 | Swift |
+| 打包 | **XCFramework**（`interactive_ios_mobile1.0.1.xcframework.zip`），使用 `BUILD_LIBRARY_FOR_DISTRIBUTION = YES` 构建 |
+| 链接方式 | `use_frameworks! :linkage => :static`（静态 framework） |
+| 宿主 view 类型 | 任意 `UIViewController`；需要 **2 个 `UIView`**：一个用于小游戏 overlay，一个用于 predict/lucky 按钮 |
+
+SDK 会调用 `UIScreen.main.bounds`、`identifierForVendor`（deviceId）等 API —— 除网络访问外无需声明其他特殊权限。
+
+---
+
+## 2. 依赖（dependencies）
+
+SDK 使用 CocoaPods 处理传输/JSON 部分，以及预先打包好的 Rx XCFramework。
+
+```ruby
+# Podfile（节选）
+platform :ios, '15.0'
+use_frameworks! :linkage => :static
+
+target 'ISdk' do
+  pod 'Alamofire', '5.9.0'
+  pod 'SwiftyJSON', '5.0.2'
+  pod 'Socket.IO-Client-Swift', '16.1.1'
+  pod 'Starscream', '4.0.8'
+end
+```
+
+此外 SDK 依赖 **RxSwift / RxCocoa / RxRelay**（在仓库中以 `*.xcframework` 形式提供，用于 VOD 的
+`OverlayVod*` 层以及部分 `import RxCocoa` 的 delegate）。
+
+| 库 | 作用 |
+|---|---|
+| `Alamofire` | 所有 REST 调用（`/api/actions`、`vip-status`、VOD 脚本、interactive-status） |
+| `Socket.IO-Client-Swift` + `Starscream` | 实时 WebSocket 连接 |
+| `SwiftyJSON` | 解析来自 WebView 的 `data`/`type` payload 以及部分 socket payload |
+| `RxSwift/RxCocoa/RxRelay` | VOD 的 use-case/repository 层（`Single<OverlayVod>`） |
+
+> ⚠️ 当以**静态 XCFramework** 方式集成时，应用**必须在自身 target 中重新声明**上述 pod，
+> 否则在链接/运行时会缺少符号（symbol）。
+
+---
+
+## 3. 将 SDK 嵌入项目
+
+**方式 A —— 使用 XCFramework**（推荐用于集成型应用）：
+
+1. 解压 `interactive_ios_mobile*.xcframework.zip`，将 `ISdk.xcframework`（以及各个 Rx
+   `*.xcframework`）拖入应用 target 的 **Frameworks, Libraries, and Embedded Content**，
+   选择 **Embed & Sign**。
+2. 在应用的 `Podfile` 中重新声明[第 2 节](#2-依赖-dependencies)中的 pod，然后执行 `pod install`。
+3. 在需要使用的地方 `import ISdk`。
+
+**方式 B —— 从源码构建**（用于维护 SDK）：打开 `ISdk/ISdk.xcworkspace`，选择
+`BuildSDK` scheme 导出 XCFramework，或选择 `DemoSDKITR` scheme 运行示例应用。
+
+---
+
+## 4. 使用前的必需配置
+
+需要**尽早**设置（例如在 `AppDelegate.didFinishLaunching` 中）—— 必须在任何 `joinRoom` 之前：
+
+```swift
+import ISdk
+
+let interactiveSetting = InteractiveSetting()
+interactiveSetting.setEnableProdEnv(enableProdEnv: Enviroment.DEV.rawValue)   // "dev" | "stg" | "prod"
+interactiveSetting.setXTenantId(xTenantId: TenantIdType.VTVprime.rawValue)    // 由 Interactive 团队分配的租户
+```
+
+> ⛔ **非常重要。** 这两个值会在多处通过**强制解包**
+> （`UserDefaults.standard.string(forKey:)!`）被重新读取。如果忘记调用，SDK 将会：
+> - 无法连接 socket（`connectSocket()` 会阻断并记录错误日志），和/或
+> - 在构建 `JoinRoomData`、调用 `TelcoRepository`、`LiveLogRepository` 等处**崩溃**。
+>
+> （这很可能就是 `[fixbug] crash` 提交的原因。）
+
+| 枚举 | 有效值 |
+|---|---|
+| `Enviroment` | `.DEV`（`"dev"`）、`.STG`（`"stg"`）、`.PROD`（`"prod"`） |
+| `TenantIdType` | `.vtvlive`（`"vtvlive"`）、`.onliveLiveStream`（`"onlivev2"`）、`.onliveTV`（`"onlivetv"`）、`.VTVprime`（`"VTVprime"`） |
+
+---
+
+## 5. 初始化 `InteractiveControllerView` 并挂载 view
+
+需要准备**两个 `UIView`**：
+
+- `uiView` —— 覆盖在播放器之上、用于显示**小游戏 overlay** 的区域（通常与视频 16:9 画面重合）。
+- `predictView` —— 容纳**浮动 predict/lucky 按钮**及对话框的区域。
+
+```swift
+class PlayerViewController: UIViewController {
+
+    let interactive = InteractiveControllerView()
+
+    private let overlayContainer = UIView()   // 覆盖在视频之上
+    private let predictContainer = UIView()    // 容纳 predict/lucky 按钮
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // ... addSubview 并将 overlayContainer 布局为与视频画面重合 ...
+
+        setupInteractive()
+    }
+
+    private func setupInteractive() {
+        // 1) 声明登录会话（须在 joinRoom 之前）
+        interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+        // 2) 挂载 delegate
+        interactive.overlayManagement?.setupDelegate(fanClubDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveLoginDelegate: self)
+        interactive.overlayManagement?.setupDelegate(interactiveViewDelegate: self)
+        interactive.overlayManagement?.setupAnswerDelegate(interactiveAnswerDelegate: self)
+        interactive.setInteractivePlayerDelegate(interactivePlayerDelegate: self)
+        interactive.setupPredictViewDelegate(interactivePredictDelegate: self)
+        interactive.setuPredictLoginDelegate(interactiveLoginDelegate: self)
+
+        // 3) 挂载 2 个宿主 view
+        interactive.initOverlay(uiView: overlayContainer, predictView: predictContainer)
+
+        // 4) 进入房间
+        interactive.joinRoom(mediaId: mediaId, type: 1)   // 1 = LIVE, 2 = VOD
+    }
+}
+```
+
+> `initOverlay(uiView:predictView:)` 也会自动注册**屏幕旋转**监听
+> （`orientationDidChange`），以便重新调整 predict 按钮的位置。
+
+---
+
+## 6. 声明登录会话
+
+```swift
+// 登录成功时
+interactive.initAuthenToken(authenToken: accessToken, userId: userId, bjName: "")
+
+// 登出时
+interactive.initAuthenToken(authenToken: "", userId: "", bjName: "")
+```
+
+机制：
+
+- `authenToken` 会**原样**放入 socket 的 `Authorization` header（socket 场景下**不会**自动加上
+  `Bearer `）。
+- 对于 **REST**（`/api/actions`、`vip-status`）：若 token 以 `"ey"`（JWT）开头 → SDK 会自动加上
+  `Bearer `；否则原样发送。
+- 若正在**连接 Live** 时调用 `initAuthenToken`（且存在 `mediaContentId`）→ SDK 会**断开 socket 并
+  重新进入房间**，使 socket 携带新 token。
+- `bjName` 用于在 fanclub 对话框中显示（"你必须是 \<bjName\> 的 FanClub 成员……"）。
+
+---
+
+## 7. 进入 / 离开内容
+
+```swift
+// LIVE
+interactive.joinRoom(mediaId: "003c04ba-...", type: 1)   // ApiConst.TYPE_LIVE
+
+// VOD
+interactive.joinRoom(mediaId: "4357747e-...", type: 2)   // ApiConst.TYPE_VOD
+
+// 离开房间（保留对象以便重新加入）
+interactive.leaveRoom()
+
+// 释放全部资源（退出播放器画面时）
+interactive.releaseAll()
+```
+
+- `joinRoom(type: 1)`：若媒体不同则自动对旧房间执行 `leaveRoom()`，断开旧 socket，
+  `removeAllView()`，重新挂载回调后再连接。`emit("join-room")` 只会在 **socket 连接成功之后**
+  执行。
+- `joinRoom(type: 2)`：断开 socket，`removeAllView()`，调用 REST 加载 VOD 脚本。
+- `releaseAll()`：`leaveRoom()`（若正在连接）→ 移除所有 delegate → `disconnection()`。
+
+**检测内容是否具有互动性**（可选，在 join 之前）：
+
+```swift
+interactive.fetchInteractiveStatus(mediaId: mediaId) { isInteractive in
+    if isInteractive { self.interactive.joinRoom(mediaId: mediaId, type: 1) }
+}
+```
+
+---
+
+## 8. VOD 集成 —— 注入播放时间
+
+对于 VOD，SDK **无法自动获知**播放器当前处于第几秒。应用必须每秒通过
+`getTimeVideo(time:)`（单位为**秒**）注入一次：
+
+```swift
+// 示例：使用 AVPlayer + periodic time observer
+let interval = CMTime(seconds: 1, preferredTimescale: 1)
+player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+    let seconds = time.seconds
+    self?.interactive.getTimeVideo(time: seconds)
+}
+```
+
+SDK 内部机制（`getTimeVideo`）：
+
+- 匹配 `timeShow == Int(time)`（精确匹配**秒**）的 overlay，调用 `showInteractiveVod`。
+- 显示之后，会将该时间线从列表中**移除**，避免重复显示。
+
+> ⚠️ 由于是**精确匹配到秒**，若应用注入的间隔大于 1 秒，或用户**快进跳过**了某个时间点，
+> 该时间点的 overlay 将会被错过。建议每秒稳定调用一次 `getTimeVideo`。
+
+VOD overlay 的显示条件（`showInteractiveVod`）：`allowAnonymous == true` **或**
+（`!allowAnonymous && 存在 token`）。URL 会附加 `timelineId`、`tenantId`、`deviceType=IOS`。
+
+---
+
+## 9. 接收来自 SDK 的事件（delegate）
+
+应用需实现以下 `protocol`（均为 `@objc … : AnyObject`）。详见
+[04 — API Reference](04-api-reference.md#3-các-protocol-delegate)。
+
+```swift
+extension PlayerViewController: InteractivePlayerDelegate {
+    func getPlayerState() -> Int { player.isPlaying ? 3 : 2 }   // 用于响应 ckst 事件
+    func showLiveView(liveView: Int) { viewersLabel.text = "\(liveView)" }  // 已预先 +230
+}
+
+extension PlayerViewController: InteractiveLoginDelegate {
+    func showInteractiveLogin() { presentLoginScreen() }        // 用户在未登录时响应
+}
+
+extension PlayerViewController: InteractivePredictDelegate {
+    func showLayoutViewPredictRoot() { predictContainer.isHidden = false }
+    func hideLayoutViewPredictRoot() { predictContainer.isHidden = true }
+    func endLayoutViewPredictRoot()  { predictContainer.removeFromSuperview() }
+}
+
+extension PlayerViewController: InteractiveAnswerDelegate {
+    func confirmDeduction() {}            // 确认扣除 OnG
+    func confirmNotEnoughMoney() {}       // OnG 不足（PM402）
+    func confirmAnswerSuccess() {}        // 回答成功
+    func showSubscibeView() {}            // 打开充值/订阅画面（注意拼写为 "Subscibe"）
+}
+
+extension PlayerViewController: FanClubDelegate {
+    func btnConfirmFanClub() { presentFanClubScreen() }
+}
+```
+
+`InteractiveViewDelegate`（在小游戏 overlay 打开/关闭时协调布局、调整画面大小）是最大的一个
+delegate —— 若希望在 overlay 出现时控制播放器布局，需要实现它。若不需要，仍必须提供所有必需的
+函数；其中 `viewForPresentDialogDedution()` 默认返回 `nil`。
+
+---
+
+## 10. 排行榜（Leaderboard）
+
+```swift
+interactive.showChartsInteractive(
+    viewRoot: self.view,
+    mediaId: "003c04ba-...",
+    userid: "355202",
+    backgroundColorHeaderView: UIColor(hex: "139DED")   // 可选，默认 #489BE6
+)
+```
+
+对话框是一个 `LeaderboardView`，从 `rnkbrd.onlive.vn`（PROD）/ `dev-rnkbrd.onplay.live`
+（DEV）加载 iframe，挂载到 `viewRoot` 上，`tag = 1202`。
+
+---
+
+## 11. `ckst` 事件的播放器状态
+
+当服务器发送 `ckst` 询问客户端当前是播放还是暂停时，SDK 会调用
+`interactivePlayerDelegate.getPlayerState()` 并将结果重新 emit 出去。返回值为播放器状态码
+（`Int` 类型）；该值会直接进入 `ckst` payload 的 `playerStatus` 字段。数字的具体含义由应用
+自行与后端团队约定。
+
+---
+
+## 12. predict/lucky 按钮 —— 显示控制
+
+```swift
+interactive.setHiddenInteractiveButton(true)     // 隐藏/显示浮动按钮
+interactive.embededInteractiveContentView()      // 打开互动内容对话框（如需主动打开）
+```
+
+> 注意：在当前代码中，predict/lucky 按钮**对租户 `vtvlive`、`onlivetv`、`VTVprime` 被禁用**
+> （`receiveDataActionButtonPredict` 会提前返回）。只有其余租户才会显示该按钮。
+
+---
+
+## 13. 集成检查清单
+
+- [ ] 应用启动时调用 `InteractiveSetting().setEnableProdEnv(...)` **以及**
+      `setXTenantId(...)`。
+- [ ] 完整重新声明各个 pod（`Alamofire`、`SwiftyJSON`、`Socket.IO-Client-Swift`、
+      `Starscream`），并嵌入各个 Rx `*.xcframework`。
+- [ ] 准备 2 个 `UIView`：overlay（覆盖视频）+ predict；调用
+      `initOverlay(uiView:predictView:)`。
+- [ ] 在登录**以及**登出时调用 `initAuthenToken(...)`。
+- [ ] 每次开始观看新内容时调用 `joinRoom(mediaId:type:)`。
+- [ ] VOD：**每秒**注入 `getTimeVideo(time:)`（单位为秒）。
+- [ ] 实现 `InteractiveLoginDelegate.showInteractiveLogin()` 及
+      `InteractiveAnswerDelegate`。
+- [ ] 退出播放器画面时调用 `releaseAll()`。
+
+---
+
+[← 架构](01-kien-truc.md) · [返回目录](README.md) · [下一篇：运行流程 →](03-luong-hoat-dong.md)

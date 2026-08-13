@@ -160,7 +160,7 @@ html.dark .nextra-nav-container {
   margin-inline-end: 24px !important;
 }
 
-.nextra-navbar nav > div:has(> a[href*="/docs"]) {
+.nextra-navbar nav > div:has(> a[href*="/sdkgame"]) {
   margin-inline-end: auto !important;
 }
 

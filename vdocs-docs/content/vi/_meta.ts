@@ -1,7 +1,4 @@
 const meta = {
-  index: {
-    display: "hidden",
-  },
   sdkgame: {
     title: "SDK Game",
     type: "page",
@@ -10,6 +7,10 @@ const meta = {
     title: "Tài liệu interactive",
     type: "page",
     href: "/itr",
+  },
+  "chung-toi": {
+    title: "Về chúng tôi",
+    type: "page",
   },
   versions: {
     title: "3.8.1",

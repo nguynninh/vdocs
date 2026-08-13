@@ -14,6 +14,30 @@ const nextConfig: NextConfig = {
     locales: ["vi", "en", "zh"],
     defaultLocale: "vi",
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/sdkgame/error_code_be",
+        permanent: false,
+      },
+      {
+        source: "/:lang(vi|en|zh)",
+        destination: "/:lang/sdkgame/error_code_be",
+        permanent: false,
+      },
+      {
+        source: "/sdkgame",
+        destination: "/sdkgame/error_code_be",
+        permanent: false,
+      },
+      {
+        source: "/:lang(vi|en|zh)/sdkgame",
+        destination: "/:lang/sdkgame/error_code_be",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withNextra(nextConfig);

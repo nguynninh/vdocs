@@ -1,7 +1,4 @@
 const meta = {
-  index: {
-    display: "hidden",
-  },
   sdkgame: {
     title: "SDK Game",
     type: "page",
@@ -11,6 +8,10 @@ const meta = {
     title: "Interactive Docs",
     type: "page",
     href: "/itr",
+  },
+  "chung-toi": {
+    title: "About Us",
+    type: "page",
   },
   versions: {
     title: "3.8.1",

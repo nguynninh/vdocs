@@ -88,7 +88,7 @@ export default async function RootLayout({
 
   const navbar = (
     <Navbar
-      logoLink={`/${lang}`}
+      logoLink="https://vtvlive.vn/"
       logo={
         <Image
           src="/images/ic_logo_vlive.png"

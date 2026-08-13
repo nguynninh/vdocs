@@ -11,6 +11,18 @@ const meta = {
       pagination: false,
     },
   },
+  sdk_features: {
+    title: "SDK 功能",
+    theme: {
+      pagination: false,
+    },
+  },
+  integrate: {
+    title: "SDK 集成",
+    theme: {
+      pagination: false,
+    },
+  },
 };
 
 export default meta;

@@ -1,0 +1,140 @@
+# Luồng kiểm tra khi tích hợp sdk
+
+### Tài liệu này sẽ liên tục được cập nhật nếu găp vấn đề trong quá trình phát hành game 
+
+Note: Khi cập nhật mỗi phiên bản kể cả sau khi phát hành app đều cần quét qua apk khi bên dev gửi để kiểm tra quyền hoặc các lỗi có thể tồn đọng\. Trước khi đưa lên thử nghiệm nội bộ\. Cần check mục 2 dành cho apk
+
+
+Lý do: Dev có thể thêm các chức năng và quyền mà không báo trước việc này có thể gây ảnh hưởng tới chính sách cài đặt trên store nếu không kiểm soát sẽ bị google ban 
+
+Khi đưa lên thử nghiệm nội bộ chỉ được phép gặp lỗi thanh toán hoặc thiếu sự kiện các lỗi như 16kb, http, tải ngầm, quyền nguy hiểm,\.\.\. tuyệt đối không được đưa lên\. Sẽ bị google cảnh báo đỏ\.
+
+
+
+### Khi tích hợp sdk vào dự án mẫu\.
+
+1. Đăng Nhập \(Tài khoản, Google \(Tùy dự án \), Facebook\) , Đăng Ký, Quên Mật Khẩu Thành Công  
+
+2. Sự kiện đã bắn lên appflyer
+
+3. Bắn thử nghiệm thông báo
+
+4. Đã cấu hình đủ các tham số trên hub
+
+5. Đã đẩy cấu hình lên firebase remote config
+
+6. Các sự kiện cần thiết đã lên \( Đếm ngược ngày phát hành\)
+
+
+
+### Bên game cung cấp apk để kiểm tra \( sử dụng mobsf để kiểm tra \)
+
+1. Bản build target api 35 trở lên hỗ trợ 16kb
+
+2. Đúng khóa ký đã cung cấp, package id
+
+3. Phiên bản ssdk
+
+4. Đăng Nhập \(Tài khoản, Google \(Tùy dự án \), Facebook\) , Đăng Ký, Quên Mật Khẩu Thành Công  
+
+5. Bắn thử nghiệm thông báo
+
+6. Kiểm tra bằng chales xem các domain trỏ từ game có http không, nếu có bắt buộc game phải sửa
+
+7. Kiểm tra các quyền được cảnh báo nguy hiểm ở mobfs nếu là tính năng có trong game cần biết là tính năng gì để khai báo chính sách
+
+8. Kiểm tra không được phép tài ngầm trừ khi là tải tài nguyên game map\. Các tải khác cầchn phải thông báo cho người dùng tải gì % tải\.
+
+9. Kiểm tra nếu ứng dụng bị treo ở đâu đó quá lâu trên 3 phút mà không có thông báo gì cũng cần báo lại cho bên game
+
+10. Kiểm tra các nút ấn không phản hồi nếu có thì cần báo cho bên game
+
+11. Kiêm tra id của các gói nạp đúng với danh sách nạp
+
+12. Kiểm tra các sự kiện ở mục Integrate SDK : 2\.3 TrackingEvent, xem log các sự kiện này đã được gọi chưa và nếu chưa tích hợp yêu cầu bên game tích hợp 
+
+### Khi bên game cung cấp aab để up lên store
+
+1. Tạo dự án mẫu thử nghiệm
+
+2. Cấu hình gọi nạp trên store và gọi nạp trên hub \(Cẩn thận\)
+
+3. Đẩy lên thử nghiệm nội bộ 
+
+4. Yêu cầu Anh Minh bật thanh toán \(Cần 1 ngày nên tốt nhất là bật trước khi đẩy aab 1 ngày \)
+
+5. Kiểm tra thử nghiệm thanh toán \(Sử dụng tài khoản dành riêng cho thanh toán trên production nếu sử dụng tài khoản ngoài sẽ đền tiền \)
+
+6. Kiểm tra các sự kiện bên mkt bắn lên, các sự kiện tới đăng ký đăng nhập trên appflyer
+
+7. Kiểm tra các sự kiện tính năng khác \(Đếm ngược, Build version \)
+
+8. Sử dụng tài khoản review để chơi và tạo game lv 1
+
+9. Danh sác các sự kiện trên appsflyer bắt buộc phải có 
+
+    1. af\_app\_launch \( sdk \)
+
+    2. **af\_extract\_started \(dev trung \- cần check \)**
+
+    3. **af\_extract\_finished \(dev trung \- cần check \)**
+
+    4. **af\_show\_start\_game \(dev trung \- cần check \)**
+
+    5. af\_login\_view \( sdk \)
+
+    6. af\_login\_start \( sdk \)
+
+    7. af\_first\_launch \( sdk \)
+
+    8. af\_server\_registration \( sdk \)
+
+    9. af\_play\_time \( sdk \)
+
+    10. af\_registration \( sdk \)
+
+    11. **af\_enter\_gameplay \(dev trung \- cần check \)**
+
+    12. **af\_patch\_start \(dev trung \- cần check \)**
+
+    13. **af\_patch\_error \(dev trung \- cần check \) \(Bỏ uqa nếu ko gặp lỗi\)**
+
+    14. **af\_patch\_success \(dev trung \- cần check \)**
+
+    15. af\_purchase \( sdk \)
+
+    16. af\_payment\_success \( sdk \)
+
+    17. af\_open\_payment\_screen \( sdk \)
+
+    18. **af\_level\_achievement \(dev trung \- cần check \)**
+
+    19. **af\_server\_select \(dev trung \- cần check \)**
+
+    20. **af\_char\_create\_start \(dev trung \- cần check \)**
+
+    21. **af\_char\_create\_error \(dev trung \- cần check \)**
+
+    22. **af\_char\_create\_success \(dev trung \- cần check \)**
+
+    23. **af\_char\_select \(dev trung \- cần check \)**
+
+    24. af\_server\_iap\_purchase \( sdk \)
+
+    25. af\_purchase\_point\_iap \( sdk \)
+
+    26. af\_retention\_d1 \( sdk \)
+
+    27. **af\_vip\_achievement \(dev trung \- cần check , nếu account ko có vip thì ko cần check \)**
+
+Ngoài ra còn có cách sự kiện khác tùy chỉnh thêm của game 
+
+### Chuẩn bị gửi review 
+
+1. Trước khi gửi review cân cấu hình chính xác chính sách trên store \( Bật quản lý bật tăt public ứng dụng \)
+
+2. Kiểm tra các lỗi liên quan tới thông tin mô tả của ứng dụng\. Xem thử : [Android](https://vtvlivevn.sg.larksuite.com/wiki/NichwNl6hiTKnrkSE26lJxdyggL?table=tblpesOGDXb5oKYP&view=vewuCREkVn)
+
+3. Bật đăng ký sớm nếu có theo tài liệu đăng ký sớm\. Tài liệu : [Đăng ký sớm \(Pre\-Order, Pre\-registration\)](https://vtvlivevn.sg.larksuite.com/wiki/UNrAw3pX9icQkMklXN3urnLZsUf?table=tblpesOGDXb5oKYP&view=vewuCREkVn)
+
+4. Gửi review trên store

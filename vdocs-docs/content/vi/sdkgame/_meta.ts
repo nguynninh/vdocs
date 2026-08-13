@@ -11,6 +11,18 @@ const meta = {
       pagination: false,
     },
   },
+  sdk_features: {
+    title: "Tính năng SDK",
+    theme: {
+      pagination: false,
+    },
+  },
+  integrate: {
+    title: "Tích hợp SDK",
+    theme: {
+      pagination: false,
+    },
+  },
 };
 
 export default meta;

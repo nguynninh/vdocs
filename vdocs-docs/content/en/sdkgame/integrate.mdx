@@ -1,0 +1,135 @@
+# SDK integration check flow
+
+### This document will be continuously updated if issues arise during game release
+
+Note: For every version update, even after the app is released, the APK sent by the dev team must be scanned to check permissions or any remaining issues. Before pushing to internal testing, item 2 for the APK must be checked.
+
+Reason: Devs may add features and permissions without prior notice, which can affect store installation policy; if not controlled, Google may ban the app.
+
+When pushing to internal testing, only payment errors or missing events are allowed. Errors such as 16kb, http, background downloads, dangerous permissions, etc. must absolutely not be present. Google will issue a red warning.
+
+### When integrating the SDK into the sample project
+
+1. Login (Account, Google (depending on project), Facebook), Registration, Forgot Password all succeed
+
+2. Events have been sent to Appsflyer
+
+3. Test notification has been sent
+
+4. All parameters on the hub have been fully configured
+
+5. Configuration has been pushed to Firebase Remote Config
+
+6. Required events are in place (release-date countdown)
+
+### The game side provides an APK for checking (use MobSF to check)
+
+1. Build target API 35 or higher with 16kb support
+
+2. Correct signing key provided, correct package id
+
+3. SDK version
+
+4. Login (Account, Google (depending on project), Facebook), Registration, Forgot Password all succeed
+
+5. Test notification has been sent
+
+6. Use Charles to check whether any domains called from the game use http; if so, the game must fix it
+
+7. Check the permissions flagged as dangerous in MobSF; if it's a feature that exists in the game, identify what feature it is in order to declare it in the policy
+
+8. Check that background downloads are not allowed, except for game map resource downloads. Other downloads must notify the user of what is being downloaded and the download %
+
+9. Check whether the app hangs anywhere for more than 3 minutes without any notification; this must also be reported back to the game side
+
+10. Check for buttons that don't respond; if any, report to the game side
+
+11. Check that the IDs of top-up packages match the top-up list
+
+12. Check the events under Integrate SDK section 2.3 TrackingEvent — check the logs to see whether these events have been called, and if not yet integrated, request the game side to integrate them
+
+### When the game side provides an AAB to upload to the store
+
+1. Create a sample test project
+
+2. Configure top-up on the store and on the hub (be careful)
+
+3. Push to internal testing
+
+4. Ask Anh Minh to enable payment (takes 1 day, so it's best to enable it 1 day before pushing the AAB)
+
+5. Test the payment flow (use an account dedicated to payment on production; using an outside account will require reimbursement)
+
+6. Check the events sent by the MKT side, and the registration/login events on Appsflyer
+
+7. Check events for other features (countdown, build version)
+
+8. Use a review account to play and create a level 1 character
+
+9. List of events on Appsflyer that are mandatory
+
+    1. af_app_launch (sdk)
+
+    2. **af_extract_started (game dev - needs check)**
+
+    3. **af_extract_finished (game dev - needs check)**
+
+    4. **af_show_start_game (game dev - needs check)**
+
+    5. af_login_view (sdk)
+
+    6. af_login_start (sdk)
+
+    7. af_first_launch (sdk)
+
+    8. af_server_registration (sdk)
+
+    9. af_play_time (sdk)
+
+    10. af_registration (sdk)
+
+    11. **af_enter_gameplay (game dev - needs check)**
+
+    12. **af_patch_start (game dev - needs check)**
+
+    13. **af_patch_error (game dev - needs check) (skip if no errors occur)**
+
+    14. **af_patch_success (game dev - needs check)**
+
+    15. af_purchase (sdk)
+
+    16. af_payment_success (sdk)
+
+    17. af_open_payment_screen (sdk)
+
+    18. **af_level_achievement (game dev - needs check)**
+
+    19. **af_server_select (game dev - needs check)**
+
+    20. **af_char_create_start (game dev - needs check)**
+
+    21. **af_char_create_error (game dev - needs check)**
+
+    22. **af_char_create_success (game dev - needs check)**
+
+    23. **af_char_select (game dev - needs check)**
+
+    24. af_server_iap_purchase (sdk)
+
+    25. af_purchase_point_iap (sdk)
+
+    26. af_retention_d1 (sdk)
+
+    27. **af_vip_achievement (game dev - needs check, no need to check if the account has no VIP)**
+
+There may also be other custom events added by the game.
+
+### Preparing to submit for review
+
+1. Before submitting for review, correctly configure the store policy (enable the public/private toggle management for the app)
+
+2. Check for errors related to the app's description information. See: [Android](https://vtvlivevn.sg.larksuite.com/wiki/NichwNl6hiTKnrkSE26lJxdyggL?table=tblpesOGDXb5oKYP&view=vewuCREkVn)
+
+3. Enable early registration if applicable, following the early registration document. Document: [Pre-Order, Pre-registration](https://vtvlivevn.sg.larksuite.com/wiki/UNrAw3pX9icQkMklXN3urnLZsUf?table=tblpesOGDXb5oKYP&view=vewuCREkVn)
+
+4. Submit the review on the store

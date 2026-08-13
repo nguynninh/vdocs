@@ -1,0 +1,346 @@
+# SDK 功能
+
+# 一、概述
+
+VLiveSDK 提供以下主要功能组：
+
+```markmap
+# VLiveSDK
+## OIDC v2
+### Login
+#### Vlive account
+- username/password
+#### SNS
+- Facebook
+- Google
+- Apple
+- Zalo
+#### Quick login
+#### VLive OpenID
+### Logout
+### Registration
+### Forget password
+### Profile
+- user name
+- birthday
+- sex
+- avatar
+### Link user accounts
+### Deactive account
+## Floating button
+- Drag/drop
+- Show/hide
+- Dimming (reduce opacity)
+## Permission Manager
+- Nomal permissions
+- Runtime permissions
+## Log Manager
+- Intergration log
+## Push notification
+- Firebase Messaging
+## Tracking
+- Appflyer
+- Facebook
+- Firebase
+## Payment
+- other payment methods (Momo, Zalopay,...)
+### In-App Purchase
+- List Product
+## Configuration
+### Environment configs
+- dev
+- staging
+- prod
+### general configs
+### UI configs
+- enable
+- disable
+### configs tracking
+- press 10 times on logo to show all configs
+```
+
+## 1. 使用的库
+
+| Library | Verison | Inventory |
+| --- | --- | --- |
+| retrofit2 | 2.9.0 | |
+| billingclient | 8.0.0 | |
+| play-services-base | 18.5.0 | |
+| play-services-auth | 21.3.0 | |
+| firebase-bom | 33.0.0 | |
+| game-tracking | 1.0.5 | |
+| app-update | 2.1.0 | |
+| glide | 4.15.1 | |
+| browser | 1.8.0 | |
+| facebook-android-sdk | 17.0.0 | |
+| af-android-sdk | 6.16.0 | |
+| installreferrer | 2.2 | |
+| play:review | 2.0.2 | |
+| okhttp3:logging-interceptor | 4.11.0 | |
+| recaptcha:recaptcha | 18.6.0 | |
+| tiktok-business-android-sdk | 1.5.0 | |
+| lifecycle-process | 2.3.1 | |
+| browser | 1.8.0 | |
+
+## 2. 版本说明
+
+| Version | CommitID | Release date | Change logs |
+| --- | --- | --- | --- |
+| 1.0.10 | 4e39208430a7d7d59857cf66602fc4e445504ec1 | 11-May | 发布首个版本 |
+| 1.0.11 | 5dfedc2c5b9e4c83898071c928c147d3add73266 | 13/11 | 新增带参数的埋点 |
+| 1.0.12 | ed667303992bfc75a906f89bc819535d98a0141c | 26/11 | 将默认环境改为 prod |
+| 1.1.0 | f06324243f69940a8165db8930b28f1e91c95e80 | 1111/12 | 倒计时功能，构建时检查 SDK 版本 |
+| 1.1.1 | afaccbcfeea2925aad3cc791d65e0f415c39260c | 23/12 | 新增当游戏设置语言时自动切换默认语言... |
+| 1.2.0 | 01edfe4996597c5a0d0aa582e48234740ab0a828 | 24/12 | 更新领取礼物信息的功能 |
+| 1.2.1 | 2eb3a17e14ace99c395fafa4c9b984c0258bd7ce | 6/1 | 新增 vtvlive 账号自动关闭倒计时 |
+| 1.2.2 | 9836e819580880028532d537dca9f4e4f9aeb714 | 8/1 | 修复关闭游戏移除网络监听时崩溃的问题 |
+| 1.2.3 | 66bd2071d8a803539d40cda09bac8504381c5338 | 9/1 | 埋点 SDK 升级至 1.0.6 |
+| 1.3.0 | | 12/1 | 新增通过 appler 配置的立即游玩按钮 |
+| 1.3.1 | | 5/2 | 修复 Google 登录被隐藏的问题 |
+| 1.3.2 | | 6/2 | 埋点 SDK 升级至 1.0.8，修复崩溃问题 |
+| 1.3.3 | | 9/4 | 修复注册返回的错误 |
+| 1.3.4 | | 10/4 | 屏幕旋转时低概率崩溃 |
+| 1.3.5 | | 13/4 | 更新新的埋点流程与事件 |
+| 1.3.8 | | 9.5 | 修复注册返回的错误，测试新事件 |
+
+# 二、功能详情
+
+Android Refactor SDK Game
+
+| 功能 | 子功能 | 状态 | 备注 |
+| --- | --- | --- | --- |
+| 启动流程检查 | 游戏启动配置包括动态配置、初始配置、来自动态域名的域名。配置未完成前无法登录。配置失败或配置进行中时会报错 | 已完成 | |
+| 动态配置 | | 已完成 | |
+| 登录时认证 | | 已完成 | |
+| 游戏初始配置 | | 已完成 | |
+| Google Play 评价 | | 已完成 | |
+| 支付 | | 已完成 | |
+| 登录 | Vlive 账号 | 已完成 | |
+| | Google | 已完成 | |
+| | Facebook | 已完成 | |
+| | 登录检查 | 已完成 | |
+| 注册 | | 已完成 | |
+| 忘记密码 | | 已完成 | |
+| 登出 | | 已完成 | |
+| 按等级更新信息 | | 已完成 | |
+| 悬浮球 | 拖拽与点击 | 已完成 | |
+| | SDK 启动状态 | 已完成 | |
+| 埋点事件 | 首次安装游戏 | 已完成 | |
+| | 游戏启动 | 已完成 | |
+| | 登录成功后 | 已完成 | |
+| | 点击登录、关闭、注册、忘记密码、使用 Google/Facebook 登录 | 已完成 | |
+| | 游玩时长 | 已完成 | |
+| Dashboard | 个人资料 | 已完成 | |
+| | 修改密码 | 已完成 | |
+| | 修改邮箱 | 已完成 | |
+| | 修改生日 | 已完成 | |
+| | 删除账号 | 已完成 | |
+| | 登出 | 已完成 | |
+| 通知 | 接收通知 | 已完成 | |
+| | 通知隐藏时的埋点 | 已完成 | |
+| 开发者功能 | 需要时在 prod 环境启用开发者功能。需执行 5 个隐藏操作：1. 在密码输入处的密码图标点击 10 次 2. 点击记住密码复选框 10 次 3. 点击政策复选框 10 次 4. 点击记住密码文字 10 次 5. 在隐藏登录的用户名中输入 vtvlive。启用开发者功能后会有提示 | 已完成 | |
+| Tiktok 埋点 | | 已完成 | |
+| 多语言 | | 已完成 | |
+| Vlive 埋点 | | 已完成 | |
+| 活动倒计时 | | 已完成 | |
+| 动态悬浮球显示 | | 已完成 | |
+
+# 三、测试与验证
+
+| 主要功能 | 功能对比 | 与旧代码对比检查 | Android 13 及以上真机 | Android 10 -> 12 真机 | Ldplayer 9 模拟器 |
+| --- | --- | --- | --- | --- | --- |
+| SDK 启动与配置 | 新 | OK | OK | OK | OK |
+| 登录 | 旧 | OK | OK | OK | OK |
+| 注册 | 旧 | OK | OK | OK | OK |
+| 忘记密码 | 旧 | OK | OK | OK | OK |
+| 修改密码 | 旧 | OK | OK | OK | OK |
+| 修改邮箱 | 旧 | OK | OK | OK | OK |
+| 修改生日 | 旧 | OK | OK | OK | OK |
+| 删除账号 | 旧 | OK | OK | OK | OK |
+| 登出 | 旧 | OK | OK | OK | OK |
+| 支付 | 旧 | OK | OK | OK | OK |
+| 切换账号 | 旧 | OK | OK | OK | OK |
+| 通知埋点 | 新 | OK | OK | OK | OK |
+| 开发者功能 | 新 | OK | OK | OK | OK |
+| Tiktok 埋点 | 旧 | OK | OK | OK | OK |
+| Vlive 埋点 | 新 | OK | OK | OK | OK |
+
+# 四、流程图
+
+1. 启动与配置
+
+```mermaid
+flowchart LR
+    A(("启动")) --> B["启动状态<br/>加载中"]
+    A --> C["初始化<br/>KeyGenerator<br/>设置 Activity<br/>SharedPreference<br/>悬浮球"]
+    C --> D["检查初始化<br/>KeyGenerator<br/>ConfigRepository<br/>AppInfoFactory"]
+    D --> E{"配置<br/>状态"}
+    D --> F["从系统文件<br/>配置 Appinfo"]
+    E -- "失败" --> H(("启动状态<br/>错误"))
+    E -- "成功" --> G["动态配置<br/>Appinfo"]
+    G --> I{"API 动态配置<br/>检查是否为空<br/>或 null"}
+    I -- "失败" --> J{"Firebase 配置<br/>检查是否为空或 null"}
+    J -- "失败" --> K{"系统配置<br/>检查变量是否<br/>为空或 null"}
+    K -- "失败" --> H
+    I -- "成功" --> L["初始化其他<br/>依赖类<br/>详情"]
+    J -.-> L
+    K -.-> L
+    L --> LOG[/"详细日志"/]
+    L --> M{"检查初始化"}
+    M -- "失败" --> H
+    M -- "成功" --> N["获取游戏<br/>登录配置"]
+    N --> O["埋点应用启动<br/>埋点首次启动<br/>Device id<br/>osVersion<br/>推送 FCM token 至服务器<br/>FB device id<br/>埋点 VersionApp"]
+    N --> P["获取 IPV4"]
+    P --> Q{"状态"}
+    Q -- "失败" --> H
+    Q -- "成功" --> R["启动状态<br/>成功"]
+    R --> S(("启动完成<br/>错误 -> 阻止使用 SDK 功能<br/>悬浮图标高亮<br/>点击图标提示错误<br/>成功 -> 正常使用<br/>各项功能<br/>悬浮图标打开<br/>点击图标无错误提示"))
+    H --> S
+```
+
+详细日志（依赖类初始化）：
+
+![详细日志](/images/sdkgame/code1.png)
+
+2. 登录
+
+```mermaid
+flowchart LR
+    A(("点击登录")) --> B["检查维护状态"]
+    B --> C{"状态"}
+    C -- "yes" --> Z(("停止登录"))
+    C -- "no" --> E{"是否有 access token"}
+    E -- "no" --> D["打开登录界面"]
+    E -- "yes" --> F["获取用户信息"]
+    D --> G["登录账号，<br/>Google/Facebook，注册"]
+    G --> H["登录"]
+    H --> I["登录成功"]
+    F --> J{"通过 access<br/>token 获取信息"}
+    J -- "access token 未过期" --> I
+    J -- "access token 已过期" --> K{"刷新<br/>access token"}
+    K -- "成功" --> I
+    K -- "失败" --> L["登出<br/>清除登录信息<br/>及各类 token"]
+    L --> Z
+    I --> M["开始游玩时长计时<br/>埋点留存<br/>推送 FCM token 至服务器<br/>认证<br/>获取充值套餐列表<br/>请求通知权限<br/>埋点登录事件"]
+    M --> N{"检查等级<br/>是否需要补充<br/>用户信息"}
+    N -- "等级 1" --> O{"显示可关闭的<br/>补充信息<br/>界面"}
+    O -- "更新成功" --> S(("登录完成"))
+    O -- "已关闭" --> S
+    N -- "等级 2" --> P["显示不可关闭的<br/>补充信息界面"]
+    P -- "成功" --> S
+    N -- "等级 0" --> S
+```
+
+C. 支付
+
+```mermaid
+flowchart LR
+    A(("登录成功")) --> B["从 hub<br/>获取充值套餐列表"]
+    B --> C["从商店获取套餐<br/>并与 hub 的<br/>套餐比对"]
+    C --> D(("可购买的<br/>套餐列表"))
+    E(("购买套餐")) --> F{"购买前<br/>检查"}
+    F -.- G["billingClient 就绪<br/>套餐列表非空<br/>网络已连接<br/>套餐及角色信息<br/>非空<br/>正在支付状态为 true"]
+    F -- "false" --> H["停止支付<br/>关闭 fragment<br/>正在支付状态<br/>为 false"]
+    F --> I["打开支付 fragment"]
+    I --> J{"初始化<br/>API 交易"}
+    J -- "失败" --> H
+    J -- "成功" --> K{"重新检查<br/>套餐及<br/>billingClient"}
+    K -- "false" --> H
+    K -- "true" --> L["打开商店支付界面<br/>并等待用户<br/>完成支付"]
+    L --> M{"交易<br/>状态"}
+    M -- "等待支付（交易<br/>较慢）" --> N["显示提示，要求<br/>完成交易"]
+    N -- "等待交易" --> M
+    M -- "未知错误" --> H
+    M -- "已支付" --> O["PURCHASED<br/>已支付"]
+    O --> P["发送消费验证"]
+    P --> Q{"消费<br/>状态"}
+    Q -- "失败" --> R["该套餐已被验证<br/>为已消费，但在<br/>返回结果过程中<br/>断开了连接"]
+    R --> S["显示提示，要求<br/>联系热线支持"]
+    S --> H
+    Q -- "消费成功" --> T["调用 API 为游戏充值"]
+    T --> U{"API 状态"}
+    U -- "失败" --> V{"显示重试<br/>弹窗"}
+    V -- "失败" --> S
+    V -- "成功" --> W(("游戏充值<br/>成功，交易<br/>完成"))
+    U -- "成功" --> W
+```
+
+D. API 结构
+
+```mermaid
+flowchart LR
+    A["Base Call Api"] --> B["Repository"]
+    B --> C["UserCase"]
+    C --> D["Ui"]
+    E["处理 Http、Code<br/>Base 的错误"] --> B
+    F["参数与错误变量"] --> C
+```
+
+E. 带 token 的 API 调用结构
+
+```mermaid
+flowchart LR
+    A1{"带 token 的<br/>API 调用"} --> D{"检查是否<br/>正在刷新 Token"}
+    A2{"带 token 的<br/>API 调用"} --> D
+    A3{"带 token 的<br/>API 调用"} --> D
+    A1 -. "token 未过期，无需<br/>刷新" .-> R["返回数据"]
+    D -- "否" --> E["刷新 Token"]
+    D -- "是" --> F["等待 Token 刷新"]
+    E --> G{"刷新<br/>结果"}
+    F --> G
+    G --> H["成功后将新 Token<br/>发送给等待中的 Api<br/>并重新调用"]
+    G --> I["失败，停止所有<br/>Api 调用并将错误<br/>返回给 api"]
+```
+
+F. 多语言
+
+```mermaid
+flowchart LR
+    Start(("开始")) --> A["初始化 Sdk"]
+    A --> B["初始化<br/>语言"]
+    B --> C["Appinfo 配置<br/>成功，<br/>获取信息"]
+    C --> D{"多语言<br/>开关"}
+    D -- "关闭" --> E["将默认语言（越南语）<br/>保存到本地存储，隐藏<br/>登录界面的语言选择<br/>禁用游戏端<br/>设置语言"]
+    D -- "开启" --> F["从 API<br/>获取语言<br/>列表"]
+    F --> G["将语言与客户端<br/>支持的语言映射 -><br/>可选择的<br/>语言列表"]
+    G --> H{"从本地存储获取<br/>语言，与可选择<br/>列表进行<br/>比对"}
+    H -- "不在列表中" --> I["取列表中第一个<br/>语言作为默认语言<br/>并保存<br/>到本地存储"]
+    H -- "存在" --> J["根据本地存储中保存的<br/>语言获取语言数据"]
+    I --> J
+    B --> K{"从本地存储<br/>获取语言"}
+    E --> J
+    E --> L
+    K -- "存在" --> L["为 SDK UI 设置语言"]
+    K -- "不存在" --> M["获取系统语言，<br/>将系统语言保存<br/>到本地存储"]
+    M --> L
+```
+
+```mermaid
+flowchart LR    
+    A["调用有界面<br/>提示的<br/>功能<br/>API"] --> B["错误返回 Error<br/>Code 与 Message"]
+    B --> C{"从翻译<br/>列表中获取"}
+    C -- "有列表" --> D{"检查列表当前<br/>语言与已保存到<br/>系统或用户已<br/>选择的语言<br/>是否一致"}
+    C -- "没有" --> G["重新调用 API 获取该<br/>语言正确的列表"]
+    D -- "yes" --> E{"获取翻译"}
+    D -- "no" --> H
+    E -- "没有翻译" --> H{"结合本地存储的<br/>语言调用翻译<br/>API"}
+    H -- "失败" --> I["从 SDK 内置的<br/>错误码中获取翻译"]
+    H -- "成功获取翻译" --> J(("结束并显示<br/>错误"))
+    I --> J
+    E --> J
+    D --> G
+    C --> H
+```
+
+G. 显示游戏开启倒计时通知
+
+```mermaid
+flowchart LR
+    A(("开始")) --> B{"是否已<br/>登录"}
+    B -- "未登录" --> C["显示登录界面<br/>并登录游戏"]
+    C -- "登录成功" --> E{"是否已<br/>更新<br/>用户信息"}
+    B -- "已登录" --> E
+    E -- "未更新" --> D["更新信息"]
+    D --> F
+    E --> F{"检查是否<br/>显示<br/>倒计时"}
+```

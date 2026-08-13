@@ -5,6 +5,12 @@ const meta = {
       pagination: false,
     },
   },
+  error_code_be: {
+    title: "Backend Error Codes",
+    theme: {
+      pagination: false,
+    },
+  },
 };
 
 export default meta;

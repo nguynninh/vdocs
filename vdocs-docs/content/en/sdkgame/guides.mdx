@@ -64,12 +64,12 @@ Note:  If you do not receive those files or have any question about it, please l
 In the Project `setting.gradle` file, declare the `maven`repository:
 
 ```Java
-**dependencyResolutionManagement {
+dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-****        mavenCentral()**
-          **// add vtv live sdk game 
+        mavenCentral()
+          // add vtv live sdk game 
         maven { url 'https://jitpack.io' }
         maven {
             url "https://artifacts.vtvlive.vn/repository/android_group/"
@@ -79,7 +79,7 @@ In the Project `setting.gradle` file, declare the `maven`repository:
             }
         }
     }
-****}**
+}
 ```
 
 
@@ -87,36 +87,36 @@ In the Project `setting.gradle` file, declare the `maven`repository:
 In the Project `build.gradle (Project)` file:
 
 ```Java
-plugins **{**
-**    **id 'com.android.application' version '8.9.1' apply false
+plugins {
+    id 'com.android.application' version '8.9.1' apply false
     id 'com.android.library' version '8.9.1' apply false
     // this
     id 'com.google.firebase.firebase-perf' version '1.4.2' apply false
     id 'com.google.gms.google-services' version "4.4.3" apply false
     id 'com.google.firebase.crashlytics' version "3.0.6" apply false
-**}**
+}
 ```
 
 Or
 
 ```Java
-buildscript **{**
-**    **repositories **{**
-**        **google()
+buildscript {
+    repositories {
+        google()
         mavenCentral()
         jcenter()
-        flatDir **{**
-    **        **dirs 'libs'
-        **}**
-**    }**
-**    **dependencies **{**
-**        **classpath 'com.android.tools.build:gradle:8.9.1'
+        flatDir {
+            dirs 'libs'
+        }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.9.1'
         // this
         classpath 'com.google.firebase:perf-plugin:1.4.2'
         classpath 'com.google.gms:google-services:4.4.3'
         classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.6'
-    **}**
-**}**
+    }
+}
 ```
 
 
@@ -124,13 +124,13 @@ buildscript **{**
 In the Project `build.gradle (App)` file:
 
 ```Java
-plugins **{**
-**    **id 'com.android.application'
+plugins {
+    id 'com.android.application'
     // this 
     id 'com.google.firebase.firebase-perf'
     id 'com.google.gms.google-services'
     id 'com.google.firebase.crashlytics'
-**}**
+}
 ```
 
 ## **Add dependencies**

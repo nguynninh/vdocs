@@ -1,0 +1,112 @@
+afterEvaluate {
+    tasks.register('verifyVersionBuildFromApi') {
+        group = "versioning"
+        description = "Check App and SDK version from API"
+
+        doLast {
+            def currentVersionCode = android.defaultConfig.versionCode
+            def currentVersionName = android.defaultConfig.versionName
+            def packageId = android.defaultConfig.applicationId
+            def apiEndpoint = "https://hub.vplay.vn/sdk-api/service/app-config?appPackage=$packageId"
+
+            println "===== VERSION CHECK START / 版本检查开始 ====="
+
+            def responseJson
+
+            try {
+                def url = new URL(apiEndpoint)
+                def conn = (HttpURLConnection) url.openConnection()
+                conn.setRequestMethod("GET")
+                conn.setConnectTimeout(3000)
+                conn.setReadTimeout(3000)
+
+                if (conn.responseCode == 200) {
+                    responseJson = conn.inputStream.text
+                } else {
+                    throw new GradleException("Error when calling version check API: ${conn.responseCode}")
+                }
+            } catch (Exception e) {
+                throw new GradleException("Failed to call version check API: ${e.message}")
+            }
+
+            // ===== Parse response  =====
+            def codeMatcher = (responseJson =~ /"minAppVersionCode"\s*:\s*"([^"]+)"/)
+            def nameMatcher = (responseJson =~ /"minAppVersionName"\s*:\s*"([^"]*)"/)
+            def sdkMatcher  = (responseJson =~ /"minGameSdkVersion"\s*:\s*"([^"]+)"/)
+
+            if (!codeMatcher) throw new GradleException("minAppVersionCode not found")
+            if (!sdkMatcher)  throw new GradleException("minGameSdkVersion not found")
+
+            def minVersionCode = Integer.parseInt(codeMatcher[0][1])
+            def minSdkVersion  = sdkMatcher[0][1]
+
+            def minVersionName = null
+            if (nameMatcher && nameMatcher[0][1]?.trim()) {
+                minVersionName = nameMatcher[0][1].trim()
+            }
+
+            if (minVersionName == null) {
+                println "⚠️ minAppVersionName is empty or missing → skip versionName check"
+            }
+
+            // ===== Find Game SDK version =====
+            def foundSdkVersion = null
+
+            android.applicationVariants.all { variant ->
+                variant.runtimeConfiguration
+                        .resolvedConfiguration
+                        .firstLevelModuleDependencies
+                        .each { dep ->
+                            if (dep.moduleGroup == "vn.vlive.sdk" && dep.moduleName == "game") {
+                                foundSdkVersion = dep.moduleVersion
+                            }
+                        }
+            }
+
+            if (foundSdkVersion == null) {
+                throw new GradleException("SDK vn.vlive.sdk:game NOT FOUND in dependencies!")
+            }
+
+            // ===== Validation =====
+            def errors = []
+
+            if (currentVersionCode <= minVersionCode) {
+                errors << "versionCode ($currentVersionCode) <= required ($minVersionCode)"
+            }
+
+            if (minVersionName != null && currentVersionName != minVersionName) {
+                errors << "versionName ($currentVersionName) != required ($minVersionName)"
+            }
+
+            if (foundSdkVersion != minSdkVersion) {
+                errors << "Game SDK version ($foundSdkVersion) != required ($minSdkVersion)"
+            }
+
+            if (!errors.isEmpty()) {
+                throw new GradleException(
+                        """
+        |⛔ VTV Live Build Check -> BUILD BLOCKED
+        |-----------------------------------------
+        |${errors.collect { "✘ " + it }.join("\n|")}
+        |-----------------------------------------
+        |Current Values:
+        |  • VersionCode : $currentVersionCode
+        |  • VersionName : $currentVersionName
+        |  • Game SDK    : $foundSdkVersion
+        |
+        |Required Values:
+        |  • VersionCode : $minVersionCode
+        |  • VersionName : ${minVersionName ?: "(SKIPPED)"}
+        |  • Game SDK    : $minSdkVersion
+        |-----------------------------------------
+        """.stripMargin()
+                )
+            }
+
+            println "✅ ALL VERSION CHECKS PASSED! / ✅ 所有版本检查通过！"
+            println "===== VERSION CHECK COMPLETE / 版本检查完成 ====="
+        }
+    }
+
+    preBuild.dependsOn verifyVersionBuildFromApi
+}

@@ -1,0 +1,765 @@
+# VTV Live Android 游戏 SDK 开发者指南\.
+
+# 必读更新说明
+
+
+
+1. Google Play 16 KB 兼容性要求：
+从2026年8月31日起，所有提交至 Google Play 的新应用以及针对现有应用的更新，若目标为 Android 16 \(或更高版本\)，都必须支持64\-bit设备上的16 KB页面大小\.
+
+更多详情，请参见：
+     [https://developer\.android\.google\.cn/guide/practices/page\-sizes?hl=zh\_cn\#compile\-16\-kb\-alignment](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh_cn#compile-16-kb-alignment)
+
+2. 根据VTV Live的政策要求，应用内使用的所有URL/链接都必须符合HTTPS标准\.
+
+3. 如果您的unity开发版本为2017\.1或更高，请务必阅读\.
+https://discussions\.unity\.com/t/unity\-platform\-protection\-take\-immediate\-action\-to\-protect\-your\-games\-and\-apps/1688031
+
+# \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+# SDK配置文件清单
+
+注：如果您没有收到这些文件或对此有任何疑问，请告知我们，联系VTV Live团队\.
+
+1. res内的文件夹：
+
+1\. xml/vtvlive\_config\_sdk\_game\_defaults\.xml
+
+2\. drawable\-hdpi, drawable\-mdpi,drawable\-xhdpi,drawable\-xxhdpi,drawable\-xxxhdpi
+
+2. strings\.xml
+
+3. keysdk\.txt
+
+4. iconapp文件夹
+
+5. keystore文件夹
+
+6. google\-services\.json
+
+7. game\-example文件夹
+
+8. 价目表\(Pricelist\)
+
+# \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+# 安装SDK
+
+**SDK信息：**
+
+- AGP 8\.9\.1
+
+- JDK build 17
+
+- compileSdk 36
+
+- minSdk 24
+
+- targetSdk 36
+
+**最新稳定版本：1\.6\.2**
+
+## **安装Gradle**
+
+在项目的 `setting.gradle` 文件中，声明 `maven` 仓库：
+
+```Java
+**dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+****        mavenCentral()**
+          **// add vtv live sdk game 
+        maven { url 'https://jitpack.io' }
+        maven {
+            url "https://artifacts.vtvlive.vn/repository/android_group/"
+            credentials {
+                username = "maven-read-only"
+                password = "Yew76u6MqiSPMoofQ9N"
+            }
+        }
+    }
+****}**
+```
+
+
+
+在项目的 `build.gradle (Project)` 文件中：
+
+```Java
+plugins **{**
+**    **id 'com.android.application' version '8.9.1' apply false
+    id 'com.android.library' version '8.9.1' apply false
+    // this
+    id 'com.google.firebase.firebase-perf' version '1.4.2' apply false
+    id 'com.google.gms.google-services' version "4.4.3" apply false
+    id 'com.google.firebase.crashlytics' version "3.0.6" apply false
+**}**
+```
+
+或者
+
+```Java
+buildscript **{**
+**    **repositories **{**
+**        **google()
+        mavenCentral()
+        jcenter()
+        flatDir **{**
+    **        **dirs 'libs'
+        **}**
+**    }**
+**    **dependencies **{**
+**        **classpath 'com.android.tools.build:gradle:8.9.1'
+        // this
+        classpath 'com.google.firebase:perf-plugin:1.4.2'
+        classpath 'com.google.gms:google-services:4.4.3'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.6'
+    **}**
+**}**
+```
+
+
+
+在项目的 `build.gradle (App)` 文件中：
+
+```Java
+plugins **{**
+**    **id 'com.android.application'
+    // this 
+    id 'com.google.firebase.firebase-perf'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+**}**
+```
+
+## **添加依赖**
+
+```Java
+dependencies {
+      implementation "vn.vlive.sdk:game:1.6.2"
+  }
+```
+
+## **从gradle\.properties添加AndroidX**
+
+```Java
+# Project-wide Gradle settings.
+# IDE (e.g. Android Studio) users:
+# Gradle settings configured through the IDE *will override*
+# any settings specified in this file.
+# For more details on how to configure your build environment visit
+# http://www.gradle.org/docs/current/userguide/build_environment.html
+# Specifies the JVM arguments used for the daemon process.
+# The setting is particularly useful for tweaking memory settings.
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. More details, visit
+# http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+# org.gradle.parallel=true
+# AndroidX package structure to make it clearer which packages are bundled with the
+# Android operating system, and which are packaged with your app's APK
+# https://developer.android.com/topic/libraries/support-library/androidx-rn
+# Enables namespacing of each library's R class so that its R class includes only the
+# resources declared in the library itself and none from the library's dependencies,
+# thereby reducing the size of the R class for that library
+
+
+// add to here
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+android.defaults.buildfeatures.buildconfig=true
+android.nonFinalResIds=false
+```
+
+## **将配置文件添加到项目中**
+
+1. 解压 `res.zip` 文件，然后将其复制并覆盖到项目的 `res` 文件夹中
+
+[guide\.gif](/images/sdkgame/guide.gif)
+
+2. 将 `string.xml` 文件中的参数复制到您项目的 `string.xml` 文件中\.
+例如：
+注：将app\_name更改为应用程序的名称
+
+```XML
+<string name="app_name">App Name</string>
+<string name="facebook_app_id">531928046216413</string>
+<string name="fb_login_protocol_scheme">fb531928046216413</string>
+<string name="facebook_client_token">55050b3d27795a5cf45bd0d9314b2009</string>
+```
+
+3. 将google\-services\.json复制到您Android项目的**应用模块根目录**中
+
+![image\.png](/images/sdkgame/image-9.png)
+
+## Proguard要求
+
+**Android应用使用Proguard时为必填项\.** 为避免在使用Proguard时混淆SDK，请确保添加以下配置：
+
+
+
+```Java
+-keep class vlive.sdk.game.** { *; }
+
+```
+
+## 在构建APK之前检查版本\. \(可选\)
+
+此功能将帮助在构建APK之前检查Version code、Version Name和Version SDK，以减少上传到商店时的重复构建\.
+您可以在build\.gradle \(App\)中禁用它，或在build\-check\-version中禁用该自定义功能\.
+
+将此文件复制到您Android项目的**应用模块根目录**中：
+
+
+
+[build\-check\-version\.gradle](/files/sdkgame/build-check-version.gradle)
+
+![image\.png](/images/sdkgame/image-2.png)
+
+在项目的 `build.gradle (App)` 文件中：
+
+```Java
+plugins **{**
+**    **id 'com.android.application'
+    id 'com.google.firebase.firebase-perf'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+**}**
+
+// this
+apply from: 'build-check-version.gradle'
+```
+
+# \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+# 集成SDK
+
+## 初始化SDK \(必填\)
+
+在您的activity中实现回调AuthenticationListener、PaymentListener
+
+更改环境变量：
+Dev \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.*Development*\);
+Prod \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.*Production*\);
+
+```Java
+public class MainActivity extends Activity implements AuthenticationListener, PaymentListener {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        requestWindowFeature(Window.*FEATURE_NO_TITLE*);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.*activity_main*);
+        getWindow().setFlags(WindowManager.LayoutParams.*FLAG_FULLSCREEN*, WindowManager.LayoutParams.*FLAG_FULLSCREEN*);
+
+        // this config sdk game
+        VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
+        vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
+        vLiveSdkGame.setActivity(this);
+        vLiveSdkGame.setAuthenticationListener(this);
+        vLiveSdkGame.setPaymentListener(this);
+
+
+    }
+
+    @Override
+    public void onLoginSuccessful(UserInfo userInfo, String accessToken, String refreshToken, String idToken) {
+    
+    }
+
+    @Override
+    public void onLogoutSuccessful() {
+
+    }
+
+    @Override
+    public void onPayProductSuccess(String orderId,String productId) {
+
+    }
+
+    @Override
+    public void onPayProductError(String error) {
+
+    }
+}
+```
+
+2. 屏幕旋转时的配置
+
+```Java
+@Override
+public void onConfigurationChanged(@NotNull Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    // Checks the orientation of the screen
+   VLiveSdkGame.*getInstance*().resetFloatingButton();
+}
+```
+
+3. SDK初始化的结果将返回到该函数中\.
+
+```Java
+vLiveSdkGame.setActivity(this);
+vLiveSdkGame.setAuthenticationListener(this);
+vLiveSdkGame.setPaymentListener(this);
+// this
+vLiveSdkGame.setInitStatusListener(isCreated -> {
+    if (isCreated){
+        // Initialization successful
+    } else  {
+        // Initialization failed
+    }
+});
+```
+
+## SDK功能
+
+### 身份验证 \(必填\)
+
+#### 登录
+
+功能说明：
+
+- 未登录时打开登录界面
+
+- 用户重新打开应用程序时登录
+
+- 登录会话结束时退出登录\.
+
+您应在点击游戏的开始按钮时调用此函数\.
+
+```Java
+VLiveSdkGame.*getInstance*().login(); 
+```
+
+登录成功将调用onLoginSuccessful
+
+
+
+#### 退出登录
+
+退出登录成功将调用onLogoutSuccessful
+
+```Java
+VLiveSdkGame.*getInstance*().logout();
+```
+
+
+
+### 支付 \(必填\)
+
+注：除非您的应用是通过Google Play的内部测试通道安装的，否则无法测试支付功能\.
+
+要进行支付测试，我们需要AAB \(Android App Bundle\) 版本\.
+
+#### 应用内购买 \(IAP\) 游戏礮包清单 \( **可选 **\)
+
+此功能将返回类似于**Pricelist\.xlsx**文件的充值礮包列表\.
+注：这是一个可选功能，可根据需要调用\.
+
+```Java
+List<ProductInfo> listProduct = VLiveSdkGame.*getInstance*().getListProduct();
+```
+
+Model ProductInfo
+
+```Java
+String productId = productInfo.getProductId(); // vn.vplay.game.t001a.029
+String productName = productInfo.getProductName(); // 20 Ngân Phiếu
+```
+
+
+
+#### 购买礮包 \(必填\)
+
+如果您想购买某个物品，请调用此函数：
+
+输入参数可从上方列表中获取，也可手动输入\.
+
+```Java
+String productId = "vn.vplay.game.t001a.029"; 
+String characterId = "324132321";
+String serverId  = "123";
+VLiveSdkGame.*getInstance*().payProduct(productId,characterId,serverId);
+```
+
+
+
+### 事件追踪 \(必填\)
+
+注：用于营销目的的追踪功能应严格按照规定的流程使用\.
+
+#### 以下这些事件为必须集成的事件\.
+
+
+
+#### 事**件参数详情**
+
+1. 追踪补丁开始 \(必填\)
+描述：应在资源下载开始时调用\.
+事件名称：af\_patch\_start
+
+```Java
+String patchVersion = "1.1.23"; // or empty
+double patchSizeMb = 550.5; // or 0
+VLiveSdkGame.*getInstance*().trackingPatchStart(patchVersion,patchSizeMb);
+```
+
+
+
+2. 追踪补丁错误 \(必填\)
+描述：应在资源下载过程中发生错误时调用\.
+事件名称：af\_patch\_error
+
+```Java
+String cdnIp = "122.56.12.188"; // or empty
+String errorCode = "404_NOT_FOUND"; // or empty
+String failedUrl =  "https://cdn.game.com/patch/v120.zip"; // or empty
+VLiveSdkGame.*getInstance*().trackingPatchError(cdnIp, errorCode,failedUrl);
+```
+
+
+
+3. 追踪补丁成功 \(必填\)
+描述：*应在所有资源成功下载完成后调用\.*
+事件名称：af\_patch\_success
+
+```Java
+int timeDownloadSecond = 32; // or 0
+String cdnIp = "122.56.12.188"; // or empty
+double patchSizeMb = 500.5; // or 0
+VLiveSdkGame.*getInstance*().trackingPatchSuccess(timeDownloadSecond,cdnIp,patchSizeMb);
+```
+
+
+
+4. 追踪解压开始 \(必填\)
+描述：*应在资源解压过程开始时调用\.*
+事件名称：af\_extract\_started
+
+```Java
+int totalFiles = 400;// or 0
+double totalSizeMb = 500.5;// or 0
+VLiveSdkGame.*getInstance*().trackingExtractStart(totalFiles,totalSizeMb);
+```
+
+
+
+5. 追踪解压完成 \(必填\)
+描述：*应在所有资源成功解压完成后调用\.*
+事件名称：af\_extract\_finished
+
+```Java
+int timeExtractSecond = 32; // or 0
+String resultCode = "success" // or Errror String (ex: out_of_storage)
+VLiveSdkGame.*getInstance*().trackingExtractFinished(timeExtractSecond,resultCode);
+```
+
+6. 追踪显示游戏开始画面 \( 必填\)
+描述**：**应在游戏开始画面显示后调用\.
+事件名称：af\_show\_start\_game
+
+```Java
+VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_SHOW_START_GAME);
+```
+
+7. 追踪服务器选择 \( 必填\)
+描述**：***应在用户确认服务器选择并进入游戏流程后调用\.*
+事件名称：af\_server\_select
+
+```Java
+String serverName = "ServerName"; // Required Not empty, Not Null 
+String serverId = "23232"; // Required Not empty, Not Null 
+VLiveSdkGame.*getInstance*().trackingServerSelected(serverName,serverId);
+```
+
+8. 追踪角色创建开始 \( 必填\)
+描述**：***应在角色创建界面对用户可见时调用\.*
+事件名称：af\_char\_create\_start
+
+```Java
+VLiveSdkGame.getInstance().trackingCharacterCreationStart();
+```
+
+
+
+9. 追踪角色创建错误 \( 必填\)
+描述**：**应在角色创建过程中发生错误时调用\.
+事件名称：af\_char\_create\_error
+
+```Java
+String characterNameError = "Hao Thien"; // or empty
+String errorMessage = "NAME_DUPLICATED"; // or empty
+VLiveSdkGame.*getInstance*().trackingCharacterCreateError(characterNameError, errorMessage);
+```
+
+
+
+10. 追踪角色创建完成 \( 必填\)
+描述**：***应在角色创建流程成功完成后调用\.*
+事件名称：af\_char\_create\_success
+
+```Java
+String characterName = "CharacterName"; // *Required Not empty, Not Null *
+String characterId = "23232"; // *Required Not empty, Not Null *
+VLiveSdkGame.*getInstance*().trackingCharacterCreationComplete(characterName,characterId);
+```
+
+
+
+11. 追踪角色选择 \( 必填\)
+描述**：**应在用户选择现有角色并进入游戏后调用\.
+事件名称：af\_char\_select
+
+```Java
+String characterName = "CharacterName"; // Required Not empty, Not Null 
+String characterId = "23232"; // Required Not empty, Not Null 
+String characterLevel = "1"; // Required Not empty, Not Null 
+VLiveSdkGame.*getInstance*().trackingCharacterSelected(characterName,characterId,characterLevel);
+```
+
+
+
+12. 追踪进入游戏 \( 必填\)
+描述**：**应在用户已选择角色并开始进入游戏后调用\.
+事件名称：af\_enter\_gameplay
+
+
+
+```Java
+VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_GAME_ENTER);
+```
+
+
+
+13. 映射用户 \( 必填\)
+描述**：**应在用户已选择角色并开始进入游戏后调用\.
+事件名称：af\_level\_achievement
+
+```Java
+String characterName = "CharacterName"; // or empty
+String characterId = "23232"; // Required Not empty, Not Null 
+String characterLevel = "2"; // Required Not empty, Not Null 
+String serverName = "ServerName";// or empty
+String serverId = "324232";// Required Not empty, Not Null 
+VLiveSdkGame.*getInstance*().mapUser(characterName, characterId, characterLevel, serverName, serverId);
+```
+
+
+
+14. 角色升级 \( 必填\)
+描述**：***应在用户成功升级时调用\.*
+事件名称：af\_level\_achievement
+事件名称：af\_vip\_achievement
+
+```Java
+String characterName = "CharacterName"; // or empty
+String characterId = "23232";// Required Not empty, Not Null 
+String characterLevel = "2"; // Required Not empty, Not Null 
+String serverName = "ServerName"; // or empty
+String serverId = "324232"; // or empty
+String vip = "1"; // Required Not empty, Not Null 
+VLiveSdkGame.*getInstance*().levelUpUser(characterName, characterId, characterLevel, serverName, serverId,vip);
+```
+
+
+
+15. 追踪加载游戏地图 \( 必填\)
+描述**：***应在地图完全加载完成后调用\.*
+
+```Java
+String mapId = "newbie_village"; // or empty
+int timeLoadSecond = 32; // or 0
+int fpsAtStart = 60; // or 0
+VLiveSdkGame.*getInstance*().trackingMapLoad(mapId, timeLoadSecond, fpsAtStart);
+```
+
+16. 自定义事件
+描述**：**用于其他自定义事件
+
+```Java
+String eventName = "Event_Name";
+VLiveSdkGame.*getInstance*().trackingEvent(eventName);
+
+// Or
+String eventName = "Event_Name";
+JsonObject jsonObject = new JsonObject();
+jsonObject.addProperty("stringValue", "Hello");
+jsonObject.addProperty("intValue", 42);
+VLiveSdkGame.*getInstance*().trackingEvent(eventName,jsonObject);
+```
+
+### 多语言 \( 可选 \)
+
+#### 在 `build.gradle (App)` 中添加
+
+```Java
+android {
+// this
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+}
+```
+
+#### Model LanguageSdk
+
+```Java
+String languageName = LanguageSdk.*CHINESE*.getNameLanguage(); // 中国
+String languageId = LanguageSdk.*CHINESE*.getIdLanguage(); // zh
+```
+
+
+
+#### 监听从sdk返回的语言
+
+```Java
+VLiveSdkGame.*getInstance*().setLanguageListener(new LanguageListener() {
+    @Override
+    public void onChangeLanguage(LanguageSdk language) {
+      // Return the language set from the sdk
+    }
+
+    @Override
+    public void onGameLanguageChangeCompleted(boolean isSuccess) {
+      // Status when updating language as required by game
+    }
+});
+```
+
+
+
+#### 从游戏为sdk设置语言
+
+
+
+```Java
+VLiveSdkGame.*getInstance*().setLanguage(LanguageSdk.*CHINESE*);
+```
+
+从游戏中选择语言的结果将返回到函数：onGameLanguageChangeCompleted
+
+
+
+#### 从sdk设置语言
+
+当用户从登录界面选择语言时
+
+![image\.png](/images/sdkgame/image-10.png)
+
+语言将返回到函数：onChangeLanguage
+
+
+
+### **更新您的礼品兑换信息\. \(必填\) **
+
+要显示礼品兑换界面，请调用
+
+注：此功能只应在登录成功后使用\.
+
+```Java
+VLiveSdkGame.*getInstance*().openUpdateInfoEvent();
+```
+
+![image\.png](/images/sdkgame/image-11.png)
+
+
+
+
+
+### **可选功能 **
+
+#### 开启/关闭悬浮按钮功能
+
+在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
+
+```Java
+VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
+vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
+// this
+vLiveSdkGame.setShowFloatingButton(false);
+//
+vLiveSdkGame.setActivity(this);
+vLiveSdkGame.setAuthenticationListener(this);
+vLiveSdkGame.setPaymentListener(this);
+```
+
+
+
+![image\.png](/images/sdkgame/image-01.png)
+
+
+
+#### 显示/隐藏Logo
+
+在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
+
+```Java
+VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
+vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
+vLiveSdkGame.setActivity(this);
+vLiveSdkGame.setAuthenticationListener(this);
+vLiveSdkGame.setPaymentListener(this);
+// this
+vLiveSdkGame.setShowLogo(false);
+```
+
+![image\.png](/images/sdkgame/image-8.png)
+
+
+
+
+
+#### 显示/隐藏BtnClose
+
+在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
+
+```Java
+VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
+vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
+vLiveSdkGame.setActivity(this);
+vLiveSdkGame.setAuthenticationListener(this);
+vLiveSdkGame.setPaymentListener(this);
+// this
+vLiveSdkGame.setShowBtnClose(false);
+```
+
+![image\.png](/images/sdkgame/image-7.png)
+
+
+
+#### 显示Google Play评价
+
+```Java
+VLiveSdkGame.*getInstance*().reviewGooglePlay(null);
+```
+
+
+
+#### 显示用户信息界面
+
+```Java
+VLiveSdkGame.*getInstance*().openUserInfo();
+```
+
+![image\.png](/images/sdkgame/image-4.png)
+
+
+
+# \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+# 其他说明
+
+### 更改应用通知图标
+
+链接：https://romannurik\.github\.io/AndroidAssetStudio/index\.html
+解压 `ic_stat_ic_notification.zip` 文件，然后将其复制并覆盖到项目的 `res` 文件夹中
+
+![image\.png](/images/sdkgame/image-6.png)
+
+![image\.png](/images/sdkgame/image-5.png)
+
+![image\.png](/images/sdkgame/image-3.png)
+
+![image\.png](/images/sdkgame/image.png)

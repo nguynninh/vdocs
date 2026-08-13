@@ -11,7 +11,7 @@ export function remarkMarkmap() {
         attributes: [
           {
             type: "mdxJsxAttribute",
-            name: "children",
+            name: "content",
             value: node.value,
           },
         ],

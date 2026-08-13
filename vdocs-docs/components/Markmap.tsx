@@ -7,12 +7,12 @@ import { Bleed } from "nextra/components";
 
 const transformer = new Transformer();
 
-export function Markmap({ children }: { children: string }) {
+export function Markmap({ content }: { content: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     if (!svgRef.current) return;
-    const { root } = transformer.transform(children);
+    const { root } = transformer.transform(content);
     const mm = MarkmapView.create(
       svgRef.current,
       {
@@ -27,7 +27,7 @@ export function Markmap({ children }: { children: string }) {
     return () => {
       mm.destroy();
     };
-  }, [children]);
+  }, [content]);
 
   return (
     <Bleed full>

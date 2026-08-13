@@ -1,0 +1,100 @@
+# SDK 埋点事件文档
+
+## 1. 事件名称与参数
+
+| 序号 | Af 事件名称 | 触发位置 | 实施状态 | 事件描述 | 参数及参数说明 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | af_first_launch | Sdk | 已完成 | 首次安装应用时触发。用于替代旧的 first launch 事件... | install_source : 安装来源<br/>install_time : 安装时间 | |
+| 2 | af_app_launch | Sdk | 已完成 | 首次初始化 sdk（打开游戏）时触发 | install_id : appsFlyer Id<br/>launch_season : 当前会话 uuidSession<br/>device_model : 设备名称<br/>os_type : ... | |
+| 3 | af_require_update | Sdk | 已完成 | 检查当前版本与 hub 上配置的最新版本 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>current_ver : 当前安装版本<br/>target_ver : ... | |
+| 4 | af_upgrade_version_success | Sdk | 已完成 | 检查当前版本是否与之前保存的版本不同 | 无参数 | |
+| 5 | af_patch_start | Game | 已完成 | 开始下载游戏更新资源之前 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>patch_version : 补丁版本<br/>size_... | |
+| 6 | af_patch_error | Game | 已完成 | 下载更新资源过程中出错 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>ip : 设备 ip<br/>cdn_ip_node : 下载服务器 ip ... | |
+| 7 | af_patch_success | Game | 已完成 | 资源下载成功 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>ip : 设备 ip<br/>network_type : 网络类型<br/>dura... | |
+| 8 | af_extract_started | Game | 已完成 | 开始解压已下载的资源 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>total_files: 文件总数<br/>total_size... | |
+| 9 | af_extract_finished | Game | 已完成 | 资源解压结束 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>result_code: 解压是否成功 ... | |
+| 10 | af_show_start_game | Game | 已完成 | 显示带登录按钮的游戏欢迎界面时 | | |
+| 11 | af_login_view | Sdk | 已完成 | 点击登录后显示登录界面时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>network_type: 网络类型<br/>device_model : ... | |
+| 12 | af_login_start | Sdk | 已完成 | 开始点击登录时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>method: 登录方式：vtvlive_id, google... | |
+| 13 | af_login_error | Sdk | 已完成 | 登录出错 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>method: 登录方式：vtvlive_id, google... | |
+| 14 | af_login_success | Sdk | 已完成 | 登录成功 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>method: 登录方式：vtvlive_id, google... | |
+| 15 | af_register_start | Sdk | 已完成 | 在登录界面点击注册，跳转到注册界面时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>method: vtvlive_id | |
+| 16 | af_login_forgotpassword | Sdk | 已完成 | 点击忘记密码时 | 需要确认补充事件信息 | |
+| 17 | af_register_success | Sdk | 已完成 | 注册成功 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 account id<br/>dura... | |
+| 18 | af_login_close | Sdk | 已完成 | 在登录界面点击关闭按钮时 | 需要确认补充事件信息 | |
+| 19 | af_server_select | Game | 已完成 | 用户登录成功并选择服务器后点击进入游戏 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 Id<br/>server_id: server_id | |
+| 20 | af_char_create_start | Game | 已完成 | 用户进入角色创建界面时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 Id<br/>server_id: server_id | |
+| 21 | af_char_create_error | Game | 已完成 | 用户创建角色出错时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 Id<br/>char_id: char id er... | |
+| 22 | af_char_create_success | Game | 已完成 | 用户创建角色成功并进入游戏时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 Id<br/>server_id: sever c... | |
+| 23 | af_char_select | Game | 已完成 | 用户已有角色并选择角色进入游戏时 | install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>account_id: 账号 Id<br/>server_id: sever c... | |
+| 24 | af_enter_gameplay | Game | 已完成 | 用户开始游玩游戏时 | | |
+| 25 | af_level_achievement | Game | 已完成 | 用户升级时 | | |
+| 26 | af_vip_achievement | Game | 已完成 | 用户 VIP 等级提升时（根据 af_level_achievement 事件升级） | | |
+| 27 | af_logout | Sdk | 已完成 | 用户从游戏或用户操作登出时，或... | | |
+| 28 | af_open_payment_screen | Sdk | 已完成 | 打开商店支付界面 | af_content_id : 套餐 Id | |
+| 29 | af_payment_success | Sdk | 已完成 | 支付成功后 | af_content_id : 套餐 id | |
+| 30 | af_purchase | Sdk | 已完成 | 支付成功后 | af_content_id : 套餐 Id<br/>af_receipt_id : 订单 id<br/>af_order_id : 订单 id<br/>item_id : 套餐 Id<br/>item_category : ... | |
+| 31 | af_cancel_purchase | Sdk | 已完成 | 已显示支付界面后用户取消支付时 | af_content_type | |
+| 32 | af_error_purchase | Sdk | 已完成 | 商店出现支付错误，或与服务器确认支付时出错 | af_content_id | |
+| 33 | af_play_time | Sdk | 已完成 | 追踪游玩时长 | af_customer_id: 用户 Id | |
+| 34 | af_level_achieved_at | Sdk | 已完成 | 达到 hub 上配置的里程碑时 | | |
+| 35 | af_vip_achieved_at | Sdk | 已完成 | 达到 hub 上配置的里程碑时 | | |
+| 36 | af_complete_tutorial | Game | 已完成 | 用户完成游戏新手引导时 | | |
+| 37 | af_retention_d1 | Sdk | 已完成 | 用户登录后 sdk 调用 api，服务器返回事件名称，s... | | |
+| 38 | af_server_retention_d1 | Sdk | 已完成 | 用户登录后 sdk 调用 api，服务器返回事件名称，s... | | |
+| 39 | af_registration | Sdk | 已完成 | 用户登录后 sdk 调用 api，服务器返回事件名称，s... | | |
+| 40 | af_server_registration | Sever | 已完成 | 该事件由服务器自行触发 | | |
+| 41 | af_server_list_begin | game_new | 未完成 | 标记用户开始获取服务器列表流程的时刻 | 新事件<br/>install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>user_id: 账号 ID<br/>device_id: ... | |
+| 42 | af_server_list_success | game_new | 未完成 | 标记用户已获取并成功显示服务器列表 | 新事件<br/>install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>user_id: 账号 ID<br/>device_id: ... | |
+| 43 | af_server_list_failed | game_new | 未完成 | 出现以下情况之一时调用：请求超时（q... | 新事件<br/>install_id: appsFlyer Id<br/>launch_season : 应用会话<br/>user_id: 账号 ID<br/>device_id: ... | |
+| 44 | af_config_game | sdk_new | 已完成 | 成功获取游戏配置时调用，传入参数表示获取来源 t... | type:firebase,api,local | 错误，无法触发 |
+| 45 | af_147_intro | sdk_new | 已完成 | 打开欢迎界面 | user_id: 账号 ID，验证方式为手机或邮箱，location，verions | |
+| 46 | af_147_verify | sdk_new | 已完成 | 打开更新界面 | user_id: 账号 ID | |
+| 47 | af_147_send_otp_success | sdk_new | 已完成 | 发送 Otp 成功 | user_id: 账号 ID | |
+| 48 | af_147_send_otp_error | sdk_new | 已完成 | 发送 otp 失败 | user_id: 账号 ID | |
+| 49 | af_147_otp_verify_success | sdk_new | 已完成 | 验证 otp 成功 | user_id: 账号 ID | |
+| 50 | af_147_otp_verify_error | sdk_new | 已完成 | 验证 otp 失败 | user_id: 账号 ID | |
+| 51 | af_147_complete | sdk_new | 已完成 | 进入完成界面 | user_id: 账号 ID | |
+| 52 | af_147_close_verify | sdk_new | 已完成 | 点击 147 验证界面上的关闭按钮 | user_id: 账号 ID | |
+| 53 | af_147_open_status | sdk_new | 已完成 | 开启或关闭 147 的原因 | user_id: 账号 ID, ip, is_vietnam, status, reason | |
+
+## 2. 发送到 Vlive Tracking 的事件（Hub Logs Collection）
+
+目前发送到 Vlive 的事件参数缺失或按照 Hub Logs Collection 文档来看参数较少。尚未应用的新事件需要补充并重新统一。
+
+### 发送事件到 Vlive tracking game sdk 时的默认参数
+
+- `deviceId` : 设备识别 ID
+- `deviceModel` : 设备型号名称
+- `deviceBrand` : 设备品牌
+- `deviceFullInfoJson` : 设备完整信息（JSON 格式）
+- `deviceOs` : 设备操作系统名称（例如：Android、iOS）
+- `deviceOsVersion` : 设备操作系统版本
+- `appClientId` : 应用 client ID
+- `appId` : 应用 ID
+- `appName` : 应用名称
+- `appCode` : 应用代码
+- `appPackage` : 应用 package 名称（例如：`com.example.app`）
+- `appVersion` : 应用版本
+- `appSdkVersion` : 应用 SDK 版本
+
+`deviceFullInfoJson` 包含以下参数：
+
+- `width` : 屏幕宽度（px）
+- `height` : 屏幕高度（px）
+- `density_dpi` : 屏幕像素密度（DPI）
+- `density` : 屏幕缩放比例（例如：2.0、3.0）
+- `serial` : 设备序列号
+- `model` : 设备型号名称（例如：Pixel 8、SM-A525F）
+- `id` : 操作系统构建 ID
+- `manufacture` : 设备制造商（三星、小米、Oppo 等）
+- `brand` : 设备品牌
+- `type` : 操作系统构建类型（`user`、`userdebug`、`eng`）
+- `user` : 用于构建操作系统的用户名
+- `base` : 首个 Android 平台版本代码（通常为 1）
+- `incremental` : 操作系统递增构建代码
+- `sdk` : Android API Level（例如：34）
+- `board` : 设备主板/硬件名称
+- `host` : 用于构建操作系统的主机名
+- `fingerprint` : 设备/ROM 版本唯一标识字符串
+- `version_code` : 显示给用户的 Android 版本（例如：14）

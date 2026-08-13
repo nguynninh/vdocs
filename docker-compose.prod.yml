@@ -71,13 +71,11 @@ services:
     mem_limit: 512m
 
   client:
-    build: ./vdocs-client
+    build: ./vdocs-docs
     container_name: vdocs-client
     restart: unless-stopped
     depends_on:
       - server
-    env_file:
-      - ./vdocs-client/.env.production
     environment:
       NODE_ENV: production
       PORT: 3000

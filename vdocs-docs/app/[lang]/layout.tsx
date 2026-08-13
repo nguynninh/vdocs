@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Layout, Navbar, ThemeSwitch } from "nextra-theme-docs";
+import { Layout, Navbar } from "nextra-theme-docs";
 import { Banner, Head, Search } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
 
 import { LanguageSwitch } from "./language-switch";
+import { ThemeSwitch } from "./theme-switch";
 import { VersionSwitch } from "./version-switch";
 
 import "nextra-theme-docs/style.css";
@@ -101,7 +102,7 @@ export default async function RootLayout({
     >
       <VersionSwitch />
       <LanguageSwitch />
-      <ThemeSwitch lite />
+      <ThemeSwitch />
     </Navbar>
   );
 

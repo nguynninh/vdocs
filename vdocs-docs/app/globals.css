@@ -390,6 +390,59 @@ html.dark .nextra-lang-switch-item[data-active] {
   color: #8fb4ff;
 }
 
+.nextra-theme-switch-button {
+  display: flex !important;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nextra-theme-switch-button::before {
+  display: block;
+  width: 16px;
+  height: 16px;
+  content: "";
+  background-color: #4b5563;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.nextra-theme-switch-button[data-theme-icon="system"]::before {
+  mask-image: url("/svgs/ic_theme_system.svg");
+  -webkit-mask-image: url("/svgs/ic_theme_system.svg");
+}
+
+.nextra-theme-switch-button[data-theme-icon="light"]::before {
+  mask-image: url("/svgs/ic_theme_sun.svg");
+  -webkit-mask-image: url("/svgs/ic_theme_sun.svg");
+}
+
+.nextra-theme-switch-button[data-theme-icon="dark"]::before {
+  mask-image: url("/svgs/ic_theme_moon.svg");
+  -webkit-mask-image: url("/svgs/ic_theme_moon.svg");
+}
+
+.nextra-theme-switch-button:hover {
+  background: #f4f4f5;
+}
+
+html.dark .nextra-theme-switch-button::before {
+  background-color: #c8d0f4;
+}
+
+html.dark .nextra-theme-switch-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .nextra-navbar a[href*="github.com"] svg {
   color: #111827 !important;
 }

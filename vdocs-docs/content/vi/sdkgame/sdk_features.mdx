@@ -1,0 +1,346 @@
+# Tính năng SDK
+
+# I\. Tổng quan
+
+VLiveSDK cung cấp các nhóm tính năng chính sau:
+
+```markmap
+# VLiveSDK
+## OIDC v2
+### Login
+#### Vlive account
+- username/password
+#### SNS
+- Facebook
+- Google
+- Apple
+- Zalo
+#### Quick login
+#### VLive OpenID
+### Logout
+### Registration
+### Forget password
+### Profile
+- user name
+- birthday
+- sex
+- avatar
+### Link user accounts
+### Deactive account
+## Floating button
+- Drag/drop
+- Show/hide
+- Dimming (reduce opacity)
+## Permission Manager
+- Nomal permissions
+- Runtime permissions
+## Log Manager
+- Intergration log
+## Push notification
+- Firebase Messaging
+## Tracking
+- Appflyer
+- Facebook
+- Firebase
+## Payment
+- other payment methods (Momo, Zalopay,...)
+### In-App Purchase
+- List Product
+## Configuration
+### Environment configs
+- dev
+- staging
+- prod
+### general configs
+### UI configs
+- enable
+- disable
+### configs tracking
+- press 10 times on logo to show all configs
+```
+
+## 1\. Thư viện sử dụng
+
+| Library | Verison | Inventory |
+| --- | --- | --- |
+| retrofit2 | 2.9.0 | |
+| billingclient | 8.0.0 | |
+| play-services-base | 18.5.0 | |
+| play-services-auth | 21.3.0 | |
+| firebase-bom | 33.0.0 | |
+| game-tracking | 1.0.5 | |
+| app-update | 2.1.0 | |
+| glide | 4.15.1 | |
+| browser | 1.8.0 | |
+| facebook-android-sdk | 17.0.0 | |
+| af-android-sdk | 6.16.0 | |
+| installreferrer | 2.2 | |
+| play:review | 2.0.2 | |
+| okhttp3:logging-interceptor | 4.11.0 | |
+| recaptcha:recaptcha | 18.6.0 | |
+| tiktok-business-android-sdk | 1.5.0 | |
+| lifecycle-process | 2.3.1 | |
+| browser | 1.8.0 | |
+
+## 2\. Ghi chú phiên bản
+
+| Version | CommitID | Release date | Change logs |
+| --- | --- | --- | --- |
+| 1.0.10 | 4e39208430a7d7d59857cf66602fc4e445504ec1 | 11-May | Phát hành phiên bản đầu tiên |
+| 1.0.11 | 5dfedc2c5b9e4c83898071c928c147d3add73266 | 13/11 | thêm tracking có tham số |
+| 1.0.12 | ed667303992bfc75a906f89bc819535d98a0141c | 26/11 | Thay đổi môi trường mặc định về prod |
+| 1.1.0 | f06324243f69940a8165db8930b28f1e91c95e80 | 1111/12 | Chức năng đếm ngược, kiểm tra phiên bản trdcs khi build |
+| 1.1.1 | afaccbcfeea2925aad3cc791d65e0f415c39260c | 23/12 | Bổ sung tự động đổi ngôn ngữ mặc định nếu set từ game mà s... |
+| 1.2.0 | 01edfe4996597c5a0d0aa582e48234740ab0a828 | 24/12 | Tính năng cập nhật thông tin nhận quà |
+| 1.2.1 | 2eb3a17e14ace99c395fafa4c9b984c0258bd7ce | 6/1 | thêm vtvlive là account tự động tắt đếm ngược |
+| 1.2.2 | 9836e819580880028532d537dca9f4e4f9aeb714 | 8/1 | Fix crash khi tắt game gỡ lắng nghe mạng |
+| 1.2.3 | 66bd2071d8a803539d40cda09bac8504381c5338 | 9/1 | Nâng tracking sdk lên 1.0.6 |
+| 1.3.0 | | 12/1 | Thêm nút chơi ngay cấu hình bằng appler |
+| 1.3.1 | | 5/2 | Sửa lỗi đăng nhập google bị ẩn |
+| 1.3.2 | | 6/2 | Nâng sdk tracking 1.0.8 fix crash |
+| 1.3.3 | | 9/4 | Sửa lỗi back từ đăng ký |
+| 1.3.4 | | 10/4 | Có tỷ lệ thấp crash khi xoay màn hình |
+| 1.3.5 | | 13/4 | Cập nhật luồng và sự kiện theo dõi mới |
+| 1.3.8 | | 9.5 | Sửa lỗi back từ màn đăng ký, thử nghiệm sự kiện mới |
+
+# II\. Chi tiết tính năng
+
+Android Refactor Sdk Game
+
+| Tính năng | Tính năng nhỏ | Trạng thái | Ghi chú |
+| --- | --- | --- | --- |
+| Kiểm tra quá trình khởi động. | Cấu hình khởi động game bao gồm cấu hình động, cấu hình ban đầu, các domain từ domain động. KHông thể đăng nhập khi chưa cấu hình xog. Báo lỗi khi cấu hình thất bại hoặc đang cấu hình | Đã làm | |
+| Cấu hình động | | Đã làm | |
+| authen khi đăng nhập | | Đã làm | |
+| Câu hính ban đầu của game | | Đã làm | |
+| Review Google Play | | Đã làm | |
+| Thanh toán | | Đã làm | |
+| Đăng nhập | Tài khoản Vlive | Đã làm | |
+| | Google | Đã làm | |
+| | Facebook | Đã làm | |
+| | check đăng nhập | Đã làm | |
+| Đăng Ký | | Đã làm | |
+| Quên mật khẩu | | Đã làm | |
+| Đăng xuất | | Đã làm | |
+| Cập nhật thông tin theo cấp độ | | Đã làm | |
+| Floating | Kéo thả và click | Đã làm | |
+| | Trạng thái khởi động của sdk | Đã làm | |
+| Tracking Event | Lần đầu cài game | Đã làm | |
+| | Khởi động game | Đã làm | |
+| | Sau khi đăng nhập thành công | Đã làm | |
+| | Nhấn đăng nhập, đóng, đăng kí, quên mật khẩu, đăng nhập bằng google facebook | Đã làm | |
+| | Thời gian chơi | Đã làm | |
+| Dashboard | Profile | Đã làm | |
+| | Thay đổi mật khẩu | Đã làm | |
+| | Thay đổi email | Đã làm | |
+| | thay đổi ngày sinh | Đã làm | |
+| | xóa tài khoản | Đã làm | |
+| | Đăng xuất | Đã làm | |
+| Notificaiton | Nhận thông báo | Đã làm | |
+| | Tracking noti khi ẩn | Đã làm | |
+| Tính năng nhà phát triển | Bật tính năng nhà phát triển trên môi trường prod khi cần. Cần thực hiện 5 thao tác ẩn 1. ẩn 10 lần vào icon pass word chỗ nhập mật khẩu 2. Ấn 10 Lần vào check box nhớ mật khẩu 3. Ấn 10 lần lần vào check box policy 4 Ấn vào 10 vào text nhớ mật khẩu 5. điền vtvlive vào user name ẩn đăng nhập Thông báo bật tính năng nhà phát triển | Đã làm | |
+| Tracking Tittok | | Đã làm | |
+| Đa Ngôn Ngữ | | Đã làm | |
+| Tracking Vlive | | Đã làm | |
+| Event Count Down | | Đã làm | |
+| Hiển thị floting button động | | Đã làm | |
+
+# III\. Kiểm tra và thử nghiệm 
+
+| Tính năng chính | So Sánh Tính Năng | Check Code với cũ | Thiết bị thật Android 13 trở lên | Thiết bị thật Android 10 -> 12 | Giả lập Ldplayer 9 |
+| --- | --- | --- | --- | --- | --- |
+| Khởi động và Cấu hình Sdk | Mới | OK | OK | OK | OK |
+| Đăng nhập | Cũ | OK | OK | OK | OK |
+| Đăng ký | Cũ | OK | OK | OK | OK |
+| Quên mật khẩu | Cũ | OK | OK | OK | OK |
+| Thay đổi mật khẩu | Cũ | OK | OK | OK | OK |
+| Thay đổi email | Cũ | OK | OK | OK | OK |
+| thay đổi ngày sinh | Cũ | OK | OK | OK | OK |
+| xóa tài khoản | Cũ | OK | OK | OK | OK |
+| Đăng xuất | Cũ | OK | OK | OK | OK |
+| thanh toán | Cũ | OK | OK | OK | OK |
+| Thay đổi tài khoản | Cũ | OK | OK | OK | OK |
+| Tracking Notificaition | Mới | OK | OK | OK | OK |
+| Tính năng nhà phát triển | Mới | OK | OK | OK | OK |
+| Tracking Tiktok | Cũ | OK | OK | OK | OK |
+| Tracking Vlive | Mới | OK | OK | OK | OK |
+
+# IV\. Sơ đồ luồng
+
+1. Khởi động và cấu hình
+
+```mermaid
+flowchart LR
+    A(("Khởi Động")) --> B["Trang thái khởi động<br/>Loading"]
+    A --> C["Khởi tạo<br/>KeyGenerator<br/>Set Activity<br/>SharedPreference<br/>Floating"]
+    C --> D["Kiểm tra khởi tạo<br/>KeyGenerator<br/>ConfigRepository<br/>AppInfoFactory"]
+    D --> E{"Trạng thái<br/>cấu hình"}
+    D --> F["Cấu hình Appinfo<br/>Từ file hệ thống"]
+    E -- "Thất bại" --> H(("Trạng thái khởi động<br/>Error"))
+    E -- "Thành công" --> G["Cấu hình Appinfo<br/>động"]
+    G --> I{"Cấu hình động từ<br/>API kiểm tra rỗng<br/>hoặc null"}
+    I -- "Thất bại" --> J{"Cấu hình từ Firebase<br/>kiểm tra rỗng hoặc null"}
+    J -- "Thất bại" --> K{"Cấu hình từ hệ<br/>thống kiểm tra biến<br/>rỗng hoặc null"}
+    K -- "Thất bại" --> H
+    I -- "Thành công" --> L["Khởi tạo các lớp<br/>phụ thuộc khác<br/>Chi tiết"]
+    J -.-> L
+    K -.-> L
+    L --> LOG[/"Log chi tiết"/]
+    L --> M{"Kiểm tra khởi tạo"}
+    M -- "Thất bại" --> H
+    M -- "thành công" --> N["Lấy cấu hình đăng<br/>nhập game"]
+    N --> O["Tracking app launch<br/>Tracking first launch<br/>Device id<br/>osVersion<br/>Push fcm token server<br/>FB dervice id<br/>tracking VersionApp"]
+    N --> P["Get IP V4V4"]
+    P --> Q{"Trạng thái"}
+    Q -- "thất bại" --> H
+    Q -- "Thành công" --> R["Trạng thái khởi động<br/>Thành Công"]
+    R --> S(("Khởi động hoàn tất<br/>Error -> Chặn thao tác vào sdk<br/>Icon float sáng<br/>Ấn vào icon sẽ báo lỗi<br/>Thành công -> Sử dụng các tính năng<br/>bình thường<br/>Icon Floasting mở<br/>Ấn vào icon không báo lỗi"))
+    H --> S
+```
+
+Log chi tiết (khởi tạo các lớp phụ thuộc):
+
+![Log chi tiết](/images/sdkgame/code1.png)
+
+2. Đăng nhập
+
+```mermaid
+flowchart LR
+    A(("Click login")) --> B["Kiểm tra bảo trì"]
+    B --> C{"Trạng thái"}
+    C -- "yes" --> Z(("Dừng dăng nhập"))
+    C -- "no" --> E{"Có accesstoken"}
+    E -- "no" --> D["Mở Giao diện đăng nhập"]
+    E -- "yes" --> F["Lấy thông tin người dùng"]
+    D --> G["Login Account,<br/>Google /Facebook, Đăng ký"]
+    G --> H["Đăng nhập"]
+    H --> I["Đăng nhập thành công"]
+    F --> J{"Lấy thông tin bởi<br/>access token"}
+    J -- "còn hạn access Token" --> I
+    J -- "hết hạn accesstoken" --> K{"Làm mới<br/>accesstoken"}
+    K -- "thành công" --> I
+    K -- "thất bại" --> L["LogOut<br/>xóa thông tin đăng nhập<br/>các loại token"]
+    L --> Z
+    I --> M["Bắt đầu bộ đếm thời gian chơi<br/>Tracking Retention<br/>Push FCM token lên sv<br/>authen<br/>Lấy danh sách gói nạp<br/>Yêu cầu quyền notify<br/>Tracking sự kiện đăng nhập"]
+    M --> N{"Kiểm tra cấp độ<br/>yêu cầu cung cấp thông<br/>tin người dùng"}
+    N -- "Cấp độ 1" --> O{"Hiển giao diện<br/>yêu cầu cung<br/>cấp thông tin<br/>có thể huỷ"}
+    O -- "cập nhật thành công" --> S(("Hoàn tất đăng nhập"))
+    O -- "Huỷ bỏ" --> S
+    N -- "Cấp độ 2" --> P["Hiển giao diện yêu cầu cung<br/>cấp thông tin không thể huỷ<br/>bỏ"]
+    P -- "thành công" --> S
+    N -- "Cấp độ 0" --> S
+```
+
+C\. Thanh toán
+
+```mermaid
+flowchart LR
+    A(("Đăng nhập thành công")) --> B["Lấy danh sách<br/>gói nạp từ hub"]
+    B --> C["Lấy gói nạp từ store<br/>và so sánh với gói<br/>nạp từ hub"]
+    C --> D(("Danh sách gói<br/>nạp có thể nạp"))
+    E(("Mua gói")) --> F{"Kiểm tra trước<br/>khi mua"}
+    F -.- G["billingClient Sẵn sàng<br/>Danh sách gói không rỗng<br/>Có kết nối mạng<br/>Thông tin gói và nhân vật không<br/>rỗng<br/>Trạng thái đang thanh toán true"]
+    F -- "false" --> H["Dừng thanh toán<br/>Đóng fragment<br/>Trạng thái đang thanh toán<br/>fasle"]
+    F --> I["Mở fragment thanh toán"]
+    I --> J{"Khởi tạo giao<br/>dịch api"}
+    J -- "thất bại" --> H
+    J -- "thành công" --> K{"Kiểm tra lại<br/>gói và<br/>billingClient"}
+    K -- "false" --> H
+    K -- "true" --> L["Mở giao diện thanh toán từ<br/>store và chờ người dùng<br/>thanh toán"]
+    L --> M{"Trạng thái<br/>giao dịch"}
+    M -- "Chờ thanh toán ( Giao dịch thanh toán<br/>chậm )" --> N["Hiển thị toast yêu cầu hoàn<br/>tất giao dịch."]
+    N -- "chờ giao dịch" --> M
+    M -- "Lỗi không xác định" --> H
+    M -- "đã thanh toán" --> O["PURCHASED<br/>Đã thanh toán"]
+    O --> P["Gửi xác minh tiêu thụ"]
+    P --> Q{"Trạng thái tiêu<br/>thụ"}
+    Q -- "thất bại" --> R["Gói này đã được xác minh<br/>tiêu thụ nhưng bị mất kết<br/>nối trong quá trình trả về lời"]
+    R --> S["Hiển thị thông báo yêu cầu<br/>hỗ trợ từ hotline"]
+    S --> H
+    Q -- "thành công tiêu thụ" --> T["Gọi Api cộng tiền game"]
+    T --> U{"Trạng thái Api"}
+    U -- "thất bại" --> V{"Show Dialog<br/>Yêu cầu thử lại"}
+    V -- "Thất bại" --> S
+    V -- "thành công" --> W(("Cộng tiền game<br/>thành công hoàn tất<br/>giao dịch"))
+    U -- "thành công" --> W
+```
+
+D\. Cấu Trúc Api
+
+```mermaid
+flowchart LR
+    A["Base Call Api"] --> B["Repository"]
+    B --> C["UserCase"]
+    C --> D["Ui"]
+    E["Xử lý lỗi từ Http, Code<br/>Base"] --> B
+    F["Tham số và biến lỗi"] --> C
+```
+
+E\. Cấu Trúc Call API có token
+
+```mermaid
+flowchart LR
+    A1{"Call APi Có<br/>Token"} --> D{"Kiểm Tra Có Đang Làm<br/>Mới Token Không"}
+    A2{"Call APi Có<br/>Token"} --> D
+    A3{"Call APi Có<br/>Token"} --> D
+    A1 -. "token Không hết hạn Không cần làm<br/>mới" .-> R["Trả Về Dữ Liệu"]
+    D -- "Không" --> E["Làm Mới Token"]
+    D -- "có" --> F["Đợi Làm Mới Token"]
+    E --> G{"Kết quả làm<br/>mới"}
+    F --> G
+    G --> H["Thành Công Gửi Lại<br/>Token Mới Cho Các Api<br/>Đang Chờ và call lại"]
+    G --> I["Thất Bại Dừng Toàn Bộ<br/>Api goi  và trả về lỗi cho<br/>api"]
+```
+
+F\. Đa Ngôn Ngữ 
+
+```mermaid
+flowchart LR
+    Start(("Bắt Đầu")) --> A["Khởi tạo Sdk"]
+    A --> B["Khởi tạo ngôn<br/>ngữ"]
+    B --> C["Cấu hình<br/>appinfo thành<br/>công lấy<br/>thông tin"]
+    C --> D{"Bật tắt<br/>đa ngôn ngữ"}
+    D -- "tắt" --> E["Lưu ngôn ngữ mặc định là<br/>tiếng việt xuống bộ nhớ, ẩn<br/>giao diện chọn ngôn ngữ ở<br/>login<br/>Vô hiệu hóa set ngôn ngữ từ<br/>game"]
+    D -- "bật" --> F["Lấy ra danh<br/>sách ngôn ngữ<br/>từ api"]
+    F --> G["Map ngôn ngữ với ngôn ngữ<br/>được hỗ trợ của client -><br/>Danh Sách ngôn ngữ có thể<br/>chọn"]
+    G --> H{"Lấy ra ngôn ngữ từ<br/>bộ nhớ kiểm tra với<br/>danh sách có thể<br/>chọn"}
+    H -- "Không có trong danh sách" --> I["Lấy ra ngôn ngữ đầu<br/>tiên trong danh sách để<br/>làm ngôn ngữ mặc định<br/>Lưu ngôn ngữ xuống bộ<br/>nhớ"]
+    H -- "có" --> J["Lấy dữ liệu ngôn ngữ theo<br/>ngôn ngữ đã lưu từ bộ nhớ"]
+    I --> J
+    B --> K{"Lấy ra ngôn<br/>ngữ từ bộ nhớ"}
+    E --> J
+    E --> L
+    K -- "có" --> L["Set ngôn ngữ cho ui của sdk"]
+    K -- "không có" --> M["Lấy ra ngôn ngữ của hệ<br/>thống, lưu ngôn ngữ hệ<br/>thống xuống bộ nhớ"]
+    M --> L
+```
+
+```mermaid
+flowchart LR    
+    A["Call Api Tính<br/>Năng Có Hiển<br/>Thị Giao Diện<br/>Thông báo"] --> B["Lỗi Trả Về Error<br/>Code và Message"]
+    B --> C{"Lấy Trong Danh<br/>Sách Bản Dịch"}
+    C -- "Có danh sách" --> D{"Kiểm tra ngôn ngữ<br/>hiện tại của danh<br/>sách và ngôn ngữ đã<br/>lưu xuống hệ thống<br/>hoặc người dùng đã<br/>chọn"}
+    C -- "không có" --> G["Call lại api lấy danh sách<br/>đúng của ngôn ngữ"]
+    D -- "yes" --> E{"Lấy Bản Dịch"}
+    D -- "no" --> H
+    E -- "Không có bản dịch" --> H{"Call API dịch thử<br/>cùng với ngôn<br/>ngữ từ bộ nhớ"}
+    H -- "thất bại" --> I["Lấy bản dịch từ error code có<br/>sẵn trong sdk"]
+    H -- "thành công có bản dịch" --> J(("Kết thúc và hiển thị<br/>lỗi"))
+    I --> J
+    E --> J
+    D --> G
+    C --> H
+```
+
+G\. Hiện thì thông báo đếm ngược mở game
+
+```mermaid
+flowchart LR
+    A(("Bắt đầu")) --> B{"Đăng nhập<br/>chưa"}
+    B -- "Chưa" --> C["Hiện giao diện đăng nhập<br/>và đăng nhập game"]
+    C -- "đăng nhập thành công" --> E{"Đã cập nhật<br/>thông tin<br/>người dùng"}
+    B -- "Đã Đăng Nhập" --> E
+    E -- "Chưa cập nhật" --> D["Cập nhật thông tin"]
+    D --> F
+    E --> F{"Kiểm tra có<br/>hiển thị đếm<br/>ngược không"}
+``` 

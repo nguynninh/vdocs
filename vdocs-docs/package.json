@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3100",
+    "dev": "next dev --webpack --port 3100",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "d3": "^7.9.0",
+    "markmap-lib": "^0.18.12",
+    "markmap-view": "^0.18.12",
+    "mermaid": "^11.16.1",
     "next": "16.3.0",
     "nextra": "^4.6.1",
     "nextra-theme-docs": "^4.6.1",

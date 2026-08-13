@@ -63,7 +63,7 @@ https://discussions\.unity\.com/t/unity\-platform\-protection\-take\-immediate\-
 
 在项目的 `setting.gradle` 文件中，声明 `maven` 仓库：
 
-```Java
+```java
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -86,7 +86,7 @@ dependencyResolutionManagement {
 
 在项目的 `build.gradle (Project)` 文件中：
 
-```Java
+```java
 plugins {
     id 'com.android.application' version '8.9.1' apply false
     id 'com.android.library' version '8.9.1' apply false
@@ -99,7 +99,7 @@ plugins {
 
 或者
 
-```Java
+```java
 buildscript {
     repositories {
         google()
@@ -123,7 +123,7 @@ buildscript {
 
 在项目的 `build.gradle (App)` 文件中：
 
-```Java
+```java
 plugins {
     id 'com.android.application'
     // this 
@@ -135,7 +135,7 @@ plugins {
 
 ## **添加依赖**
 
-```Java
+```java
 dependencies {
       implementation "vn.vlive.sdk:game:1.6.2"
   }
@@ -143,7 +143,7 @@ dependencies {
 
 ## **从gradle\.properties添加AndroidX**
 
-```Java
+```java
 # Project-wide Gradle settings.
 # IDE (e.g. Android Studio) users:
 # Gradle settings configured through the IDE *will override*
@@ -182,7 +182,7 @@ android.nonFinalResIds=false
 例如：
 注：将app\_name更改为应用程序的名称
 
-```XML
+```xml
 <string name="app_name">App Name</string>
 <string name="facebook_app_id">531928046216413</string>
 <string name="fb_login_protocol_scheme">fb531928046216413</string>
@@ -199,7 +199,7 @@ android.nonFinalResIds=false
 
 
 
-```Java
+```java
 -keep class vlive.sdk.game.** { *; }
 
 ```
@@ -219,7 +219,7 @@ android.nonFinalResIds=false
 
 在项目的 `build.gradle (App)` 文件中：
 
-```Java
+```java
 plugins **{**
 **    **id 'com.android.application'
     id 'com.google.firebase.firebase-perf'
@@ -243,7 +243,7 @@ apply from: 'build-check-version.gradle'
 Dev \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.*Development*\);
 Prod \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.*Production*\);
 
-```Java
+```java
 public class MainActivity extends Activity implements AuthenticationListener, PaymentListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -286,7 +286,7 @@ public class MainActivity extends Activity implements AuthenticationListener, Pa
 
 2. 屏幕旋转时的配置
 
-```Java
+```java
 @Override
 public void onConfigurationChanged(@NotNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
@@ -297,7 +297,7 @@ public void onConfigurationChanged(@NotNull Configuration newConfig) {
 
 3. SDK初始化的结果将返回到该函数中\.
 
-```Java
+```java
 vLiveSdkGame.setActivity(this);
 vLiveSdkGame.setAuthenticationListener(this);
 vLiveSdkGame.setPaymentListener(this);
@@ -327,7 +327,7 @@ vLiveSdkGame.setInitStatusListener(isCreated -> {
 
 您应在点击游戏的开始按钮时调用此函数\.
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().login(); 
 ```
 
@@ -339,7 +339,7 @@ VLiveSdkGame.*getInstance*().login();
 
 退出登录成功将调用onLogoutSuccessful
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().logout();
 ```
 
@@ -356,13 +356,13 @@ VLiveSdkGame.*getInstance*().logout();
 此功能将返回类似于**Pricelist\.xlsx**文件的充值礮包列表\.
 注：这是一个可选功能，可根据需要调用\.
 
-```Java
+```java
 List<ProductInfo> listProduct = VLiveSdkGame.*getInstance*().getListProduct();
 ```
 
 Model ProductInfo
 
-```Java
+```java
 String productId = productInfo.getProductId(); // vn.vplay.game.t001a.029
 String productName = productInfo.getProductName(); // 20 Ngân Phiếu
 ```
@@ -375,7 +375,7 @@ String productName = productInfo.getProductName(); // 20 Ngân Phiếu
 
 输入参数可从上方列表中获取，也可手动输入\.
 
-```Java
+```java
 String productId = "vn.vplay.game.t001a.029"; 
 String characterId = "324132321";
 String serverId  = "123";
@@ -398,7 +398,7 @@ VLiveSdkGame.*getInstance*().payProduct(productId,characterId,serverId);
 描述：应在资源下载开始时调用\.
 事件名称：af\_patch\_start
 
-```Java
+```java
 String patchVersion = "1.1.23"; // or empty
 double patchSizeMb = 550.5; // or 0
 VLiveSdkGame.*getInstance*().trackingPatchStart(patchVersion,patchSizeMb);
@@ -410,7 +410,7 @@ VLiveSdkGame.*getInstance*().trackingPatchStart(patchVersion,patchSizeMb);
 描述：应在资源下载过程中发生错误时调用\.
 事件名称：af\_patch\_error
 
-```Java
+```java
 String cdnIp = "122.56.12.188"; // or empty
 String errorCode = "404_NOT_FOUND"; // or empty
 String failedUrl =  "https://cdn.game.com/patch/v120.zip"; // or empty
@@ -423,7 +423,7 @@ VLiveSdkGame.*getInstance*().trackingPatchError(cdnIp, errorCode,failedUrl);
 描述：*应在所有资源成功下载完成后调用\.*
 事件名称：af\_patch\_success
 
-```Java
+```java
 int timeDownloadSecond = 32; // or 0
 String cdnIp = "122.56.12.188"; // or empty
 double patchSizeMb = 500.5; // or 0
@@ -436,7 +436,7 @@ VLiveSdkGame.*getInstance*().trackingPatchSuccess(timeDownloadSecond,cdnIp,patch
 描述：*应在资源解压过程开始时调用\.*
 事件名称：af\_extract\_started
 
-```Java
+```java
 int totalFiles = 400;// or 0
 double totalSizeMb = 500.5;// or 0
 VLiveSdkGame.*getInstance*().trackingExtractStart(totalFiles,totalSizeMb);
@@ -448,7 +448,7 @@ VLiveSdkGame.*getInstance*().trackingExtractStart(totalFiles,totalSizeMb);
 描述：*应在所有资源成功解压完成后调用\.*
 事件名称：af\_extract\_finished
 
-```Java
+```java
 int timeExtractSecond = 32; // or 0
 String resultCode = "success" // or Errror String (ex: out_of_storage)
 VLiveSdkGame.*getInstance*().trackingExtractFinished(timeExtractSecond,resultCode);
@@ -458,7 +458,7 @@ VLiveSdkGame.*getInstance*().trackingExtractFinished(timeExtractSecond,resultCod
 描述**：**应在游戏开始画面显示后调用\.
 事件名称：af\_show\_start\_game
 
-```Java
+```java
 VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_SHOW_START_GAME);
 ```
 
@@ -466,7 +466,7 @@ VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_SHOW_START_GAME
 描述**：***应在用户确认服务器选择并进入游戏流程后调用\.*
 事件名称：af\_server\_select
 
-```Java
+```java
 String serverName = "ServerName"; // Required Not empty, Not Null 
 String serverId = "23232"; // Required Not empty, Not Null 
 VLiveSdkGame.*getInstance*().trackingServerSelected(serverName,serverId);
@@ -476,7 +476,7 @@ VLiveSdkGame.*getInstance*().trackingServerSelected(serverName,serverId);
 描述**：***应在角色创建界面对用户可见时调用\.*
 事件名称：af\_char\_create\_start
 
-```Java
+```java
 VLiveSdkGame.getInstance().trackingCharacterCreationStart();
 ```
 
@@ -486,7 +486,7 @@ VLiveSdkGame.getInstance().trackingCharacterCreationStart();
 描述**：**应在角色创建过程中发生错误时调用\.
 事件名称：af\_char\_create\_error
 
-```Java
+```java
 String characterNameError = "Hao Thien"; // or empty
 String errorMessage = "NAME_DUPLICATED"; // or empty
 VLiveSdkGame.*getInstance*().trackingCharacterCreateError(characterNameError, errorMessage);
@@ -498,7 +498,7 @@ VLiveSdkGame.*getInstance*().trackingCharacterCreateError(characterNameError, er
 描述**：***应在角色创建流程成功完成后调用\.*
 事件名称：af\_char\_create\_success
 
-```Java
+```java
 String characterName = "CharacterName"; // *Required Not empty, Not Null *
 String characterId = "23232"; // *Required Not empty, Not Null *
 VLiveSdkGame.*getInstance*().trackingCharacterCreationComplete(characterName,characterId);
@@ -510,7 +510,7 @@ VLiveSdkGame.*getInstance*().trackingCharacterCreationComplete(characterName,cha
 描述**：**应在用户选择现有角色并进入游戏后调用\.
 事件名称：af\_char\_select
 
-```Java
+```java
 String characterName = "CharacterName"; // Required Not empty, Not Null 
 String characterId = "23232"; // Required Not empty, Not Null 
 String characterLevel = "1"; // Required Not empty, Not Null 
@@ -525,7 +525,7 @@ VLiveSdkGame.*getInstance*().trackingCharacterSelected(characterName,characterId
 
 
 
-```Java
+```java
 VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_GAME_ENTER);
 ```
 
@@ -535,7 +535,7 @@ VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_GAME_ENTER);
 描述**：**应在用户已选择角色并开始进入游戏后调用\.
 事件名称：af\_level\_achievement
 
-```Java
+```java
 String characterName = "CharacterName"; // or empty
 String characterId = "23232"; // Required Not empty, Not Null 
 String characterLevel = "2"; // Required Not empty, Not Null 
@@ -551,7 +551,7 @@ VLiveSdkGame.*getInstance*().mapUser(characterName, characterId, characterLevel,
 事件名称：af\_level\_achievement
 事件名称：af\_vip\_achievement
 
-```Java
+```java
 String characterName = "CharacterName"; // or empty
 String characterId = "23232";// Required Not empty, Not Null 
 String characterLevel = "2"; // Required Not empty, Not Null 
@@ -566,7 +566,7 @@ VLiveSdkGame.*getInstance*().levelUpUser(characterName, characterId, characterLe
 15. 追踪加载游戏地图 \( 必填\)
 描述**：***应在地图完全加载完成后调用\.*
 
-```Java
+```java
 String mapId = "newbie_village"; // or empty
 int timeLoadSecond = 32; // or 0
 int fpsAtStart = 60; // or 0
@@ -576,7 +576,7 @@ VLiveSdkGame.*getInstance*().trackingMapLoad(mapId, timeLoadSecond, fpsAtStart);
 16. 自定义事件
 描述**：**用于其他自定义事件
 
-```Java
+```java
 String eventName = "Event_Name";
 VLiveSdkGame.*getInstance*().trackingEvent(eventName);
 
@@ -592,7 +592,7 @@ VLiveSdkGame.*getInstance*().trackingEvent(eventName,jsonObject);
 
 #### 在 `build.gradle (App)` 中添加
 
-```Java
+```java
 android {
 // this
     bundle {
@@ -605,7 +605,7 @@ android {
 
 #### Model LanguageSdk
 
-```Java
+```java
 String languageName = LanguageSdk.*CHINESE*.getNameLanguage(); // 中国
 String languageId = LanguageSdk.*CHINESE*.getIdLanguage(); // zh
 ```
@@ -614,7 +614,7 @@ String languageId = LanguageSdk.*CHINESE*.getIdLanguage(); // zh
 
 #### 监听从sdk返回的语言
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().setLanguageListener(new LanguageListener() {
     @Override
     public void onChangeLanguage(LanguageSdk language) {
@@ -634,7 +634,7 @@ VLiveSdkGame.*getInstance*().setLanguageListener(new LanguageListener() {
 
 
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().setLanguage(LanguageSdk.*CHINESE*);
 ```
 
@@ -658,7 +658,7 @@ VLiveSdkGame.*getInstance*().setLanguage(LanguageSdk.*CHINESE*);
 
 注：此功能只应在登录成功后使用\.
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().openUpdateInfoEvent();
 ```
 
@@ -674,7 +674,7 @@ VLiveSdkGame.*getInstance*().openUpdateInfoEvent();
 
 在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
 
-```Java
+```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
 vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
 // this
@@ -695,7 +695,7 @@ vLiveSdkGame.setPaymentListener(this);
 
 在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
 
-```Java
+```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
 vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
 vLiveSdkGame.setActivity(this);
@@ -715,7 +715,7 @@ vLiveSdkGame.setShowLogo(false);
 
 在初始化sdk时调用，默认为true\. 如果想隐藏它请传入false
 
-```Java
+```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.*getInstance*();
 vLiveSdkGame.setEnvironment(EnvironmentSdk.*Development*);
 vLiveSdkGame.setActivity(this);
@@ -731,7 +731,7 @@ vLiveSdkGame.setShowBtnClose(false);
 
 #### 显示Google Play评价
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().reviewGooglePlay(null);
 ```
 
@@ -739,7 +739,7 @@ VLiveSdkGame.*getInstance*().reviewGooglePlay(null);
 
 #### 显示用户信息界面
 
-```Java
+```java
 VLiveSdkGame.*getInstance*().openUserInfo();
 ```
 

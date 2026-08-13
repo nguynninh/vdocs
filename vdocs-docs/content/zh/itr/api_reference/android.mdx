@@ -1,0 +1,348 @@
+# 04 — API 参考
+
+[← 返回目录](README.md)
+
+以下所有 API 均属于根包 `vn.interactive`。
+
+---
+
+## 1. `OverlayManager`
+
+```kotlin
+class OverlayManager(
+    activity: Activity,                              // 必须是 FragmentActivity/AppCompatActivity
+    overlayView: OverlayView,                        // 布局中的 view，覆盖在视频区域上
+    overlayData: OverlayData,                        // 环境 + 租户 配置
+    overlayEventListener: OverlayEventListener? = null
+) : OnOverlayListener, LifecycleOverlay
+```
+
+### 1.1. 公开属性
+
+| 成员 | 类型 | 说明 |
+|---|---|---|
+| `valueTimePlay` | `Int`（只读） | app 通过 `receiveTrackingTime` 注入的最近播放秒数 |
+| `receiveTrackingTime` | `(Int) -> Unit` | **为 VOD 流注入播放时间（秒）。** 像函数一样调用：`overlayManager.receiveTrackingTime(12)` |
+
+### 1.2. 方法
+
+| 函数 | 说明 | 备注 |
+|---|---|---|
+| `initToken(token: String, userId: String, bjName: String = "")` | 声明/清除登录会话 | 需在 `joinRoom` 之前调用。登出：`initToken("", "")`。若正在观看直播则会自动重新加入房间 |
+| `joinRoom(mediaId: String, type: Int)` | 为某个内容开始交互会话 | `type = 1` 为直播（LIVE），`type = 2` 为点播（VOD）。会自动 `cleanUp()` 旧会话 |
+| `releaseAll()` | 释放全部资源：socket、WebView、dialog、tracking | 在 `onDestroy()` 或退出内容时调用 |
+| `fetchInteractiveStatus(mediaId: String, callback: (Boolean) -> Unit)` | 向服务器询问该内容是否支持互动 | 网络错误 → 返回 `false` |
+| `showChartsInteractive(mediaId: String, userId: String, backgroundColorHeader: String? = null)` | 打开排行榜（全屏 DialogFragment） | `backgroundColorHeader` 为十六进制颜色码，例如 `"#139DED"` |
+| `hideChartsInteractive()` | 关闭排行榜 | |
+| `isDialogCharShowing(): Boolean` | 排行榜当前是否正在显示 | |
+| `addPlayerListener(listener: PlayerChangeListener)` | 向 SDK 提供播放器状态（供 `ckst` 事件使用） | 需在 `joinRoom` **之后**调用，以便 listener 也能挂载到 socket 上 |
+| `sendAction(data: JSONObject)` | *（实现 `OnOverlayListener`）* 处理来自 WebView 的操作 | SDK 内部自动调用，app **无需**调用 |
+| `onClickAdsOverlay(url: String)` | *（实现 `OnOverlayListener`）* 用外部浏览器打开广告链接 | SDK 内部自动调用 |
+
+> `LifecycleOverlay` 目前是一个空接口（`onResume/onStop/onDestroy` 函数已在代码中被注释掉）——
+> SDK **不会**自行绑定 Activity 生命周期，除了观察 LiveData 之外。
+
+---
+
+## 2. `OverlayData` + `OverlayData.Builder`
+
+```kotlin
+val overlayData = OverlayData.Builder()
+    .setEnvironment(EnvInteractive.PROD)   // 默认 PROD
+    .setTenantId("vtvlive")                // 默认 "" —— 应始终设置
+    .setDebug(false)                       // 默认 false
+    .build()
+```
+
+| 属性 | 类型 | 默认值 | 影响 |
+|---|---|---|---|
+| `envInteractive` | `EnvInteractive` | `PROD` | socket URL、REST URL、排行榜 URL |
+| `tenantId` | `String` | `""` | `X-TENANT-ID` 请求头（socket + REST）、排行榜查询参数、`vtvlive` 租户的登录规则 |
+| `debug` | `Boolean` | `false` | 预留标志位，目前尚不影响日志行为（日志取决于 SDK 的 `BuildConfig.DEBUG`） |
+| `mediaId`、`userId` | `String?` | `null` | 在打开排行榜时由 SDK 赋值 |
+
+```kotlin
+enum class EnvInteractive { DEV, STG, PROD }
+```
+
+---
+
+## 3. `OverlayEventListener` / `DefaultOverlayEventListener`
+
+```kotlin
+interface OverlayEventListener {
+    fun onHandleMessage(msg: EventOverlay)
+    fun onHandleLiveViews(liveViews: Int)
+    fun onShowITR(show: Boolean)
+    fun onFocusOverlay(
+        takeControl: Boolean = false,
+        webViewError: Boolean = false,
+        overlayConfig: OverlayConfig? = null
+    )
+}
+
+interface DefaultOverlayEventListener : OverlayEventListener   // 别名，未新增函数
+```
+
+| 回调 | 何时触发 | app 应做的事 |
+|---|---|---|
+| `onHandleMessage(NEED_LOGIN)` | 用户操作 overlay 时需要登录 | 打开登录界面，然后调用 `initToken()` |
+| `onHandleMessage(NEED_PAY_ONG)` | 服务器返回 `PM402`（OnG 余额不足） | 打开充值界面 |
+| `onHandleLiveViews(n)` | socket `liveviews` 事件 | 显示观看人数（**已加上 230**） |
+| `onShowITR(true)` | overlay 打开统计/对话框 | 如需要可隐藏部分 app UI |
+| `onFocusOverlay(takeControl = true, …)` | WebView 加载完成（`onPageFinished`） | 若 overlay 为弹窗则调整布局 |
+| `onFocusOverlay(webViewError = true, …)` | 页面加载失败 / HTTP / SSL 错误 | 记录日志，必要时提示用户 |
+| `onFocusOverlay(takeControl = false, …)` | overlay 被移除（`INTERACTIVE_HIDE_ANALYTICS`） | 恢复布局 |
+
+```kotlin
+enum class EventOverlay {
+    NEED_LOGIN,                  // SDK 会触发
+    NEED_PAY_ONG,                // SDK 会触发
+    TOURNAMENT_BET,              // 已声明，尚未使用
+    SUCCESSFUL_REPLY_SUBMITTED,  // 已声明，尚未使用
+    FAILED_REPLY_SUBMITTED,      // 已声明，尚未使用
+    TAKE_FOCUS                   // 已声明，尚未使用
+}
+```
+
+---
+
+## 4. `PlayerChangeListener`
+
+```kotlin
+interface PlayerChangeListener {
+    suspend fun currentPosition(): Long
+    fun onPlayerStateChanged(): Pair<Boolean, Int>   // (isPlaying, playbackState)
+}
+```
+
+`playbackState` 遵循 ExoPlayer 的约定：`1 = IDLE`、`2 = BUFFERING`、`3 = READY`、`4 = ENDED`。
+SDK 映射规则：`1 → "idle"`、`3 → isPlaying ? "playing" : "paused"`，其余 → `""`。
+
+---
+
+## 5. `OverlayView`
+
+自定义 `ConstraintLayout`，是承载所有 overlay 的**容器**。
+
+| 公开成员 | 说明 |
+|---|---|
+| `overlayList: HashMap<OverlayWebView, OverlayConfig>` | 当前挂载的所有 WebView |
+| `addListener(eventListener, overlayListener)` | SDK 在 `OverlayManager.init` 中自动调用 |
+| `getCurrentOrientation(): Int` | 当前屏幕方向 |
+| `getLastOverlay(): OverlayWebView?` | 最近挂载的 WebView |
+| `getOverlayConfig(): OverlayConfig?` | 弹窗式 overlay 的配置（如有） |
+| `removeWebView(view)`、`removeWebViews()`、`clearViews()` | 移除 view 并销毁相应的 tracking |
+
+app 只需在 XML 中声明该 view；其余函数均由 SDK 内部使用。
+
+---
+
+## 6. 主要模型
+
+### `Overlay` — 描述一个 overlay
+
+| 字段 | 类型 | 含义 |
+|---|---|---|
+| `src` | `String` | 网页模板 URL |
+| `metadata` | `Metadata(pos, size)` | 按比例计算的位置与尺寸 |
+| `duration` | `Long` | 显示时长（秒） |
+| `targets` | `String?` | 适用平台（`all`、`androidmobile`、`androidtv`……） |
+| `timelineId` | `String?` | 剧本节点标识（用于去重及防止重复作答） |
+| `mediaContentId` | `String?` | 适用的内容 |
+| `typeTimeline` | `Int?` | 0/1/2 小游戏、3 竞猜（predict）、4 头条（headline）、5 幸运抽奖（lucky） |
+| `isPopupOverlay` | `Boolean` | `true` → 按 9 个位置使用弹窗约束；`false` → 上/下内嵌 |
+| `allowAnonymous` | `Boolean` | 是否允许未登录用户查看/互动 |
+| `requiredFanClub` | `Boolean?` | 是否要求为粉丝俱乐部（fanclub）成员 |
+| `startTimeShowOverlay` | `Long?` | （VOD）开始显示的秒数 |
+| `requiredFocus`、`frequencyLimit`、`ts`、`sendTime`、`serverTime` | | 来自服务器的辅助字段 |
+
+### `Metadata` / `OverlayPosition` / `OverlaySize`
+
+```kotlin
+data class Metadata(val pos: OverlayPosition, val size: OverlaySize)
+data class OverlayPosition(val x: Int, val y: Int, var alignment: OverlayAlignment? = null)
+data class OverlaySize(val w: Float, val h: Float)   // 0..1 —— 相对于 OverlayView 的比例
+```
+
+`x`：`0` 左，`1` 中，`2` 右。`y`：`0` 上，`1` 中，`2` 下 →
+`OverlayAlignment.{LeftTop, LeftCenter, LeftBottom, CenterTop, Center, CenterBottom, RightTop, RightCenter, RightBottom}`。
+
+### `OverlayConfig` — 随 `onFocusOverlay` 回调附带的信息
+
+```kotlin
+data class OverlayConfig(
+    val popupOverlay: Boolean = false,  // true 表示为上/下条状内嵌 overlay
+    val alignment: String? = null,      // "top" | "bottom" | "left" | "right"
+    val ratio: Float = 0F               // 相对 OverlayView 的高度比例
+)
+```
+
+### `ActionReportResponse`
+
+```kotlin
+data class ActionReportResponse(
+    var success: Boolean = false,
+    var result: ActionResponseMessage = ActionResponseMessage(),  // message、status、description、data
+    var failureReason: String? = null,
+    var failureStep: String? = null,
+    var error: String? = null,
+)
+```
+
+---
+
+## 7. Socket.IO 事件
+
+### 7.1. 服务器 → SDK（监听）
+
+| 事件名 | 常量 | 数据类型 | 处理方式 |
+|---|---|---|---|
+| `overlay` | `Const.OVERLAY` | `JSONObject` | 实时 overlay |
+| `ex-overlay` | `Const.EX_OVERLAY` | `JSONObject` | 补发 overlay（若 `duration <= 10` 则忽略） |
+| `overlay-recall` | `Const.OVERLAY_RECALL` | `JSONObject` \| `ByteArray` | 按 `timelineId` 撤回 overlay |
+| `predict-timeline` | `Const.PREDICT_TIMELINE` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `lucky-event` | `Const.LUCKY_EVENT` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `predict-result` | `Const.PREDICT_RESULT` | `ByteArray` | `answer1` / `answer2` 数据 |
+| `update-result` | `Const.UPDATE_RESULT` | `ByteArray` | 通过 `UPDATE_DATA_INTERACTIVE` 推送给网页 |
+| `liveviews` | `Const.LIVE_VIEWS` | `JSONObject` | 观看人数 |
+| `data` | `Const.FAN_CLUB` | `ByteArray` | 粉丝俱乐部状态 |
+| `ckst` | `Const.CKST` | `JSONObject` | 服务器询问播放器状态 |
+
+### 7.2. SDK → 服务器（发送）
+
+| 名称 | 何时触发 | Payload |
+|---|---|---|
+| `join-room` | socket 连接成功之后 | `{deviceId, mediaContentId, os, versionSDK, tenantId, isActivelyDisconnectSocket}` |
+| `leave-room` | `leaveRoom()` | 同上 |
+| `receive-message` | Payload 中 `traceLock = true` | 原始 payload（ByteArray UTF-8） |
+| `emit-ack` | 各个 tracking 节点 | 参见 [05 — Tracking](05-tracking-emit-ack.md) |
+| `ckst` | 回应 `ckst` 事件 | `{action: "CHECK_PLAYER_STATUS", sessionId, data: {deviceId, os, mediaContentId, playerStatus}}` |
+
+### 7.3. Socket 连接时的请求头
+
+| Header | 值 |
+|---|---|
+| `X-TENANT-ID` | `tenantId` |
+| `v` | `BuildConfig.BUILD_VERSION`（SDK 构建日期） |
+| `os` | `BuildConfig.DEVICE_TYPE`（`androidmobile` / `androidtv`） |
+| `deviceId` | `Settings.Secure.ANDROID_ID` |
+| `Authorization` | `Bearer <jwt>` 或原始 cookie |
+
+连接选项：仅使用 `websocket`，自动重连，延迟 5000ms（`reconnectionDelay` 与
+`reconnectionDelayMax` 均如此），`randomizationFactor = 0.4`。
+
+---
+
+## 8. HTTP 接口
+
+Base URL = `Const.INTERACTIVE_URL`（由 `EnvInteractive` 推导得出）。
+`BaseRequest` 的拦截器会自动附加 `X-TENANT-ID` 请求头。
+
+| Method | 路径 | Header | 用途 |
+|---|---|---|---|
+| `GET` | `/api/ctc/scenario/v2/vod/{mediaContentId}/{os}` | `Authorization` | 加载 VOD 剧本 |
+| `GET` | `/api/scenario/getActiveOverlay/{mediaContentId}` | — | 获取当前活跃的 overlay（补发） |
+| `POST` | `/api/actions` | `Authorization` | 提交操作 / 回答 |
+| `GET` | `/api/public/vip-status` | `Authorization` | 回答前检查 VIP 状态 |
+| `GET` | `/api/media/interactive-status/{mediaId}` | `x-tenant-id`、`Cookie` | 该内容是否支持互动 |
+
+**`/api/actions` 请求体**（SDK 在网页发送的 JSON 基础上补充）：
+
+```jsonc
+{
+  "type": "INTERACTIVE_ACTION_REPORT",
+  "deviceId": "<android-id>",      // SDK 添加
+  "os": "(os, androidmobile)",     // SDK 添加
+  "data": {
+    "timelineId": "...",
+    "typeTimeline": 1,
+    "betAmount": 0,
+    "allowAnonymous": false,
+    "requiredFanClub": false,
+    "media": "<mediaId>",          // SDK 添加
+    "socket_id": "<socket id>"     // SDK 添加（仅直播时）
+    // ...其余字段由网页模板发送
+  }
+}
+```
+
+---
+
+## 9. JS bridge 协议
+
+接口名称：**`Android`**（`Const.JS_INTERFACE_NAME`）。
+
+### 网页 → SDK
+
+```javascript
+Android.postMessage(JSON.stringify({ key: "LOADED_OVERLAY" }));
+Android.postMessage(JSON.stringify({ type: "INTERACTIVE_ACTION_REPORT", data: {...} }));
+```
+
+| 值 | 常量 | 含义 |
+|---|---|---|
+| `key = LOADED_OVERLAY` | `Const.LOADED_OVERLAY` | 模板已就绪，可接收数据 |
+| `type = INTERACTIVE_SHOW_ANALYTICS` | | overlay 显示 |
+| `type = INTERACTIVE_HIDE_ANALYTICS` | | overlay 关闭 |
+| `type = INTERACTIVE_ACTION_REPORT` | | 回答 / 操作（广告场景下带 `data.action = "CLICK_ADS"`） |
+| `type = INTERACTIVE_OPEN_ANALYTICS` | | 打开竞猜(predict)/幸运抽奖(lucky) 对话框 |
+| `type = INTERACTIVE_CLOSE_ANALYTICS` | | 关闭竞猜(predict)/幸运抽奖(lucky) 对话框 |
+
+### SDK → 网页
+
+```javascript
+window.addEventListener("message", (e) => { /* e.data 包含 key + data */ });
+```
+
+| `key` | 内容 |
+|---|---|
+| `GET_DATA_INTERACTIVE` | overlay 的初始数据 |
+| `UPDATE_DATA_INTERACTIVE` | 实时结果更新 |
+| `UPDATE_CONFIRM` | 回答成功确认 |
+| `UPDATE_COUTER` | 竞猜数据（`answer1`、`answer2`） |
+| `UPDATE_NUMBER_LUCKY` | 幸运抽奖结果 |
+
+---
+
+## 10. 附加到模板 URL 的查询参数
+
+| 参数 | 何时添加 |
+|---|---|
+| `os=<deviceType>` | 若 `src` 中尚无 `&os` |
+| `logged=false` | 未登录 **且** overlay 不允许 `allowAnonymous` |
+| `duration=<剩余秒数>` | 始终附加（根据 `missTime` 计算） |
+| `fanclub=false` | overlay 要求粉丝俱乐部身份但用户尚不属于该俱乐部 |
+| `u=<userId>` | 仅用于 `PredictDialog` / `LuckyDialog` |
+| `timelineId`、`tenantId`、`deviceType`、`os` | 仅用于 VOD overlay（在 `parseTimeLineListForVOD` 中构建） |
+
+---
+
+## 11. 供 app 使用的常量
+
+```kotlin
+Const.VIDEO_LIVE  // = 1
+Const.VIDEO_VOD   // = 2
+```
+
+由 SDK 管理的全局变量（app **不应**直接写入）：`Const.USER_COOKIE`、
+`Const.USER_ID`、`Const.BJ_NAME`、`Const.IS_FAN_CLUB`、`Const.IS_VIP`、`Const.BET_AMOUNT`、
+`Const.INTERACTIVE_URL`、`Const.INTERACTIVE_SOCKET_URL`。
+
+---
+
+## 12. 提示对话框（`SuggestType`）—— 由 SDK 自动显示
+
+| 类型 | 显示内容 | 触发条件 |
+|---|---|---|
+| `SUGGEST_FAN_CLUB` | 提示需加入粉丝俱乐部（附带 `Const.BJ_NAME`） | overlay 的 `requiredFanClub` |
+| `SUGGEST_BET` | "您是否同意使用 N 个 OnG 来回答？" | `betAmount > 0` 且非 VIP |
+| `SUGGEST_ANSWER_REJECT` | 来自 API 的 `description`，默认 "回答未成功！" | API 返回 `success = false` |
+| `SUGGEST_ANSWER_PAYMENT_REJECT` | "请充值 OnG！" | 错误码 `PM402` |
+| `SUGGEST_PREDICT_END` | "竞猜已结束！" | 竞猜事件 `END` |
+| `SUGGEST_LUCKY_END` | "活动已结束！" | 幸运抽奖结束 |
+| `SUGGEST_ANSWER_SUCCESS`、`SUGGEST_ERROR_OCCUR`、`SUGGEST_LOGIN` | 已定义，当前流程中尚未使用 | |
+
+---
+
+[← 工作流程](03-luong-hoat-dong.md) · [返回目录](README.md) · [下一篇：Tracking emit-ack →](05-tracking-emit-ack.md)

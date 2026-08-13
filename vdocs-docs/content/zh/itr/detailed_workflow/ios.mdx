@@ -1,0 +1,459 @@
+# 03 — 详细工作流程
+
+[← 返回目录](README.md)
+
+本文档描述 iOS SDK 的**每一个业务流程**，并附有时序图与分支条件，与当前源代码
+（`InteractiveControllerView.swift`、`OverlayManagementImpl.swift`、
+`PredictManagementImpl.swift`、`SocketIOManagementImpl.swift`）保持一致。
+
+## 流程列表
+
+1. [初始化与配置](#1-初始化与配置)
+2. [登录 / 登出](#2-登录--登出)
+3. [进入 LIVE 房间](#3-进入-live-房间)
+4. [接收并路由 overlay（LIVE）](#4-接收并路由-overlay-live)
+5. [渲染小游戏 overlay](#5-渲染小游戏-overlay)
+6. [回答小游戏问题（登录 → fanclub → VIP/下注）](#6-回答小游戏问题)
+7. [Predict — 竞猜（`typeTimeline = 3`）](#7-predict--竞猜-typetimeline--3)
+8. [Lucky — 幸运数字（`typeTimeline = 5`）](#8-lucky--幸运数字-typetimeline--5)
+9. [撤回 overlay — overlay-recall](#9-撤回-overlay--overlay-recall)
+10. [辅助事件：liveviews、fanclub、ckst、update-result](#10-辅助事件)
+11. [VOD 流程](#11-vod-流程)
+12. [断线与恢复](#12-断线与恢复)
+13. [释放资源](#13-释放资源)
+
+---
+
+## 1. 初始化与配置
+
+```mermaid
+sequenceDiagram
+    participant APP as App
+    participant SET as InteractiveSetting
+    participant ICV as InteractiveControllerView
+    participant SIO as SocketIOManagementImpl
+    participant OMI as OverlayManagementImpl
+
+    APP->>SET: setEnableProdEnv(env) + setXTenantId(tenant)
+    Note over SET: 写入 UserDefaults KEY_ENABLE_PROD_ENV, KEY_X_TENANT_ID
+    APP->>ICV: InteractiveControllerView()
+    ICV->>SIO: SocketIOManagementImpl()
+    ICV->>OMI: OverlayManagementImpl()
+    APP->>ICV: setup*Delegate(...)
+    APP->>ICV: initOverlay(uiView, predictView)
+    ICV->>OMI: initialization(overlayView: UIOverlay(overlay: uiView))
+    ICV->>ICV: 注册 orientationDidChange，创建 PredictManagementImpl
+    Note over ICV: 尚未打开 socket，尚未调用 API
+```
+
+完成此步骤后，SDK **已就绪**：已知晓环境、租户，并有两个 view 用于渲染——但尚未关联任何内容。
+
+---
+
+## 2. 登录 / 登出
+
+```mermaid
+flowchart TD
+    A["initAuthenToken(token, userId, bjName)"] --> B["保存 authenToken, userId, bjName"]
+    B --> C{"socket 是否正在连接<br/>且有 mediaContentId？"}
+    C -->|"否"| D["结束——token 用于下一次 joinRoom"]
+    C -->|"是"| E["disconnection()"]
+    E --> F["joinRoom(mediaId, type: 1) —— 重新进入房间<br/>使 socket 携带新 token"]
+```
+
+含义：
+
+- **在观看 Live 过程中登录** → SDK 会自动断开并重新进入房间；正在显示的 overlay 会被清理。
+- **登出** = `initAuthenToken("", "", "")`。
+- Token 会**原样**放入 socket 的 `Authorization` 头；对于 REST，若为 JWT（以 `"ey"` 开头）
+  则会加上 `Bearer ` 前缀。
+
+---
+
+## 3. 进入 LIVE 房间
+
+```mermaid
+sequenceDiagram
+    participant APP as App
+    participant ICV as InteractiveControllerView
+    participant SIO as SocketIOManagementImpl
+    participant WS as Socket.IO server
+
+    APP->>ICV: joinRoom(mediaId, type: 1)
+    ICV->>ICV: 若 media 不同 → leaveRoom() 离开旧房间
+    ICV->>SIO: 若正在连接 → disconnection()
+    ICV->>ICV: removeAllView(); mediaContentId = mediaId
+    ICV->>ICV: handleEventsSocket() —— 在 connect 之前先绑定回调
+    ICV->>SIO: connectSocket() → connection(url, authenToken)
+    SIO->>SIO: buildSocket() —— 校验 tenantId 与 env（不能为空）
+    Note over SIO: headers x-tenant-id, v, os=iphone, deviceId, Authorization<br/>forceWebsockets, reconnectWait 5, randomization 0.4
+    SIO->>SIO: addEvents()（注册处理器）
+    SIO->>WS: socket.connect()
+    WS-->>SIO: clientEvent .connect
+    SIO-->>ICV: callback CONNECTED
+    ICV->>SIO: joinRoom(JoinRoomData(mediaContentId))
+    SIO->>WS: emit("join-room", {deviceId, mediaContentId, os, tenantId, versionSDK})
+```
+
+需要记住的要点：
+
+- `emit("join-room")` **只有在 socket 连接成功之后**才会发生（在 `SocketEvents.CONNECTED`
+  分支中），而不是在调用 `joinRoom()` 时立即触发。
+- `handleEventsSocket()` 在 `connectSocket()` **之前**被调用，以避免错过 `CONNECTED` 事件。
+- 若 `KEY_X_TENANT_ID` 为空，`buildSocket()` 将**停止**；若 env 或 tenant 为空，
+  `connectSocket()` 将停止。
+
+---
+
+## 4. 接收并路由 overlay（LIVE）
+
+### 4.1. Socket 前置过滤层（`SocketIOManagementImpl`）
+
+```mermaid
+flowchart TD
+    A["on('overlay') 或 on('ex-overlay')"] --> B["senDataToServer(data)"]
+    B --> C{"payload 中 traceLock == true？"}
+    C -->|"是"| E["emit('receive-message', 二进制 ArrayBuffer)"]
+    C -->|"否"| F
+    E --> F["trackedOverlayPayload(): 从 _trackingId, _emitTimestamp<br/>创建 OverlaySocketPayload"]
+    F --> G{"是否有 _trackingId？"}
+    G -->|"有"| H["sendReceivedAck() → emit-ack 阶段 'received'"]
+    G -->|"没有"| I["保留原始 payload"]
+    H --> J["callback(OVERLAY / EX_OVERLAY, payload)"]
+    I --> J
+```
+
+### 4.2. `InteractiveControllerView` 层（`startShowLiveOverlayWithDataReceived`）
+
+```mermaid
+flowchart TD
+    A["callback OVERLAY / EX_OVERLAY"] --> B["从 OverlaySocketPayload 拆出 rawData + trackingSession"]
+    B --> C{"decode JSON → OverlayLive 成功？"}
+    C -->|"否"| X1["记录错误日志，停止"]
+    C -->|"是"| T{"trackingSession == nil<br/>但有 trackingId？"}
+    T -->|"是"| T1["创建 OverlayTrackingSession + sendReceivedAck()"]
+    T -->|"否"| D
+    T1 --> D{"typeTimeline"}
+    D -->|"3 或 5"| P["Predict/Lucky：<br/>设置按钮图片，添加 PredictManagementImpl，<br/>根据 ACTIVE/INACTIVE 状态更新按钮状态，<br/>setUpDataForTemplatePredict()"]
+    D -->|"其余"| M["小游戏：<br/>DispatchQueue.main → showInteractive()"]
+```
+
+在 `showInteractive()` 内部：
+
+```mermaid
+flowchart TD
+    A["showInteractive(overlayLive)"] --> B["getInfoCompensatory(mediaId, timelineID)"]
+    B --> C{"isView == true？<br/>（尚未交互 / 已超出 frequencyLimit）"}
+    C -->|"false"| X1["跳过——最近已交互过"]
+    C -->|"true"| D["MINI_GAMES = SHOW；若 predict 正在显示 → 隐藏 predict 按钮"]
+    D --> E{"targets 包含 'iphone' 或 'all'？"}
+    E -->|"否"| X2["跳过（target_mismatch）"]
+    E -->|"是"| F["构造 Compensatory（unlockedTime = now + frequencyLimit + duration）"]
+    F --> G["拼接 URL：&fanclub=false（onlivev2 且尚非 fanclub），<br/>&logged=false/true"]
+    G --> H["创建 Overlay 并关联 trackingSession"]
+    H --> I["overlayManagement.showOverlayLive(...)"]
+```
+
+> `getInfoCompensatory` 按 `mediaId` 读取 `UserDefaults(suiteName: INTERACTIVE_<userId|DEFAULT>)`：
+> 若该时间点已交互过且仍在 `frequencyLimit` 内，则返回 `false`（不再显示）。
+
+---
+
+## 5. 渲染小游戏 overlay
+
+```mermaid
+flowchart TD
+    A["showOverlayLive(overlay, ...)"] --> B["setupAlignment() + setupInteractiveView()"]
+    B --> C{"countdown > 0？"}
+    C -->|"是"| D["timeDiff = now - ts(ms)<br/>重写/追加 &duration = countdown - timeDiff"]
+    D --> D2{"timeDiff < 0？"}
+    D2 -->|"是 → 已超时"| X1["return（不显示）"]
+    D2 -->|"否"| E
+    C -->|"否"| E{"pos.alignment == nil 或 uiOvelay == nil？"}
+    E -->|"是"| X2["sendRenderedAck(cancelled, cancelReason=invalid_overlay_state)"]
+    E -->|"否"| F["cancelActiveOverlay('replaced_by_new_overlay'); activeOverlay = overlay"]
+    F --> G["alignment → location 0..8"]
+    G --> H["interactiveViewDelegate.locationLayoutViewRoot(location, width, height)"]
+    H --> I["uiOvelay.addIframeOverlay(url) → 透明的 WKWebView"]
+    I --> J["beginRenderTracking（超时 5 秒）"]
+    J --> K["configurationWebView() —— 绑定 'IOS' 处理器"]
+```
+
+**几何约束**：`location`（0..8）由 `OverlayPosition.pos.x`/`pos.y`（每个轴 0/1/2）推导，
+映射到 9 个位置（`LeftTop`…`RightBottom`）。尺寸 `size.w/size.h` 是相对于容器的**比例**。
+实际位置的排布由应用在 `locationLayoutViewRoot(location:width:height:)` 中处理；WebView
+会被放置在覆盖根容器之上。
+
+**同一时刻只有一个小游戏 overlay**：`showOverlayLive` 在添加新 overlay 之前会先调用
+`cancelActiveOverlay` 和 `uiOvelay?.onStop()`。
+
+---
+
+## 6. 回答小游戏问题
+
+当 WebView 发送 `IOS.postMessage({type: INTERACTIVE_ACTION_REPORT, data})` 时触发。
+分为 **Live** 分支（`handleWebViewCallBack`）和 **VOD** 分支（`handleWebViewCallBackVod`）。
+
+```mermaid
+flowchart TD
+    A["INTERACTIVE_ACTION_REPORT"] --> B{"overlay.allowAnonymous？"}
+    B -->|"true"| N{"是否有网络？"}
+    N -->|"有"| SEND["sendLogIniteractive() + saveInfoCompensatory()"]
+    N -->|"没有"| NET["signalAnswerNetworkFailure() + 弹窗 '请检查网络'"]
+    B -->|"false"| C{"authenToken 为空？"}
+    C -->|"为空"| LOGIN["interactiveLoginDelegate.showInteractiveLogin() → 停止"]
+    C -->|"有 token"| D{"requiredFanClub？"}
+    D -->|"需要且尚非 fanclub"| FC["显示 FanClubView '您必须是 <bjName> 的 FanClub'"]
+    D -->|"满足"| E{"typeTimeline == 2 且 betAmount > 0？"}
+    E -->|"否"| SEND
+    E -->|"是"| VIP["telcoRepository.isMemberVip(token)"]
+    VIP -->|"VIP == true"| FREE["didTapConfirmButton() → 直接发送（免费）"]
+    VIP -->|"VIP == false"| DED["DialogDeductionView '使用 N OnG 来回答？'"]
+    DED -->|"同意"| FREE
+```
+
+### 6.1. `sendLogIniteractive` —— 调用 API `/api/actions`
+
+```mermaid
+sequenceDiagram
+    participant OMI as OverlayManagementImpl
+    participant TRK as OverlayTrackingSession
+    participant API as POST /api/actions
+    participant WV as WKWebView
+
+    OMI->>OMI: 若 action == CLICK_ADS → 用 Safari 打开 urlLinkAds，不调用 API
+    OMI->>OMI: data += media, socket_id, versionSDK; params += deviceId, type, os=iphone
+    OMI->>TRK: sendAnswerAttempt() → emit-ack 阶段 'answer'
+    OMI->>API: POST（若 token 以 'ey' 开头则加 Authorization Bearer，X-TENANT-ID）
+    alt success == true
+        API-->>OMI: {success: true, result}
+        OMI->>TRK: sendAnswerSucceeded() → 阶段 'answer-succeeded'
+        Note over OMI,WV: isReturnData 分支（下注/VIP）：postMessage UPDATE_CONFIRM
+        OMI->>OMI: saveInfoCompensatory()
+    else success == false / 错误
+        API-->>OMI: {success: false, result{message, description}} 或网络错误
+        OMI->>TRK: sendAnswerFailed(reason, step) → 阶段 'answer-failed'
+        OMI->>OMI: 根据 result.message 调用 showDialogDedution
+    end
+```
+
+错误码 → `failureReason` 的映射（`OverlayTrackingFailure.answerFailureReason`）：
+
+| `result.message` | `failureReason` | `failureStep` |
+|---|---|---|
+| `EX400` | `api_EX400` | `api_response` |
+| `TL404` | `api_TL404` | `api_response` |
+| `PM402` | `api_PM402` | `api_response` |
+| 其他，`success == false` | `api_false` | `api_response` |
+| 网络错误 | `network_error` | `network` |
+| body 无法解析 | `unknown_response` | `unknown_response` |
+
+提示对话框（`showDialogDedution`）根据 `result.message`：
+
+| `message` | 内容 |
+|---|---|
+| `PM402` | "请充值 OnG" → 触发 `showSubscibeView` / `NEED_PAY` |
+| `EX400` | "您已回答过此问题" |
+| `answerSuccess` | "您已成功回答此问题" |
+| 其他 | "回答问题失败" |
+
+---
+
+## 7. Predict — 竞猜（`typeTimeline = 3`）
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant ICV as InteractiveControllerView
+    participant PMI as PredictManagementImpl
+    participant DLG as DialogLuckyNumberView（共用）
+    participant API as /api/actions
+
+    WS-->>ICV: overlay (typeTimeline = 3)
+    ICV->>PMI: 设置按钮图片（来自 payload 的 idle/power，回退到 CDN_PREDICT_*）
+    ICV->>PMI: addSubview 按钮；根据 status 更新状态
+    ICV->>PMI: setUpDataForTemplatePredict() → setUrlWebView + setDataForPredict
+
+    Note over WS,ICV: 实时事件 'predict-timeline'（DataButtonPredict）
+    WS-->>ICV: {type: ACTIVE} → 显示按钮, PREDICT = SHOW
+    WS-->>ICV: {type: INACTIVE} → 隐藏按钮，移除对话框, PREDICT = HIDE_CMS
+    WS-->>ICV: {type: POWER} → 按钮切换为 power 图片，透明度 1 → 5 秒后 0.5
+    WS-->>ICV: {type: END} → 清除结果缓存，隐藏按钮，hideLayoutViewPredictRoot, PREDICT = END
+
+    PMI->>PMI: 用户点击按钮（didButtonClick）
+    alt authenToken 为空
+        PMI->>PMI: DialogConfirmView → showInteractiveLogin()
+    else 有 token
+        PMI->>DLG: embededInteractiveContentView() → 加载 URL，绑定 'IOS' 处理器
+        DLG->>PMI: INTERACTIVE_ACTION_REPORT → 回答流程（登录/fanclub/VIP）
+        PMI->>API: POST /api/actions (isReturnData = true)
+        API-->>PMI: 成功 → UPDATE_CONFIRM；失败 → showDialogDedution
+    end
+
+    WS-->>ICV: 'predict-result' → answer1/answer2 → UPDATE_COUTER（postMessage）
+```
+
+控制按钮状态的标志（保存于 `UserDefaults`，常量 `TypeInteractive`）：
+
+| 键 | 含义 |
+|---|---|
+| `MINI_GAMES` | 是否有小游戏正在占用屏幕（`SHOW`/`HIDE`） |
+| `PREDICT` | predict 按钮的状态（`SHOW`/`HIDE`/`HIDE_CMS`/`END`） |
+| `POPUP_PREDICT` | predict 对话框是否打开（`SHOW`/`HIDE`） |
+| `INTERACTIVE_TYPE_TIMELINE` | `3` 为 predict，`5` 为 lucky，`0` 表示没有 |
+
+按钮图片：predict 使用**动态 GIF**（`CDN_PREDICT_IDLE/POWER`），lucky 使用**静态 PNG**
+（`CDN_LUCKY_IDLE/POWER`）；通过 `.gif` 后缀区分。
+
+> ⚠️ 对于租户 `vtvlive`、`onlivetv`、`VTVprime`，整个 `predict-timeline` / `lucky-event`
+> 流程都会**被跳过**（在 `receiveDataActionButtonPredict` 中提前 return）。
+
+---
+
+## 8. Lucky — 幸运数字（`typeTimeline = 5`）
+
+结构与 Predict 相似（共用 `DialogLuckyNumberView`），区别在于：
+
+- URL 会额外拼接 `&u=<userId>`（仅 lucky）。
+- 默认图片为 `CDN_LUCKY_IDLE/POWER`（PNG）。
+- API 返回的结果通过 **`UPDATE_NUMBER_LUCKY`** 推送到 web 端：
+
+```mermaid
+sequenceDiagram
+    participant DLG as DialogLuckyNumberView
+    participant PMI as PredictManagementImpl
+    participant API as /api/actions
+    DLG->>PMI: INTERACTIVE_ACTION_REPORT
+    PMI->>PMI: 登录 → fanclub → VIP/下注
+    PMI->>API: POST (isReturnData = true)
+    API-->>PMI: {success: true, result: {data: <数字>}}
+    PMI->>DLG: postMessageWhenClickPlayLucky() → window.postMessage(UPDATE_NUMBER_LUCKY)
+```
+
+---
+
+## 9. 撤回 overlay — overlay-recall
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant SIO as SocketIOManagementImpl
+    participant ICV as InteractiveControllerView
+    participant OMI as OverlayManagementImpl
+
+    WS-->>SIO: on("overlay-recall", data)  %% Data / dict / NSDictionary
+    SIO-->>ICV: callback OVERLAY_RECALL
+    ICV->>ICV: parseRecallTimelineId()（RecallData.timelineId）
+    ICV->>OMI: recallOverlay(timelineId)
+    OMI->>OMI: 若 activeOverlay.id == timelineId：<br/>cancelActiveOverlay('recalled'), onStop(),<br/>shrinkScreenInteractive(show:false), hideLayoutViewRoot(), showPlayerControl()
+```
+
+用于编辑人员在全系统范围内下架某个正在播放的 overlay。只有当 `timelineId` 与当前显示的
+overlay 匹配时才会被移除。
+
+---
+
+## 10. 辅助事件
+
+| Socket 事件 | 处理方式 |
+|---|---|
+| `liveviews` | 解析 `LiveViewDto.count`，调用 `showLiveView(liveView: 230 + count)`（**再加上 230**） |
+| `data`（fanclub） | 解码 `FanClub`；若 `mediaId` 与当前观看 media 的 `_` 前面部分匹配且 `isFanClub` → 设置 `KEY_FAN_CLUB = true`，否则为 `false` |
+| `ckst` | 解码 `CkstResponse`；从 delegate 获取 `getPlayerState()` → 重新 emit `ckst`，带 `CkstData(action: "CHECK_PLAYER_STATUS", sessionId, data: Ckst{deviceId, os, mediaContentId, playerStatus, tenantId})` |
+| `update-result` | `sendMessageResultinteractive()` → `window.postMessage(UPDATE_DATA_INTERACTIVE)` |
+| `predict-result` | 更新 `answer1`/`answer2`，缓存到 `DATA_RESULT_PREDICT`，推送 `UPDATE_COUTER` |
+| `branching` | 解码 `Branching`；根据 `action`（`START/PLAY_MINIGAME/END_VIDEO_BRANCHING`）调用 `BranchingSocketIODelegate`（预加载 / 显示 / 结束分支视频） |
+
+> `liveViews + 230` 是当前代码中的既定行为（`showCCU`）。若需要原始数字，应用需自行减去。
+>
+> 在向上 emit 的 `ckst` payload 中，`data` 字段被映射为 **JSON key `"os"`**（依据
+> `CkstData` 的 `CodingKeys`）——与后端对照时需要留意这一点。
+
+---
+
+## 11. VOD 流程
+
+```mermaid
+sequenceDiagram
+    participant APP as App
+    participant ICV as InteractiveControllerView
+    participant API as GET /api/ctc/scenario/v2/vod/{mediaId}/{os}
+    participant OMI as OverlayManagementImpl
+
+    APP->>ICV: joinRoom(mediaId, type: 2)
+    ICV->>ICV: 若正在连接 → disconnection(); removeAllView()
+    ICV->>API: callApiScenarioForVod(header X-TENANT-ID)
+    API-->>ICV: VODOverlayData {data.timelines[]}
+    ICV->>ICV: convertVodInteractive()：筛选 showStatus == ACTIVE，<br/>按 timeShow（秒）排序
+
+    loop 每秒（由应用自行注入）
+        APP->>ICV: getTimeVideo(time: 秒)
+        ICV->>ICV: 查找 timeShow == Int(time) 的 timeline
+        alt 恰好匹配该秒
+            ICV->>ICV: showInteractiveVod()：检查 allowAnonymous/token
+            ICV->>ICV: 拼接 URL（timelineId, tenantId, deviceType=IOS）
+            ICV->>OMI: showOverlayVod(overlay, token, mediaId)
+            ICV->>ICV: 从列表中删除该 timeline（不再显示）
+        end
+    end
+```
+
+与 LIVE 的差异：
+
+| | LIVE | VOD |
+|---|---|---|
+| overlay 来源 | Socket.IO 推送 | REST 预先加载整套剧本 |
+| 触发显示 | 实时事件 | 由应用注入的 `getTimeVideo(秒)` |
+| `socketIO` | 已连接 | 已断开（所有 socket 调用都被安全忽略） |
+| action 中的 `socket_id` | 有 | 无 |
+| emit-ack 追踪 | 有 | **无**（`showOverlayVod` 不调用 `beginRenderTracking`） |
+| Predict / Lucky / liveviews / ckst | 有 | 无 |
+| 显示条件 | 完整的 login/fanclub/VIP | 只需 `allowAnonymous` 或有 token |
+
+---
+
+## 12. 断线与恢复
+
+```mermaid
+stateDiagram-v2
+    [*] --> Connected
+    Connected --> Disconnected: clientEvent .disconnect（记录 disconnectedAt）
+    Disconnected --> Connected: 自动重连（reconnectWait 5 秒，randomization 0.4）
+    Connected --> Error: clientEvent .error → callback ERROR（仅记录日志）
+    Disconnected --> Reconnected: clientEvent .reconnect → callback RECONNECT（记录耗时）
+```
+
+- Socket.IO 客户端会自动重连（`.reconnects(true)`，`reconnectWait 5`）。当再次 `.connect`
+  时，`CONNECTED` 回调会执行 → 若存在 `mediaContentId`，将再次 **emit `join-room`**。
+- `isConnected()` 在 `status == .connecting` 或 `reconnects == true` 时也会返回 `true`——
+  应将其理解为"正在/将要连接"，而不仅仅是"已连接"。
+- `disconnection()` 会移除**所有**客户端 + 应用处理器，调用 `disconnect()`，并将
+  `socketManager` 置为 `nil`。
+
+---
+
+## 13. 释放资源
+
+```mermaid
+flowchart TD
+    A["releaseAll()"] --> B{"是否正在连接且有 mediaId？"}
+    B -->|"是"| C["leaveRoom() → emit('leave-room')"]
+    B -->|"否"| D
+    C --> D["移除 delegate：player, predict, login = nil"]
+    D --> E["overlayManagement.killDelegate()"]
+    E --> F["predictManagement.killDelegate()"]
+    F --> G["socketIO.disconnection()"]
+
+    H["removeAllView()"] --> H1["overlayManagement.removeAllView()<br/>cancelActiveOverlay + uiOvelay.onStop()"]
+```
+
+调用 `releaseAll()` 的时机：
+
+- 退出播放器画面（`viewWillDisappear`/`deinit`）时，
+- 用户离开内容时，
+- 在切换到另一个 `mediaId` 之前，**若**不立即调用 `joinRoom()`（因为 `joinRoom` 已自动
+  执行 `removeAllView()` 并处理 socket）。
+
+---
+
+[← 安装与集成](02-cai-dat-va-tich-hop.md) · [返回目录](README.md) · [下一节：API Reference →](04-api-reference.md)

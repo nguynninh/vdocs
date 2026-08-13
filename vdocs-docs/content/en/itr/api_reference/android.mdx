@@ -1,0 +1,349 @@
+# 04 — API Reference
+
+[← Back to table of contents](README.md)
+
+All APIs below belong to the root package `vn.interactive`.
+
+---
+
+## 1. `OverlayManager`
+
+```kotlin
+class OverlayManager(
+    activity: Activity,                              // must be FragmentActivity/AppCompatActivity
+    overlayView: OverlayView,                        // the view in the layout that covers the video area
+    overlayData: OverlayData,                        // environment + tenant configuration
+    overlayEventListener: OverlayEventListener? = null
+) : OnOverlayListener, LifecycleOverlay
+```
+
+### 1.1. Public properties
+
+| Component | Type | Description |
+|---|---|---|
+| `valueTimePlay` | `Int` (read-only) | The latest playback second the app has fed in via `receiveTrackingTime` |
+| `receiveTrackingTime` | `(Int) -> Unit` | **Feeds the playback time (seconds) for VOD streams.** Call it as a function: `overlayManager.receiveTrackingTime(12)` |
+
+### 1.2. Methods
+
+| Function | Description | Notes |
+|---|---|---|
+| `initToken(token: String, userId: String, bjName: String = "")` | Declares/clears the login session | Call before `joinRoom`. To log out: `initToken("", "")`. If currently Live, it will automatically rejoin the room |
+| `joinRoom(mediaId: String, type: Int)` | Starts an interactive session for a piece of content | `type = 1` LIVE, `type = 2` VOD. Automatically calls `cleanUp()` on the previous session |
+| `releaseAll()` | Releases everything: socket, WebView, dialog, tracking | Call in `onDestroy()` or when leaving the content |
+| `fetchInteractiveStatus(mediaId: String, callback: (Boolean) -> Unit)` | Asks the server whether this content is interactive | Network error → returns `false` |
+| `showChartsInteractive(mediaId: String, userId: String, backgroundColorHeader: String? = null)` | Opens the leaderboard (full-screen DialogFragment) | `backgroundColorHeader` is a hex code, e.g. `"#139DED"` |
+| `hideChartsInteractive()` | Closes the leaderboard | |
+| `isDialogCharShowing(): Boolean` | Whether the leaderboard is currently showing | |
+| `addPlayerListener(listener: PlayerChangeListener)` | Supplies player state to the SDK (serves the `ckst` event) | Call **after** `joinRoom` so the listener is also attached to the socket |
+| `sendAction(data: JSONObject)` | *(implements `OnOverlayListener`)* Handles actions coming from the WebView | Called automatically by the SDK, the app does **not** need to call it |
+| `onClickAdsOverlay(url: String)` | *(implements `OnOverlayListener`)* Opens the ad URL in an external browser | Called automatically by the SDK |
+
+> `LifecycleOverlay` is currently an empty interface (the `onResume/onStop/onDestroy` functions have
+> been commented out in the code) — the SDK does **not** hook into the Activity lifecycle on its own,
+> aside from observing LiveData.
+
+---
+
+## 2. `OverlayData` + `OverlayData.Builder`
+
+```kotlin
+val overlayData = OverlayData.Builder()
+    .setEnvironment(EnvInteractive.PROD)   // default PROD
+    .setTenantId("vtvlive")                // default "" — should always be set
+    .setDebug(false)                       // default false
+    .build()
+```
+
+| Property | Type | Default | Effect |
+|---|---|---|---|
+| `envInteractive` | `EnvInteractive` | `PROD` | Socket URL, REST URL, leaderboard URL |
+| `tenantId` | `String` | `""` | Header `X-TENANT-ID` (socket + REST), leaderboard query, login rules of the `vtvlive` tenant |
+| `debug` | `Boolean` | `false` | Reserved flag, currently does not change logging behavior (logging depends on the SDK's own `BuildConfig.DEBUG`) |
+| `mediaId`, `userId` | `String?` | `null` | Assigned by the SDK when opening the leaderboard |
+
+```kotlin
+enum class EnvInteractive { DEV, STG, PROD }
+```
+
+---
+
+## 3. `OverlayEventListener` / `DefaultOverlayEventListener`
+
+```kotlin
+interface OverlayEventListener {
+    fun onHandleMessage(msg: EventOverlay)
+    fun onHandleLiveViews(liveViews: Int)
+    fun onShowITR(show: Boolean)
+    fun onFocusOverlay(
+        takeControl: Boolean = false,
+        webViewError: Boolean = false,
+        overlayConfig: OverlayConfig? = null
+    )
+}
+
+interface DefaultOverlayEventListener : OverlayEventListener   // alias, adds no functions
+```
+
+| Callback | When it is called | What the app should do |
+|---|---|---|
+| `onHandleMessage(NEED_LOGIN)` | The user interacts with an overlay that requires login | Open the login screen, then call `initToken()` |
+| `onHandleMessage(NEED_PAY_ONG)` | The server returns `PM402` (not enough OnG) | Open the top-up screen |
+| `onHandleLiveViews(n)` | Socket `liveviews` | Display the viewer count (**already includes +230**) |
+| `onShowITR(true)` | The overlay opens a stats/dialog panel | Hide part of the app's own UI if needed |
+| `onFocusOverlay(takeControl = true, …)` | The WebView finished loading (`onPageFinished`) | Adjust the layout if the overlay is a popup |
+| `onFocusOverlay(webViewError = true, …)` | Page load / HTTP / SSL error | Log it, optionally notify the user |
+| `onFocusOverlay(takeControl = false, …)` | The overlay is removed (`INTERACTIVE_HIDE_ANALYTICS`) | Restore the layout |
+
+```kotlin
+enum class EventOverlay {
+    NEED_LOGIN,                  // emitted by the SDK
+    NEED_PAY_ONG,                // emitted by the SDK
+    TOURNAMENT_BET,              // declared, not yet used
+    SUCCESSFUL_REPLY_SUBMITTED,  // declared, not yet used
+    FAILED_REPLY_SUBMITTED,      // declared, not yet used
+    TAKE_FOCUS                   // declared, not yet used
+}
+```
+
+---
+
+## 4. `PlayerChangeListener`
+
+```kotlin
+interface PlayerChangeListener {
+    suspend fun currentPosition(): Long
+    fun onPlayerStateChanged(): Pair<Boolean, Int>   // (isPlaying, playbackState)
+}
+```
+
+`playbackState` follows the ExoPlayer convention: `1 = IDLE`, `2 = BUFFERING`, `3 = READY`, `4 = ENDED`.
+The SDK maps: `1 → "idle"`, `3 → isPlaying ? "playing" : "paused"`, everything else → `""`.
+
+---
+
+## 5. `OverlayView`
+
+A custom `ConstraintLayout` that acts as the **container** for every overlay.
+
+| Public component | Description |
+|---|---|
+| `overlayList: HashMap<OverlayWebView, OverlayConfig>` | The WebViews currently attached |
+| `addListener(eventListener, overlayListener)` | Called automatically by the SDK inside `OverlayManager.init` |
+| `getCurrentOrientation(): Int` | The current screen orientation |
+| `getLastOverlay(): OverlayWebView?` | The most recently attached WebView |
+| `getOverlayConfig(): OverlayConfig?` | Config of the popup-style overlay (if any) |
+| `removeWebView(view)`, `removeWebViews()`, `clearViews()` | Removes views and destroys the corresponding tracking |
+
+The app only needs to declare this view in XML; the remaining functions are used internally by the SDK.
+
+---
+
+## 6. Main models
+
+### `Overlay` — describes an overlay
+
+| Field | Type | Meaning |
+|---|---|---|
+| `src` | `String` | Web template URL |
+| `metadata` | `Metadata(pos, size)` | Position + size as ratios |
+| `duration` | `Long` | Display duration (seconds) |
+| `targets` | `String?` | Applicable platform (`all`, `androidmobile`, `androidtv`…) |
+| `timelineId` | `String?` | Scenario milestone identifier (dedup key, prevents re-answering) |
+| `mediaContentId` | `String?` | The content it applies to |
+| `typeTimeline` | `Int?` | 0/1/2 mini game, 3 predict, 4 headline, 5 lucky |
+| `isPopupOverlay` | `Boolean` | `true` → uses popup constraints based on 9 positions; `false` → inline top/bottom |
+| `allowAnonymous` | `Boolean` | Allows non-logged-in users to view/interact |
+| `requiredFanClub` | `Boolean?` | Requires fan club membership |
+| `startTimeShowOverlay` | `Long?` | (VOD) the second at which it starts showing |
+| `requiredFocus`, `frequencyLimit`, `ts`, `sendTime`, `serverTime` | | Auxiliary fields from the server |
+
+### `Metadata` / `OverlayPosition` / `OverlaySize`
+
+```kotlin
+data class Metadata(val pos: OverlayPosition, val size: OverlaySize)
+data class OverlayPosition(val x: Int, val y: Int, var alignment: OverlayAlignment? = null)
+data class OverlaySize(val w: Float, val h: Float)   // 0..1 — ratio relative to OverlayView
+```
+
+`x`: `0` left, `1` center, `2` right. `y`: `0` top, `1` middle, `2` bottom →
+`OverlayAlignment.{LeftTop, LeftCenter, LeftBottom, CenterTop, Center, CenterBottom, RightTop, RightCenter, RightBottom}`.
+
+### `OverlayConfig` — info passed along with the `onFocusOverlay` callback
+
+```kotlin
+data class OverlayConfig(
+    val popupOverlay: Boolean = false,  // true if this is an inline top/bottom strip overlay
+    val alignment: String? = null,      // "top" | "bottom" | "left" | "right"
+    val ratio: Float = 0F               // height ratio relative to OverlayView
+)
+```
+
+### `ActionReportResponse`
+
+```kotlin
+data class ActionReportResponse(
+    var success: Boolean = false,
+    var result: ActionResponseMessage = ActionResponseMessage(),  // message, status, description, data
+    var failureReason: String? = null,
+    var failureStep: String? = null,
+    var error: String? = null,
+)
+```
+
+---
+
+## 7. Socket.IO events
+
+### 7.1. Server → SDK (listened to)
+
+| Event name | Constant | Data type | Handling |
+|---|---|---|---|
+| `overlay` | `Const.OVERLAY` | `JSONObject` | Real-time overlay |
+| `ex-overlay` | `Const.EX_OVERLAY` | `JSONObject` | Compensatory overlay (skipped if `duration <= 10`) |
+| `overlay-recall` | `Const.OVERLAY_RECALL` | `JSONObject` \| `ByteArray` | Recalls an overlay by `timelineId` |
+| `predict-timeline` | `Const.PREDICT_TIMELINE` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `lucky-event` | `Const.LUCKY_EVENT` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `predict-result` | `Const.PREDICT_RESULT` | `ByteArray` | `answer1` / `answer2` figures |
+| `update-result` | `Const.UPDATE_RESULT` | `ByteArray` | Pushed down to the web via `UPDATE_DATA_INTERACTIVE` |
+| `liveviews` | `Const.LIVE_VIEWS` | `JSONObject` | Viewer count |
+| `data` | `Const.FAN_CLUB` | `ByteArray` | Fan club status |
+| `ckst` | `Const.CKST` | `JSONObject` | Server asks for player status |
+
+### 7.2. SDK → Server (emitted)
+
+| Name | When | Payload |
+|---|---|---|
+| `join-room` | After the socket connects | `{deviceId, mediaContentId, os, versionSDK, tenantId, isActivelyDisconnectSocket}` |
+| `leave-room` | `leaveRoom()` | Same as above |
+| `receive-message` | Payload has `traceLock = true` | The original payload (ByteArray UTF-8) |
+| `emit-ack` | Tracking milestones | See [05 — Tracking](05-tracking-emit-ack.md) |
+| `ckst` | Reply to the `ckst` event | `{action: "CHECK_PLAYER_STATUS", sessionId, data: {deviceId, os, mediaContentId, playerStatus}}` |
+
+### 7.3. Headers when connecting the socket
+
+| Header | Value |
+|---|---|
+| `X-TENANT-ID` | `tenantId` |
+| `v` | `BuildConfig.BUILD_VERSION` (SDK build date) |
+| `os` | `BuildConfig.DEVICE_TYPE` (`androidmobile` / `androidtv`) |
+| `deviceId` | `Settings.Secure.ANDROID_ID` |
+| `Authorization` | `Bearer <jwt>` or the raw cookie |
+
+Connection options: `websocket` transport only, auto-reconnect, 5000ms delay (both `reconnectionDelay` and
+`reconnectionDelayMax`), `randomizationFactor = 0.4`.
+
+---
+
+## 8. HTTP Endpoints
+
+Base URL = `Const.INTERACTIVE_URL` (derived from `EnvInteractive`).
+`BaseRequest`'s interceptor automatically adds the `X-TENANT-ID` header.
+
+| Method | Path | Header | Used for |
+|---|---|---|---|
+| `GET` | `/api/ctc/scenario/v2/vod/{mediaContentId}/{os}` | `Authorization` | Loads the VOD scenario |
+| `GET` | `/api/scenario/getActiveOverlay/{mediaContentId}` | — | Gets the currently active (compensatory) overlay |
+| `POST` | `/api/actions` | `Authorization` | Sends an action / answer |
+| `GET` | `/api/public/vip-status` | `Authorization` | Checks VIP status before answering |
+| `GET` | `/api/media/interactive-status/{mediaId}` | `x-tenant-id`, `Cookie` | Whether content is interactive |
+
+**Request body for `/api/actions`** (the SDK adds these to the JSON sent by the web):
+
+```jsonc
+{
+  "type": "INTERACTIVE_ACTION_REPORT",
+  "deviceId": "<android-id>",      // added by SDK
+  "os": "(os, androidmobile)",     // added by SDK
+  "data": {
+    "timelineId": "...",
+    "typeTimeline": 1,
+    "betAmount": 0,
+    "allowAnonymous": false,
+    "requiredFanClub": false,
+    "media": "<mediaId>",          // added by SDK
+    "socket_id": "<socket id>"     // added by SDK (Live only)
+    // ...other fields sent by the web template
+  }
+}
+```
+
+---
+
+## 9. JS bridge protocol
+
+Interface name: **`Android`** (`Const.JS_INTERFACE_NAME`).
+
+### Web → SDK
+
+```javascript
+Android.postMessage(JSON.stringify({ key: "LOADED_OVERLAY" }));
+Android.postMessage(JSON.stringify({ type: "INTERACTIVE_ACTION_REPORT", data: {...} }));
+```
+
+| Value | Constant | Meaning |
+|---|---|---|
+| `key = LOADED_OVERLAY` | `Const.LOADED_OVERLAY` | The template is ready to receive data |
+| `type = INTERACTIVE_SHOW_ANALYTICS` | | The overlay is displayed |
+| `type = INTERACTIVE_HIDE_ANALYTICS` | | The overlay is closed |
+| `type = INTERACTIVE_ACTION_REPORT` | | Reply / action (`data.action = "CLICK_ADS"` for ads) |
+| `type = INTERACTIVE_OPEN_ANALYTICS` | | Opens the predict/lucky dialog |
+| `type = INTERACTIVE_CLOSE_ANALYTICS` | | Closes the predict/lucky dialog |
+
+### SDK → Web
+
+```javascript
+window.addEventListener("message", (e) => { /* e.data contains key + data */ });
+```
+
+| `key` | Content |
+|---|---|
+| `GET_DATA_INTERACTIVE` | Initial overlay data |
+| `UPDATE_DATA_INTERACTIVE` | Real-time result update |
+| `UPDATE_CONFIRM` | Confirms a successful answer |
+| `UPDATE_COUTER` | Predict figures (`answer1`, `answer2`) |
+| `UPDATE_NUMBER_LUCKY` | Lucky result |
+
+---
+
+## 10. Query parameters attached to the template URL
+
+| Parameter | When it is added |
+|---|---|
+| `os=<deviceType>` | If `src` doesn't already have `&os` |
+| `logged=false` | Not logged in **and** the overlay is not `allowAnonymous` |
+| `duration=<seconds remaining>` | Always (computed from `missTime`) |
+| `fanclub=false` | The overlay requires fan club but the user isn't a fan club member |
+| `u=<userId>` | Only for `PredictDialog` / `LuckyDialog` |
+| `timelineId`, `tenantId`, `deviceType`, `os` | Only for VOD overlays (built in `parseTimeLineListForVOD`) |
+
+---
+
+## 11. Constants useful to the app
+
+```kotlin
+Const.VIDEO_LIVE  // = 1
+Const.VIDEO_VOD   // = 2
+```
+
+Global variables managed by the SDK (the app **should not** write to them directly): `Const.USER_COOKIE`,
+`Const.USER_ID`, `Const.BJ_NAME`, `Const.IS_FAN_CLUB`, `Const.IS_VIP`, `Const.BET_AMOUNT`,
+`Const.INTERACTIVE_URL`, `Const.INTERACTIVE_SOCKET_URL`.
+
+---
+
+## 12. Suggestion dialogs (`SuggestType`) — displayed automatically by the SDK
+
+| Type | Content displayed | Triggered by |
+|---|---|---|
+| `SUGGEST_FAN_CLUB` | Warning that fan club membership is required (includes `Const.BJ_NAME`) | Overlay `requiredFanClub` |
+| `SUGGEST_BET` | "Do you agree to use N OnG to answer?" | `betAmount > 0` and not VIP |
+| `SUGGEST_ANSWER_REJECT` | `description` from the API, defaults to "Reply failed!" | API returns `success = false` |
+| `SUGGEST_ANSWER_PAYMENT_REJECT` | "Please top up OnG!" | Code `PM402` |
+| `SUGGEST_PREDICT_END` | "Prediction has ended!" | Predict `END` event |
+| `SUGGEST_LUCKY_END` | "Event has ended!" | Lucky event ended |
+| `SUGGEST_ANSWER_SUCCESS`, `SUGGEST_ERROR_OCCUR`, `SUGGEST_LOGIN` | Defined, not yet used in the current flow | |
+
+---
+
+[← Activity Flow](03-luong-hoat-dong.md) · [Back to table of contents](README.md) · [Next: Tracking emit-ack →](05-tracking-emit-ack.md)

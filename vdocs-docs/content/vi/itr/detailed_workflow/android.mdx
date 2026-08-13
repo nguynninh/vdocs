@@ -1,0 +1,556 @@
+# 03 — Luồng hoạt động chi tiết
+
+[← Về mục lục](README.md)
+
+Tài liệu này mô tả **từng luồng nghiệp vụ** của SDK, kèm sơ đồ tuần tự và điều kiện rẽ nhánh đúng
+như mã nguồn hiện tại.
+
+## Danh sách luồng
+
+1. [Khởi tạo SDK](#1-khởi-tạo-sdk)
+2. [Đăng nhập / đăng xuất](#2-đăng-nhập--đăng-xuất)
+3. [Vào phòng LIVE](#3-vào-phòng-live)
+4. [Nhận và định tuyến overlay (LIVE)](#4-nhận-và-định-tuyến-overlay-live)
+5. [Render overlay lên màn hình](#5-render-overlay-lên-màn-hình)
+6. [Vòng đời một WebView overlay](#6-vòng-đời-một-webview-overlay)
+7. [Trả lời câu hỏi (mini game)](#7-trả-lời-câu-hỏi-mini-game)
+8. [Dự đoán — Predict (`typeTimeline = 3`)](#8-dự-đoán--predict-typetimeline--3)
+9. [Vòng quay may mắn — Lucky (`typeTimeline = 5`)](#9-vòng-quay-may-mắn--lucky-typetimeline--5)
+10. [Headline (`typeTimeline = 4`)](#10-headline-typetimeline--4)
+11. [Thu hồi overlay — overlay-recall](#11-thu-hồi-overlay--overlay-recall)
+12. [Các sự kiện phụ trợ: liveviews, fan-club, ckst](#12-các-sự-kiện-phụ-trợ-liveviews-fan-club-ckst)
+13. [Luồng VOD](#13-luồng-vod)
+14. [Mất kết nối và khôi phục](#14-mất-kết-nối-và-khôi-phục)
+15. [Giải phóng tài nguyên](#15-giải-phóng-tài-nguyên)
+
+---
+
+## 1. Khởi tạo SDK
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant U as Utils (JNI)
+    participant BR as BaseRequest
+    participant OV as OverlayView
+    participant SP as NPreferenceUtils
+
+    APP->>OM: new OverlayManager(activity, overlayView, overlayData, listener)
+    OM->>OM: deviceId = Settings.Secure.ANDROID_ID
+    OM->>OM: versionSDK = VERSION_NAME + "." + VERSION_CODE
+    OM->>U: splitEnvironmentSocket(env)
+    U-->>OM: Const.INTERACTIVE_SOCKET_URL
+    OM->>U: splitInteractive(env)
+    U-->>OM: Const.INTERACTIVE_URL
+    OM->>BR: setTenantId(overlayData.tenantId)
+    OM->>OV: addListener(overlayEventListener, this)
+    OM->>SP: init(activity)
+    Note over OM: KHÔNG mở socket, KHÔNG gọi API
+```
+
+Sau bước này SDK ở trạng thái **Idle**: đã biết môi trường, tenant, có chỗ để render — nhưng chưa
+gắn với nội dung nào.
+
+---
+
+## 2. Đăng nhập / đăng xuất
+
+```mermaid
+flowchart TD
+    A["initToken(token, userId, bjName)"] --> B["Const.USER_COOKIE = token<br/>Const.USER_ID = userId<br/>Const.BJ_NAME = bjName"]
+    B --> C{"currentOverlay != null?<br/>(đã joinRoom chưa)"}
+    C -->|"chưa"| D["Kết thúc — token sẽ được dùng ở joinRoom kế tiếp"]
+    C -->|"rồi"| E["currentOverlay.userToken = token<br/>currentOverlay.userId = userId"]
+    E --> F{"đang LIVE và có mediaId?"}
+    F -->|"có"| G["joinRoom(mediaId, 1) — vào lại phòng<br/>để socket mang token mới"]
+    F -->|"không"| D
+```
+
+Ý nghĩa thực tế:
+
+- **Đăng nhập giữa lúc đang xem Live** → SDK tự kết nối lại; overlay đang hiển thị sẽ bị dọn
+  (`cleanUp()` bên trong `joinRoom`).
+- **Đăng xuất** = `initToken("", "")`; nếu đang Live cũng sẽ vào lại phòng ở trạng thái ẩn danh.
+- Header `Authorization`: token bắt đầu `"ey"` (JWT) → `"Bearer <token>"`, ngược lại gửi nguyên văn.
+
+---
+
+## 3. Vào phòng LIVE
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant WVM as OverlayWebViewManagement
+    participant SIO as SocketIOManagement
+    participant WS as Socket.IO server
+
+    APP->>OM: joinRoom(mediaId, type = 1)
+    OM->>OM: cleanUp() — dọn phiên cũ
+    OM->>OM: currentOverlay = CurrentOverlay(mediaId, USER_COOKIE, USER_ID, isLive = true)
+    OM->>SIO: new SocketIOManagement(activity, currentOverlay, deviceId, tenantId)
+    OM->>WVM: setEmitAckTrackingManager(sio.emitAckTrackingManager)
+    OM->>OM: connectSocket() — observe LiveData theo LifecycleOwner
+    OM->>SIO: joinRoom(room)
+    SIO->>SIO: disconnection() (đảm bảo sạch)
+    SIO->>SIO: IO.Options: headers X-TENANT-ID, v, os, deviceId, Authorization
+    Note over SIO: transports = [websocket], reconnection = true,<br/>delay 5000ms, max 5000ms, randomization 0.4
+    SIO->>WS: connect()
+    SIO->>SIO: addEvents() — đăng ký handler
+    WS-->>SIO: EVENT_CONNECT
+    SIO-->>OM: SocketIOState.Connected
+    OM->>SIO: emitJoinRoom(room)
+    SIO->>WS: emit("join-room", {deviceId, mediaContentId, os, versionSDK, tenantId})
+    SIO-->>OM: SocketIOState.JoinRoomSuccess
+    OM->>WVM: temporaryUnlock() — isVisible = true, loadCaches()
+    OM->>OM: overlayView.visible()
+```
+
+Điểm cần nhớ:
+
+- Lệnh `emit("join-room")` **chỉ xảy ra sau khi socket connect thành công**, không phải ngay khi gọi
+  `joinRoom()`.
+- Trước khi `Connected`, `OverlayWebViewManagement.isVisible = false` → mọi overlay đến sớm được
+  **đưa vào cache** thay vì hiển thị.
+- `overlayView` chỉ được `visible()` ở `temporaryUnlock()`.
+
+---
+
+## 4. Nhận và định tuyến overlay (LIVE)
+
+### 4.1. Tầng socket lọc trước
+
+```mermaid
+flowchart TD
+    A["on('overlay') hoặc on('ex-overlay')"] --> B["emitAckTrackingManager.normalizeAndIngest()<br/>→ tách _trackingId, _emitTimestamp<br/>→ emit-ack stage 'received'"]
+    B --> C{"có mediaContentId<br/>và timelineId?"}
+    C -->|"không"| X1["cancel(trackingId, 'invalid_payload')"]
+    C -->|"có"| D{"traceLock == true?"}
+    D -->|"có"| E["emit('receive-message', payload)"]
+    D -->|"không"| F
+    E --> F{"sự kiện là ex-overlay<br/>và có 'duration'?"}
+    F -->|"có, duration <= 10"| X2["cancel(trackingId, 'short_duration')"]
+    F -->|"còn lại"| G["lưu missTime_&lt;timelineId&gt; = thời điểm hiện tại (giây)"]
+    G --> H["postValue(SocketIOState.Overlay(json, trackingId))"]
+```
+
+### 4.2. Tầng `OverlayManager` kiểm tra nghiệp vụ
+
+```mermaid
+flowchart TD
+    A["SocketIOState.Overlay"] --> B{"parse JSON → Overlay thành công?"}
+    B -->|"không"| X1["cancel 'invalid_payload'"]
+    B -->|"có"| C{"tenant = 'vtvlive'<br/>chưa đăng nhập<br/>và !allowAnonymous?"}
+    C -->|"đúng"| X2["cancel 'login_required'"]
+    C -->|"sai"| D{"socket còn kết nối?"}
+    D -->|"không"| X3["cancel 'socket_not_connected'"]
+    D -->|"có"| E{"có timelineId?"}
+    E -->|"không"| X4["cancel 'missing_timeline_id'"]
+    E -->|"có"| F{"typeTimeline"}
+
+    F -->|"3"| P{"predictOverlay đang tồn tại?"}
+    P -->|"cùng timelineId"| P1["cập nhật dữ liệu predict<br/>cancel 'duplicate_overlay'"]
+    P -->|"khác timelineId"| P2["clearPredictStuff() rồi tạo mới"]
+    P -->|"chưa có"| P3["registerAnswerTrackingSession()<br/>generatePredictStuff()<br/>hiện PredictBtnView"]
+
+    F -->|"4"| H{"miniGame đang mở<br/>hoặc headline trùng timelineId?"}
+    H -->|"đúng"| H1["cancel 'duplicate_overlay'"]
+    H -->|"sai"| H2["headlineData = data<br/>handleMiniGameOverlay()"]
+
+    F -->|"5"| L{"luckyData đang tồn tại?"}
+    L -->|"cùng timelineId"| L1["cancel 'duplicate_overlay'"]
+    L -->|"khác"| L2["clearLuckyStuff() rồi tạo mới"]
+    L -->|"chưa có"| L3["registerAnswerTrackingSession()<br/>genLuckyStuff() → mở LuckyDialog"]
+
+    F -->|"0, 1, 2"| M{"miniGame trùng timelineId?"}
+    M -->|"đúng"| M1["cancel 'duplicate_overlay'"]
+    M -->|"sai"| N{"đã trả lời rồi?<br/>(pref ex_&lt;userId|deviceId&gt; == timelineId)"}
+    N -->|"đúng"| N1["cancel 'already_answered'"]
+    N -->|"sai"| N2["registerAnswerTrackingSession()<br/>turnOffPredict() + turnOffLucky()<br/>miniGameData = data<br/>handleMiniGameOverlay()"]
+```
+
+> Khoá `ex_...` dùng `userId` khi đã đăng nhập; nếu chưa đăng nhập nhưng overlay cho phép ẩn danh
+> thì dùng `deviceId`.
+
+---
+
+## 5. Render overlay lên màn hình
+
+```mermaid
+flowchart TD
+    A["showOverlay(overlay, trackingId)"] --> B{"Utils.isValidTargets(targets)?<br/>targets chứa 'all' hoặc chứa os hiện tại"}
+    B -->|"không"| X1["cancel 'target_mismatch'"]
+    B -->|"có"| C["setupAlignment(): pos.x/pos.y → OverlayAlignment"]
+    C --> D{"isVisible == true?"}
+    D -->|"không"| CACHE["caches.add(PendingOverlay) — chờ temporaryUnlock()"]
+    D -->|"có"| E{"alignment != null?"}
+    E -->|"không"| X2["cancel 'invalid_layout'"]
+    E -->|"có"| F["Dựng URL:<br/>+ &os=... (nếu chưa có)<br/>+ &logged=false (chưa login và !allowAnonymous)"]
+    F --> G["remainingTime = duration - (now - missTime)"]
+    G --> H{"missTime > 0 và remainingTime <= 0?"}
+    H -->|"đúng"| X3["cancel 'expired_duration'"]
+    H -->|"sai"| I["+ &duration=remainingTime<br/>+ &fanclub=false (nếu requiredFanClub và chưa là fanclub)"]
+    I --> J{"isPopupOverlay?"}
+    J -->|"false → inline"| K["alignmentPopupOverlay = pos.y == 0 ? 'top' : 'bottom'<br/>addViewCommonCasePopupOverlayTracked()"]
+    J -->|"true → popup"| L["addViewCommonTracked(size, alignment, ...)"]
+    K --> M["overlayByTimelineId[timelineId] = webView"]
+    L --> M
+```
+
+**Ràng buộc hình học** trong `OverlayView`:
+
+- `addViewCommonTracked`: chiều rộng/cao theo phần trăm (`constrainPercentWidth/Height`) và neo theo
+  9 vị trí (`LeftTop` … `RightBottom`) suy từ `metadata.pos`.
+- `addViewCommonCasePopupOverlayTracked`: rộng `WRAP_CONTENT`, cao theo phần trăm, neo trên/dưới/
+  trái/phải theo `alignmentPopupOverlay`.
+- Cả hai đều gọi `clearViews()` trước khi thêm → **tại một thời điểm chỉ có một overlay WebView**.
+
+---
+
+## 6. Vòng đời một WebView overlay
+
+```mermaid
+sequenceDiagram
+    participant OV as OverlayView
+    participant WV as OverlayWebView
+    participant WEB as Template (CDN)
+    participant CB as OverlayWebViewCallBack
+    participant OM as OverlayManager
+    participant TRK as Tracking
+
+    OV->>TRK: renderTracker.attach() (hẹn giờ timeout)
+    OV->>WV: createWebView(): JS bật, nền trong suốt,<br/>addJavascriptInterface(callback, "Android")
+    OV->>TRK: renderTracker.renderStart()
+    OV->>WEB: loadUrl(src)
+    WEB-->>WV: onPageFinished
+    WV->>TRK: pageFinished() → chốt 'rendered' (profile legacy)
+    WV-->>OM: onFocusOverlay(takeControl = true, overlayConfig)
+    WEB->>CB: Android.postMessage({key: "LOADED_OVERLAY"})
+    CB->>TRK: readyReceived() → chốt 'rendered'
+    CB->>OM: handleWebViewCallBack(json, overlay)
+    OM->>WV: loadData(templateData) — window.postMessage(GET_DATA_INTERACTIVE)
+
+    Note over WEB: người dùng thao tác
+    WEB->>CB: Android.postMessage({type: "INTERACTIVE_ACTION_REPORT", data: {...}})
+    CB->>OM: sendAction(json)
+
+    WEB->>CB: Android.postMessage({type: "INTERACTIVE_HIDE_ANALYTICS"})
+    CB->>OV: removeWebView() + onFocusOverlay(takeControl = false)
+```
+
+Các lỗi tải trang (`onReceivedError`, `onReceivedHttpError`, `onReceivedSslError`) đều:
+`renderTracker.failed(...)` → ẩn WebView → `onFocusOverlay(webViewError = true)`.
+
+---
+
+## 7. Trả lời câu hỏi (mini game)
+
+Đây là luồng phức tạp nhất, có 4 lớp kiểm tra trước khi gửi API.
+
+```mermaid
+flowchart TD
+    A["Web: INTERACTIVE_ACTION_REPORT"] --> B["OverlayManager.sendAction(data)"]
+    B --> C["handleMiniGameOverlay(data) — cập nhật realtimeOverLay"]
+    C --> D{"overlay yêu cầu đăng nhập?<br/>(!allowAnonymous)"}
+    D -->|"chưa login"| X1["onHandleMessage(NEED_LOGIN) → dừng"]
+    D -->|"đạt"| E{"requiredFanClub và<br/>Const.IS_FAN_CLUB != true?"}
+    E -->|"đúng"| X2["signalAnswerFailed('fanclub_required')<br/>SuggestDialog SUGGEST_FAN_CLUB → dừng"]
+    E -->|"sai"| F["refreshVipStatusThen()<br/>GET /api/public/vip-status"]
+    F --> G{"Const.IS_VIP == true?"}
+    G -->|"đúng"| I["gửi câu trả lời"]
+    G -->|"sai"| H{"betAmount > 0?"}
+    H -->|"không"| I
+    H -->|"có"| J["SuggestDialog SUGGEST_BET<br/>'Bạn có đồng ý dùng N OnG…'"]
+    J -->|"người dùng đồng ý"| I
+    J -->|"huỷ"| X3["dừng"]
+    I --> K["actionReportHandler(data, trackAnswer = true)"]
+```
+
+### 7.1. `actionReportHandler` — gửi API
+
+```mermaid
+sequenceDiagram
+    participant OM as OverlayManager
+    participant TRK as Tracking
+    participant API as POST /api/actions
+    participant WV as OverlayWebView
+    participant SP as SharedPreferences
+
+    OM->>OM: data += deviceId, os
+    OM->>OM: data.data += media = mediaId
+    OM->>OM: nếu Live: data.data += socket_id = socket.id
+    OM->>TRK: signalAnswerAttempt() → emit-ack stage 'answer'
+    OM->>API: POST (Authorization: Bearer <token>) body = data
+    alt success = true
+        API-->>OM: {success: true, result: {...}}
+        OM->>TRK: signalAnswerSucceeded() → stage 'answer-succeeded'
+        OM->>SP: ex_<userId|deviceId> = timelineId (chống trả lời lại)
+        Note over OM,WV: chỉ ở nhánh VIP / có đặt cược:<br/>triggerUpdateConfirm() → window.postMessage(UPDATE_CONFIRM)
+        OM->>WV: triggerUpdateConfirm()
+    else success = false hoặc lỗi mạng
+        API-->>OM: lỗi / {success: false, result: {message}}
+        OM->>TRK: signalAnswerFailed(reason, step) → stage 'answer-failed'
+        alt result.message == "PM402"
+            OM->>OM: SuggestDialog SUGGEST_ANSWER_PAYMENT_REJECT<br/>→ onHandleMessage(NEED_PAY_ONG)
+        else khác
+            OM->>OM: SuggestDialog SUGGEST_ANSWER_REJECT (kèm description)
+        end
+    end
+```
+
+Ánh xạ mã lỗi → `failureReason` trong tracking (`AnswerTrackingMapper`):
+
+| `result.message` | `failureReason` | `failureStep` |
+|---|---|---|
+| `EX400` | `api_EX400` | `api_response` |
+| `TL404` | `api_TL404` | `api_response` |
+| `PM402` | `api_PM402` | `api_response` |
+| khác, `success = false` | `api_false` | `api_response` |
+| lỗi mạng | `network_error` | `network` |
+| body rỗng / không parse được | `unknown_response` | `unknown_response` |
+
+### 7.2. Các loại `type` khác trong `sendAction`
+
+| `type` | Hành vi |
+|---|---|
+| `INTERACTIVE_SHOW_ANALYTICS` | `onShowITR(true)` + ghi nhận hành vi qua `/api/actions` |
+| `INTERACTIVE_HIDE_ANALYTICS` | Ghi nhận, xoá `overlay`/`miniGameData`, **bật lại** predict và lucky |
+| `INTERACTIVE_OPEN_ANALYTICS` | `onShowITR(true)` + ghi nhận (predict/lucky) |
+| `INTERACTIVE_CLOSE_ANALYTICS` | Ghi nhận (predict/lucky) |
+| `action = CLICK_ADS` + có `url` | Không gọi API, mở trình duyệt ngoài qua `onClickAdsOverlay(url)` |
+
+---
+
+## 8. Dự đoán — Predict (`typeTimeline = 3`)
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant OM as OverlayManager
+    participant BTN as PredictBtnView
+    participant DLG as PredictDialog
+    participant API as /api/actions
+
+    WS-->>OM: overlay (typeTimeline = 3)
+    OM->>BTN: tạo nút nổi (ảnh normal/power từ payload,<br/>fallback ảnh mặc định trên CDN)
+    OM->>DLG: PredictDialog.getInstance(payload)
+    OM->>BTN: onAttach() — hiện nút, sau 5s giảm alpha còn 0.5
+
+    Note over WS,OM: sự kiện điều khiển realtime "predict-timeline"
+    WS-->>OM: {type: "ACTIVE"} → activePredict() → hiện nút
+    WS-->>OM: {type: "INACTIVE"} → inactivePredict() → ẩn nút, đóng dialog
+    WS-->>OM: {type: "POWER"} → nút đổi sang ảnh power 5 giây
+    WS-->>OM: {type: "END"} → SuggestDialog "Dự đoán đã kết thúc" + dọn toàn bộ
+
+    BTN->>OM: người dùng bấm nút
+    alt chưa đăng nhập
+        OM-->>OM: onHandleMessage(NEED_LOGIN), hiện lại nút
+    else đã đăng nhập
+        OM->>DLG: show() (toàn màn hình, nền trong suốt)
+        DLG->>DLG: WebView nạp src + &u=<userId> (+ &logged=false nếu chưa login)
+        DLG-->>OM: LOADED_OVERLAY → loadData()
+        DLG->>OM: INTERACTIVE_ACTION_REPORT → luồng trả lời (mục 7)
+        OM->>API: POST /api/actions
+        API-->>OM: success → updateConfirm(); thất bại → SuggestDialog
+    end
+
+    WS-->>OM: "predict-result" → cập nhật answer1/answer2 → DLG.updateResult()
+```
+
+Cờ trạng thái điều khiển hiển thị nút:
+
+| Cờ | Ý nghĩa | Ai đổi |
+|---|---|---|
+| `isPredictOn` | Có được phép hiện không (bị tắt khi mini game chiếm màn hình) | `turnOnPredict()` / `turnOffPredict()` |
+| `isPredictActive` | Server cho phép tương tác không | Sự kiện `ACTIVE` / `INACTIVE` |
+| `isPredictDialogOn` | Dialog đang mở | `showPredictDialog()` / `hidePredictDialog()` |
+
+Nút chỉ hiện khi `isPredictOn && isPredictActive`.
+
+---
+
+## 9. Vòng quay may mắn — Lucky (`typeTimeline = 5`)
+
+Cấu trúc giống Predict (`LuckyBtnView` + `LuckyDialog`, sự kiện socket `lucky-event` với
+`ACTIVE/INACTIVE/POWER/END`), **khác một điểm quan trọng**:
+
+```kotlin
+// OverlayManager.genLuckyStuff() — dòng cuối
+showLuckyDialog()
+```
+
+→ Overlay lucky **tự mở dialog ngay khi nhận được**, không chờ người dùng bấm nút.
+
+Kết quả trả về từ API được đẩy xuống web bằng `UPDATE_NUMBER_LUCKY`:
+
+```mermaid
+sequenceDiagram
+    participant DLG as LuckyDialog
+    participant OM as OverlayManager
+    participant API as /api/actions
+    DLG->>OM: INTERACTIVE_ACTION_REPORT
+    OM->>OM: kiểm tra login → fanclub → VIP/bet
+    OM->>API: POST
+    API-->>OM: {success: true, result: {data: "..."}}
+    OM->>DLG: updateResult(data) → window.postMessage(UPDATE_NUMBER_LUCKY)
+    OM->>DLG: disable() — khoá WebView chống bấm lại
+```
+
+---
+
+## 10. Headline (`typeTimeline = 4`)
+
+- Dùng chung đường render với mini game (`handleMiniGameOverlay`).
+- Bị bỏ qua nếu **đang có mini game mở** (`miniGameData != null`) hoặc trùng `timelineId` với
+  headline hiện tại.
+- Chỉ nhận hai `type` hành vi: `INTERACTIVE_SHOW_ANALYTICS` và `INTERACTIVE_HIDE_ANALYTICS`
+  (không có luồng trả lời).
+
+---
+
+## 11. Thu hồi overlay — overlay-recall
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant SIO as SocketIOManagement
+    participant OM as OverlayManager
+    participant WVM as OverlayWebViewManagement
+    participant OV as OverlayView
+
+    WS-->>SIO: on("overlay-recall", {timelineId})  %% ByteArray hoặc JSONObject
+    SIO-->>OM: SocketIOState.OverlayRecall(timelineId)
+    OM->>WVM: removeByTimelineId(timelineId)
+    WVM->>OV: removeWebView(webView) — huỷ tracking 'removed'
+    WVM->>WVM: overlayByTimelineId.remove(timelineId)
+```
+
+Dùng khi biên tập viên gỡ một overlay đang phát trên toàn hệ thống.
+
+---
+
+## 12. Các sự kiện phụ trợ: liveviews, fan-club, ckst
+
+| Sự kiện socket | Xử lý |
+|---|---|
+| `liveviews` | Parse `OverlayLiveViews.count`, **cộng thêm 230**, gọi `onHandleLiveViews(count)` |
+| `data` (fan-club) | Nếu `mediaId` khớp media đang xem (so sánh phần trước dấu `_`) → cập nhật `Const.IS_FAN_CLUB`; ngược lại đặt `false` |
+| `ckst` | Server hỏi trạng thái player → SDK emit lại `ckst` với `{action: "CHECK_PLAYER_STATUS", sessionId, data: {deviceId, os, mediaContentId, playerStatus}}` |
+| `update-result` | `OverlayWebView.updateResult(data)` → `window.postMessage(UPDATE_DATA_INTERACTIVE)` |
+| `predict-result` | Cập nhật `answer1`/`answer2` vào `predictOverlay`, gọi `PredictDialog.updateResult()` |
+
+> `liveViews` cộng 230 là hành vi cố ý trong mã hiện tại
+> ([OverlayManager.kt:435](../interactive/src/main/java/vn/interactive/OverlayManager.kt:435)) —
+> nếu app cần con số thô, phải trừ lại phía app.
+
+`playerStatus` chỉ khác rỗng khi app đã `addPlayerListener(...)`.
+
+---
+
+## 13. Luồng VOD
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant API as GET /api/ctc/scenario/v2/vod/{mediaId}/{os}
+    participant WVM as OverlayWebViewManagement
+    participant OV as OverlayView
+
+    APP->>OM: joinRoom(mediaId, type = 2)
+    OM->>OM: cleanUp(); isLive = false
+    OM->>WVM: isVisible = true
+    OM->>API: GetScenarioRequest(token = USER_COOKIE, mediaId, os)
+    API-->>OM: ScenarioDTO {data.timelines[]}
+    OM->>WVM: parseTimeLineListForVOD(timelines)
+    WVM->>WVM: mỗi Timeline.interactive → Overlay:<br/>src + ?timelineId&tenantId&deviceType&os<br/>startTimeShowOverlay = time("mm:ss") → giây
+
+    loop mỗi giây (app tự chạy)
+        APP->>OM: receiveTrackingTime(seconds)
+        OM->>WVM: checkShowQuestion(seconds, userToken)
+        WVM->>WVM: tìm overlay có startTimeShowOverlay nhỏ nhất còn >= seconds
+        alt startTimeShowOverlay == seconds
+            WVM->>WVM: nếu !allowAnonymous và chưa login → bỏ qua
+            WVM->>WVM: lưu missTime_<timelineId>
+            WVM->>OV: showOverlay() trên Main thread
+            WVM->>WVM: xoá các overlay cùng mốc khỏi danh sách
+        end
+    end
+```
+
+Khác biệt so với LIVE:
+
+| | LIVE | VOD |
+|---|---|---|
+| Nguồn overlay | Socket.IO đẩy | REST tải trước toàn bộ kịch bản |
+| Kích hoạt hiển thị | Sự kiện realtime | `receiveTrackingTime(giây)` do app bơm |
+| `socketIOManagement` | Có | **null** (mọi lời gọi socket bị bỏ qua an toàn) |
+| `socket_id` trong action | Có | Không |
+| Tracking emit-ack | Có | Không (không có socket để emit) |
+| Predict / Lucky / liveviews | Có | Không |
+
+---
+
+## 14. Mất kết nối và khôi phục
+
+```mermaid
+stateDiagram-v2
+    [*] --> Connected
+    Connected --> Disconnected: EVENT_DISCONNECT
+    Disconnected --> Connected: tự reconnect (mỗi 5s)
+
+    state Disconnected {
+        [*] --> Dọn
+        Dọn: emitAckTrackingManager.cancelAll("socket_disconnected") + finishAll()
+        Dọn --> Khoá
+        Khoá: clearAllStuff() + temporaryLock()<br/>isVisible = false, overlayView.invisible()
+    }
+
+    state Connected {
+        [*] --> MoKhoa
+        MoKhoa: temporaryUnlock() → isVisible = true, loadCaches()
+        MoKhoa --> VaoPhong
+        VaoPhong: emitJoinRoom(room)
+    }
+```
+
+- **Cache overlay**: khi `isVisible = false`, overlay mới đi vào `caches`. Lúc mở khoá,
+  `loadCaches()` chỉ hiển thị **phần tử cuối cùng**, các phần tử trước bị huỷ tracking với lý do
+  `superseded_cache`.
+- **`missTime`**: nhờ mốc thời gian đã lưu, overlay hiện lại sau khi mất kết nối sẽ có `duration` bị
+  trừ đi phần đã trôi qua; nếu hết hạn thì bị bỏ (`expired_duration`).
+- Sự kiện `EVENT_CONNECT_ERROR` → `SocketIOState.Error` → `clearAllStuff()`.
+
+---
+
+## 15. Giải phóng tài nguyên
+
+```mermaid
+flowchart TD
+    A["releaseAll() — hoặc joinRoom() mới"] --> B["cleanUp()"]
+    B --> C["clearAllStuff()"]
+    C --> C1["clearLuckyStuff(): huỷ nút + dialog lucky"]
+    C --> C2["clearPredictStuff(): huỷ nút + dialog predict"]
+    C --> C3["hideChartsInteractive()"]
+    C --> C4["xoá overlay, miniGameData, headlineData, activeAnswerTrackingIds"]
+    C --> C5["overlayView.clearViews()"]
+    C --> C6["overlayWebViewManagement.clearOverlayViews()"]
+    C --> C7["socketIOManagement.cancelAllTracking('clear_all')"]
+    B --> D["overlayWebViewManagement.onDestroy()<br/>isVisible = false, xoá cache và danh sách VOD"]
+    B --> E["overlayView.clearViews()"]
+    B --> F{"đang LIVE?"}
+    F -->|"có"| G["socketIOManagement.disconnection()<br/>huỷ tracking, gỡ handler, close socket"]
+    F -->|"không"| H["calledScenario = false"]
+```
+
+Gọi `releaseAll()` ở:
+
+- `onDestroy()` của Activity chứa player,
+- khi người dùng thoát khỏi nội dung (đóng player, quay lại danh sách),
+- trước khi chuyển sang một `mediaId` khác **nếu** không dùng ngay `joinRoom()` (vì `joinRoom` đã tự
+  dọn).
+
+---
+
+[← Cài đặt & Tích hợp](02-cai-dat-va-tich-hop.md) · [Về mục lục](README.md) · [Tiếp: API Reference →](04-api-reference.md)

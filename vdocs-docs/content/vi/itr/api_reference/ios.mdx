@@ -1,0 +1,406 @@
+# 04 — API Reference
+
+[← Về mục lục](README.md)
+
+Toàn bộ API dưới đây thuộc module **`ISdk`** (`import ISdk`).
+
+---
+
+## 1. `InteractiveControllerView`
+
+Lớp điều phối chính — điểm vào của app.
+
+```swift
+@objc public class InteractiveControllerView : NSObject {
+    public override init()   // tạo SocketIOManagementImpl + OverlayManagementImpl
+}
+```
+
+### 1.1. Thuộc tính công khai
+
+| Thuộc tính | Kiểu | Mô tả |
+|---|---|---|
+| `overlayManagement` | `OverlayManagement?` | Manager overlay minigame (gắn delegate qua đây) |
+| `predictManagement` | `PredictManagementImpl!` | Manager nút + dialog predict/lucky |
+| `socketIO` | `SocketIOManagement?` | Đối tượng socket (chỉ đọc thông tin) |
+| `interactivePlayerDelegate` | `InteractivePlayerDelegate?` | Delegate trạng thái player / số người xem |
+| `interactiveLoginDelegate` | `InteractiveLoginDelegate?` | Delegate yêu cầu đăng nhập |
+| `interactivePredictDelegate` | `InteractivePredictDelegate?` | Delegate layout nút predict |
+
+### 1.2. Phương thức
+
+| Hàm | Mô tả |
+|---|---|
+| `initOverlay(uiView: UIView, predictView: UIView)` | Gắn 2 view host (overlay + predict), đăng ký lắng nghe xoay màn hình, tạo `PredictManagementImpl` |
+| `initAuthenToken(authenToken: String, userId: String, bjName: String)` | Khai báo/xoá phiên đăng nhập. Đăng xuất: truyền chuỗi rỗng. Nếu đang Live → tự vào lại phòng |
+| `joinRoom(mediaId: String, type: Int)` | Bắt đầu phiên. `type = 1` LIVE, `type = 2` VOD. Tự dọn phiên cũ |
+| `getTimeVideo(time: TimeInterval)` | **(VOD)** Bơm thời gian phát (giây). So khớp `timeShow` để hiện overlay |
+| `leaveRoom()` | Emit `leave-room` cho media hiện tại |
+| `releaseAll()` | Giải phóng: leaveRoom + gỡ delegate + disconnect socket |
+| `removeAllView()` | Gỡ overlay đang hiển thị (không đụng socket) |
+| `resizeVideoView(width: CGFloat, height: CGFloat)` | Cập nhật kích thước khung video cho overlay |
+| `fetchInteractiveStatus(mediaId: String, completion: @escaping (Bool) -> Void)` | Hỏi server media này có tương tác không (lỗi → `false`) |
+| `showChartsInteractive(viewRoot: UIView, mediaId: String, userid: String?, backgroundColorHeaderView: UIColor = #489BE6)` | Mở bảng xếp hạng (iframe) |
+| `setInteractivePlayerDelegate(interactivePlayerDelegate:)` | Gắn delegate player |
+| `setupPredictViewDelegate(interactivePredictDelegate:)` | Gắn delegate layout predict |
+| `setuPredictLoginDelegate(interactiveLoginDelegate:)` | Gắn delegate login cho predict (lưu ý chính tả `setuPredict`) |
+| `embededInteractiveContentView()` | Chủ động mở dialog nội dung predict/lucky |
+| `setHiddenInteractiveButton(_ isHidden: Bool)` | Ẩn/hiện nút nổi predict/lucky |
+| `leaveRoom()` / `disconnection()` | Rời phòng / ngắt socket |
+
+Gắn delegate cho overlay minigame qua `overlayManagement`:
+
+```swift
+interactive.overlayManagement?.setupDelegate(interactiveViewDelegate: self)
+interactive.overlayManagement?.setupDelegate(interactiveLoginDelegate: self)
+interactive.overlayManagement?.setupDelegate(fanClubDelegate: self)
+interactive.overlayManagement?.setupAnswerDelegate(interactiveAnswerDelegate: self)
+```
+
+---
+
+## 2. `InteractiveSetting`
+
+```swift
+@objc public class InteractiveSetting: NSObject {
+    public static let KEY_ENABLE_PROD_ENV = "KEY_ENABLE_PROD_ENV"
+    public static let KEY_X_TENANT_ID     = "KEY_X_TENANT_ID"
+
+    public func setEnableProdEnv(enableProdEnv: String)   // Enviroment.rawValue
+    public func setXTenantId(xTenantId: String)           // TenantIdType.rawValue
+}
+```
+
+> Phải gọi cả hai **trước** mọi `joinRoom`. Giá trị lưu vào `UserDefaults.standard` và được đọc lại
+> (force-unwrap) ở nhiều nơi.
+
+```swift
+public enum Enviroment: String { case DEV = "dev"; case STG = "stg"; case PROD = "prod" }
+
+public enum TenantIdType: String {
+    case vtvlive                          // OnPlus
+    case onliveLiveStream = "onlivev2"    // SOOP
+    case onliveTV = "onlivetv"            // OnLive TV
+    case VTVprime = "VTVprime"            // SeeNow
+}
+```
+
+---
+
+## 3. Các protocol delegate
+
+Tất cả (trừ `PlayerChangeListener`) là `@objc public protocol … : AnyObject`.
+
+### `InteractivePlayerDelegate`
+```swift
+func getPlayerState() -> Int        // mã trạng thái player, dùng cho sự kiện ckst
+func showLiveView(liveView: Int)    // số người xem realtime (ĐÃ cộng +230)
+```
+
+### `InteractiveLoginDelegate`
+```swift
+func showInteractiveLogin()         // gọi khi user tương tác mà chưa đăng nhập
+```
+
+### `InteractivePredictDelegate`
+```swift
+func showLayoutViewPredictRoot()    // hiện vùng chứa nút predict/lucky
+func hideLayoutViewPredictRoot()
+func endLayoutViewPredictRoot()
+```
+
+### `InteractiveAnswerDelegate`
+```swift
+func confirmDeduction()             // đồng ý trừ OnG
+func confirmNotEnoughMoney()        // thiếu OnG (PM402)
+func confirmAnswerSuccess()         // trả lời thành công
+func showSubscibeView()             // mở màn hình nạp/đăng ký (chính tả "Subscibe")
+```
+
+### `InteractiveViewDelegate`
+```swift
+func shrinkScreenInteractive(show: Bool, direction: Int, withXScale x: CGFloat, withYScale y: CGFloat)
+func resetLayoutInteractive()
+func preloadVideoActionBranching(url: String, timeToNext: TimeInterval)
+func nextVideoActionBranching()
+func showLayoutViewRoot()
+func hideLayoutViewRoot()
+func locationLayoutViewRoot(location: Int, width: CGFloat, height: CGFloat)  // vị trí 0..8
+func hidePlayerControl()
+func showPlayerControl()
+func viewForPresentDialogDedution() -> UIView?   // có default = nil (tùy chọn)
+```
+
+### `FanClubDelegate`
+```swift
+func btnConfirmFanClub()            // user bấm xác nhận vào fanclub
+```
+
+### `InteractiveConnectDelegate`
+```swift
+func connectedSocket()
+```
+
+### `PlayerChangeListener` (Swift thuần)
+```swift
+func currentPosition() -> CLong?
+```
+
+`location` trong `locationLayoutViewRoot`: `0 LeftTop, 1 CenterTop, 2 RightTop, 3 LeftCenter,
+4 Center, 5 RightCenter, 6 LeftBottom, 7 CenterBottom, 8 RightBottom`.
+
+---
+
+## 4. `OverlayManagement` (protocol)
+
+```swift
+@objc public protocol OverlayManagement {
+    var isReadyToShowVodOverlay: Bool { get set }
+    func initialization(overlayView: UIOverlay)
+    func setupDataToPrepareShowVOD(timeLineList: [Timelines])
+    func prepareShowOverlayForVod(overlayList: [Overlay])
+    func showOverlayLive(overlay: Overlay, authenToken: String, mediaContentId: String,
+                         socketId: String?, bjName: String, buttonPredict: UIImageView)
+    func showOverlayVod(overlay: Overlay, authenToken: String, mediaContentId: String)
+    func stopShowOverlayPlayback()
+    func hiddenOverlay()
+    func onDestroy()
+    func removeAllView()
+    func setupDelegate(interactiveViewDelegate: InteractiveViewDelegate)
+    func setupDelegate(interactiveLoginDelegate: InteractiveLoginDelegate?)
+    func setupAnswerDelegate(interactiveAnswerDelegate: InteractiveAnswerDelegate)
+    func setupDelegate(fanClubDelegate: FanClubDelegate)
+    func resizeVideoView(width: CGFloat, height: CGFloat)
+    func webviewPublic() -> WKWebView?
+    func killDelegate()
+    func recallOverlay(timelineId: String)
+}
+```
+
+App chủ yếu dùng các `setupDelegate*`, `recallOverlay` do SDK gọi nội bộ.
+
+---
+
+## 5. `SocketIOManagement` (protocol) — thông tin
+
+Ứng dụng thường không gọi trực tiếp; SDK điều phối.
+
+```swift
+func connection(url: String, authenToken: String?)
+func addCallback(callBack: @escaping (String, Any) -> ())
+func joinRoom(data: JoinRoomData)
+func leaveRoom(data: JoinRoomData)
+func ckstRoom(data: CkstData)
+func sendEmitAck(trackingId: String, event: String, stage: String, clientContext: [String: Any])
+func isConnected() -> Bool
+func getSocketId() -> String
+func disconnection()
+func onDestroy()
+```
+
+---
+
+## 6. Sự kiện Socket.IO
+
+### 6.1. Server → SDK (lắng nghe)
+
+| Tên wire | Hằng số | Xử lý |
+|---|---|---|
+| `overlay` | `SocketEvents.OVERLAY` | Overlay realtime |
+| `ex-overlay` | `SocketEvents.EX_OVERLAY` | Overlay bù |
+| `overlay-recall` | `SocketEvents.OVERLAY_RECALL` | Thu hồi overlay theo `timelineId` |
+| `predict-timeline` | `SocketEvents.PREDICT_TIMELINE` | `ACTIVE`/`INACTIVE`/`POWER`/`END` cho nút predict |
+| `lucky-event` | `SocketEvents.LUCKY_EVENT` | Tương tự cho lucky |
+| `predict-result` | `SocketEvents.PREDICT_RESULT` | `answer1`/`answer2` |
+| `update-result` | `SocketEvents.UPDATE_RESULT` | Đẩy xuống web qua `UPDATE_DATA_INTERACTIVE` |
+| `liveviews` | `SocketEvents.LIVE_VIEW` | Số người xem |
+| `data` | `SocketEvents.FANCLUB` | Trạng thái fanclub |
+| `ckst` | `SocketEvents.CKST` | Server hỏi trạng thái player |
+| `branching` | `SocketEvents.BRANCHING` | Video nhánh (branching) |
+
+Sự kiện client nội bộ: `.connect` → `CONNECTED`, `.disconnect` → `DISCONNECTED`, `.reconnect` →
+`RECONNECT`, `.error` → `ERROR`.
+
+### 6.2. SDK → Server (emit)
+
+| Tên | Khi nào | Payload |
+|---|---|---|
+| `join-room` | Sau khi socket connect | `JoinRoomData` = `{deviceId, mediaContentId, os, tenantId, versionSDK}` |
+| `leave-room` | `leaveRoom()` | như trên |
+| `receive-message` | Payload overlay có `traceLock == true` | Bản nhị phân (ArrayBuffer) của payload gốc |
+| `emit-ack` | Các mốc tracking | `{trackingId, event, stage, deviceId, clientContext}` |
+| `ckst` | Trả lời sự kiện `ckst` | `CkstData` = `{action: "CHECK_PLAYER_STATUS", sessionId, os: {…Ckst}}` |
+
+### 6.3. Header & cấu hình khi kết nối socket
+
+| Header | Giá trị |
+|---|---|
+| `x-tenant-id` | `KEY_X_TENANT_ID` |
+| `v` | `ApiConst.VERSION_SDK` (`"2025-05-25"`) |
+| `os` | `ApiConst.OS` (`"iphone"`) |
+| `deviceId` | `UIDevice.identifierForVendor` |
+| `Authorization` | token **nguyên văn** (socket không tự thêm `Bearer`) |
+
+Cấu hình: `forceWebsockets(true)`, `compress`, `reconnects(true)`, `reconnectWait(5)`,
+`randomizationFactor(0.4)`.
+
+---
+
+## 7. Endpoint HTTP
+
+Base URL chọn theo `KEY_ENABLE_PROD_ENV`:
+
+| Env | REST base | WSK base |
+|---|---|---|
+| DEV | `https://dev-api.onplay.live/` | `https://dev-wsk.onplay.live/` |
+| STG | `https://beta-api.onplay.live/` | `https://beta-wsk.onplay.live/` |
+| PROD | `https://api.onplay.live/` | `https://wsk.onplay.live/` |
+
+| Method | Đường dẫn | Header | Dùng cho |
+|---|---|---|---|
+| `GET` | `/api/ctc/scenario/v2/vod/{mediaId}/{os}` | `X-TENANT-ID` | Tải kịch bản VOD |
+| `POST` | `/api/actions` | `X-TENANT-ID`, `Authorization` (Bearer nếu JWT) | Gửi hành động / câu trả lời |
+| `GET` | `/api/public/vip-status` | `X-TENANT-ID`, `Authorization` | Kiểm tra VIP (telco) trước khi trừ OnG |
+| `GET` | `/api/media/interactive-status/{mediaId}` | `X-TENANT-ID` | Media có tương tác không |
+| `GET` | `/api/scenario/getActiveOverlay/{mediaId}` | — | Overlay đang hoạt động (bù) — hàm hiện có lỗi trả về đồng bộ, xem [06](06-loi-thuong-gap.md) |
+
+**Thân request `/api/actions`** (SDK bổ sung vào JSON web gửi lên):
+
+```jsonc
+{
+  "type": "INTERACTIVE_ACTION_REPORT",
+  "deviceId": "<identifierForVendor>",   // SDK thêm
+  "os": "iphone",                          // SDK thêm
+  "data": {
+    "answer": ...,                         // từ template
+    "content": ...,                        // từ template
+    "media": "<mediaId>",                  // SDK thêm
+    "socket_id": "<socket id>",            // SDK thêm (chỉ Live)
+    "versionSDK": "2025-05-25"             // SDK thêm
+    // ...các trường khác do template gửi
+  }
+}
+```
+
+---
+
+## 8. Giao thức JS bridge
+
+Tên interface: **`IOS`** (`userContentController.add(callBack, name: "IOS")`).
+
+### Web → SDK
+```javascript
+window.webkit.messageHandlers.IOS.postMessage(JSON.stringify({ type: "INTERACTIVE_ACTION_REPORT", data: {...} }));
+```
+
+| `type` (`TypeInteractive`) | Ý nghĩa |
+|---|---|
+| `INTERACTIVE_SHOW_ANALYTICS` | Overlay hiển thị |
+| `INTERACTIVE_HIDE_ANALYTICS` | Overlay đóng → gỡ WebView |
+| `INTERACTIVE_ACTION_REPORT` | Trả lời / hành động (`data.action = "CLICK_ADS"` cho quảng cáo, mở `urlLinkAds`) |
+| `INTERACTIVE_OPEN_ANALYTICS` / `INTERACTIVE_CLOSE_ANALYTICS` | Mở/đóng dialog predict/lucky |
+| `INTERACTIVE_PING_ANALYTICS` | Chỉ dùng để lọc |
+
+### SDK → Web
+```javascript
+window.addEventListener("message", (e) => { /* e.data chứa key + data */ });
+```
+
+| `key` | Nội dung |
+|---|---|
+| `UPDATE_DATA_INTERACTIVE` | Cập nhật kết quả realtime (từ `update-result`) |
+| `UPDATE_COUTER` *(nguyên văn)* | Số liệu predict `answer1`/`answer2` |
+| `UPDATE_NUMBER_LUCKY` | Kết quả số may mắn |
+| `UPDATE_CONFIRM` | Xác nhận trả lời thành công (nhánh bet/VIP) |
+
+---
+
+## 9. Tham số query gắn vào URL template
+
+| Tham số | Khi nào |
+|---|---|
+| `&logged=false` / `&logged=true` | Theo trạng thái đăng nhập & `allowAnonymous` |
+| `&fanclub=false` | Tenant `onlivev2`, `requiredFanClub` và chưa là fanclub |
+| `&duration=<còn lại>` | Khi `countdown > 0` (tính từ `ts`) |
+| `&u=<userId>` | Riêng lucky (`typeTimeline = 5`) |
+| `timelineId`, `tenantId`, `deviceType=IOS` | Riêng overlay VOD |
+
+---
+
+## 10. Model chính
+
+### `OverlayLive` — overlay realtime (Live)
+| Trường | Kiểu | Ý nghĩa |
+|---|---|---|
+| `src` | `String` | URL template |
+| `metadata` | `Metadata(size, pos, duration?, targets?)` | Vị trí + kích thước |
+| `ts` | `Int` | Mốc thời gian (ms) để tính duration còn lại |
+| `timelineID` (`timelineId`) | `String` | Định danh mốc (chống trùng / chống trả lời lại) |
+| `mediaContentID` (`mediaContentId`) | `String` | Nội dung áp dụng |
+| `targets` | `String` | Nền tảng (`iphone`, `all`…) |
+| `duration`, `frequencyLimit`, `countdown` | `Int?` | Thời lượng / giới hạn tần suất |
+| `status` | `String?` | `ACTIVE` / `INACTIVE`… |
+| `typeTimeline` | `Int?` | `3` predict, `5` lucky, `2` (bet), còn lại minigame |
+| `allowAnonymous`, `requiredFanClub`, `isPopupOverlay` | `Bool?` | Điều kiện hiển thị/trả lời |
+| `betAmount` | `Int?` | Số OnG cược |
+| `imageNormal`, `imagePower` | `String?` | Ảnh nút predict/lucky |
+| `trackingId` (`_trackingId`), `emitTimestamp` (`_emitTimestamp`) | | Metadata tracking |
+
+### `Overlay` — overlay đã dựng để render
+`id, src, ttl, ts, pos: OverlayPosition, size: OverlaySize, isPopupOverlay, allowAnonymous,
+compensatory: Compensatory, userId, requiredFanClub, betAmount, typeTimeline, imageNormal,
+imagePower, countdown`, và `trackingSession` (internal).
+
+### `OverlayPosition` / `OverlaySize`
+```swift
+class OverlayPosition { var x: Int; var y: Int; var alignment: OverlayAlignment? }  // x/y ∈ {0,1,2}
+class OverlaySize { var w: Float; var h: Float }   // tỉ lệ so với khung
+```
+`x`: 0 trái / 1 giữa / 2 phải. `y`: 0 trên / 1 giữa / 2 dưới. →
+`OverlayAlignment.{LeftTop … RightBottom}`.
+
+### `Timelines` (VOD)
+`time: String` (`"SS"`/`"MM:SS"`/`"HH:MM:SS"`), `interactive: VODInteractive?`, `showStatus: String?`,
+`id` (`_id`), computed `timeShow: Int` (giây).
+
+### `VODInteractive`
+`id, allowAnonymous, isPopupOverlay, requiredFocus, frequencyLimit, metadata: MetadataVod, betAmount,
+duration, targets, tenantId, src, timelineId, mediaContentId, ts`.
+
+### `Compensatory` — chống tương tác lại
+`mediaId, duration, frequencyLimit, interactiveId, unlockedTime`. Lưu vào
+`UserDefaults(suiteName: "INTERACTIVE_<userId|DEFAULT>")` theo key `mediaId`.
+
+### `PredictResult` (socket `predict-result`)
+`tenantId, timlineId` *(nguyên văn — thiếu chữ e)*, `data: { answer1: Int?, answer2: Int? }`.
+
+### `FanClub` (socket `data`)
+`roomName, isFanClub?, mediaId?`; ghi `KEY_FAN_CLUB` vào `UserDefaults`.
+
+### `JoinRoomData` / `CkstData`
+- `JoinRoomData`: `{deviceId, mediaContentId, os, tenantId, versionSDK}`.
+- `CkstData`: `action = "CHECK_PLAYER_STATUS"`, `sessionId`, `data: Ckst` (map JSON key **`os`**).
+  `Ckst`: `{deviceId, os, mediaContentId, playerStatus: Int?, tenantId}`.
+
+---
+
+## 11. Hằng số hữu ích
+
+```swift
+ApiConst.TYPE_LIVE   // = 1
+ApiConst.TYPE_VOD    // = 2
+ApiConst.OS          // = "iphone"
+ApiConst.VERSION_SDK // = "2025-05-25"
+```
+
+CDN ảnh nút:
+```swift
+PredictConst.CDN_PREDICT_IDLE   // btnpredictidle.gif (động)
+PredictConst.CDN_PREDICT_POWER  // btnpredictpower.gif (động)
+PredictConst.CDN_LUCKY_IDLE     // lucky-normal.png (tĩnh)
+PredictConst.CDN_LUCKY_POWER    // lucky-power.png (tĩnh)
+```
+
+---
+
+[← Luồng hoạt động](03-luong-hoat-dong.md) · [Về mục lục](README.md) · [Tiếp: Tracking emit-ack →](05-tracking-emit-ack.md)

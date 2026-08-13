@@ -1,0 +1,406 @@
+# 04 — API Reference
+
+[← Back to table of contents](README.md)
+
+All APIs below belong to the **`ISdk`** module (`import ISdk`).
+
+---
+
+## 1. `InteractiveControllerView`
+
+Main coordinator class — the app's entry point.
+
+```swift
+@objc public class InteractiveControllerView : NSObject {
+    public override init()   // creates SocketIOManagementImpl + OverlayManagementImpl
+}
+```
+
+### 1.1. Public properties
+
+| Property | Type | Description |
+|---|---|---|
+| `overlayManagement` | `OverlayManagement?` | Minigame overlay manager (attach delegates through here) |
+| `predictManagement` | `PredictManagementImpl!` | Manager for the predict/lucky button + dialog |
+| `socketIO` | `SocketIOManagement?` | The socket object (read-only info) |
+| `interactivePlayerDelegate` | `InteractivePlayerDelegate?` | Delegate for player state / viewer count |
+| `interactiveLoginDelegate` | `InteractiveLoginDelegate?` | Delegate for login requests |
+| `interactivePredictDelegate` | `InteractivePredictDelegate?` | Delegate for the predict button layout |
+
+### 1.2. Methods
+
+| Function | Description |
+|---|---|
+| `initOverlay(uiView: UIView, predictView: UIView)` | Attaches the 2 host views (overlay + predict), registers for orientation change listening, creates `PredictManagementImpl` |
+| `initAuthenToken(authenToken: String, userId: String, bjName: String)` | Declares/clears the login session. To log out: pass an empty string. If currently Live → automatically rejoins the room |
+| `joinRoom(mediaId: String, type: Int)` | Starts a session. `type = 1` LIVE, `type = 2` VOD. Automatically cleans up the previous session |
+| `getTimeVideo(time: TimeInterval)` | **(VOD)** Feeds the playback time (seconds). Matched against `timeShow` to display overlays |
+| `leaveRoom()` | Emits `leave-room` for the current media |
+| `releaseAll()` | Releases: leaveRoom + removes delegates + disconnects the socket |
+| `removeAllView()` | Removes the currently displayed overlay (does not touch the socket) |
+| `resizeVideoView(width: CGFloat, height: CGFloat)` | Updates the video frame size for the overlay |
+| `fetchInteractiveStatus(mediaId: String, completion: @escaping (Bool) -> Void)` | Asks the server whether this media is interactive (error → `false`) |
+| `showChartsInteractive(viewRoot: UIView, mediaId: String, userid: String?, backgroundColorHeaderView: UIColor = #489BE6)` | Opens the leaderboard (iframe) |
+| `setInteractivePlayerDelegate(interactivePlayerDelegate:)` | Attaches the player delegate |
+| `setupPredictViewDelegate(interactivePredictDelegate:)` | Attaches the predict layout delegate |
+| `setuPredictLoginDelegate(interactiveLoginDelegate:)` | Attaches the login delegate for predict (note the typo `setuPredict`) |
+| `embededInteractiveContentView()` | Actively opens the predict/lucky content dialog |
+| `setHiddenInteractiveButton(_ isHidden: Bool)` | Hides/shows the floating predict/lucky button |
+| `leaveRoom()` / `disconnection()` | Leave the room / disconnect the socket |
+
+Attach a delegate for the minigame overlay via `overlayManagement`:
+
+```swift
+interactive.overlayManagement?.setupDelegate(interactiveViewDelegate: self)
+interactive.overlayManagement?.setupDelegate(interactiveLoginDelegate: self)
+interactive.overlayManagement?.setupDelegate(fanClubDelegate: self)
+interactive.overlayManagement?.setupAnswerDelegate(interactiveAnswerDelegate: self)
+```
+
+---
+
+## 2. `InteractiveSetting`
+
+```swift
+@objc public class InteractiveSetting: NSObject {
+    public static let KEY_ENABLE_PROD_ENV = "KEY_ENABLE_PROD_ENV"
+    public static let KEY_X_TENANT_ID     = "KEY_X_TENANT_ID"
+
+    public func setEnableProdEnv(enableProdEnv: String)   // Enviroment.rawValue
+    public func setXTenantId(xTenantId: String)           // TenantIdType.rawValue
+}
+```
+
+> Both must be called **before** any `joinRoom`. The values are stored in `UserDefaults.standard` and
+> read back (force-unwrapped) in several places.
+
+```swift
+public enum Enviroment: String { case DEV = "dev"; case STG = "stg"; case PROD = "prod" }
+
+public enum TenantIdType: String {
+    case vtvlive                          // OnPlus
+    case onliveLiveStream = "onlivev2"    // SOOP
+    case onliveTV = "onlivetv"            // OnLive TV
+    case VTVprime = "VTVprime"            // SeeNow
+}
+```
+
+---
+
+## 3. Delegate protocols
+
+All of them (except `PlayerChangeListener`) are `@objc public protocol … : AnyObject`.
+
+### `InteractivePlayerDelegate`
+```swift
+func getPlayerState() -> Int        // player state code, used for the ckst event
+func showLiveView(liveView: Int)    // real-time viewer count (ALREADY includes +230)
+```
+
+### `InteractiveLoginDelegate`
+```swift
+func showInteractiveLogin()         // called when the user interacts while not logged in
+```
+
+### `InteractivePredictDelegate`
+```swift
+func showLayoutViewPredictRoot()    // shows the container area for the predict/lucky button
+func hideLayoutViewPredictRoot()
+func endLayoutViewPredictRoot()
+```
+
+### `InteractiveAnswerDelegate`
+```swift
+func confirmDeduction()             // agrees to deduct OnG
+func confirmNotEnoughMoney()        // not enough OnG (PM402)
+func confirmAnswerSuccess()         // answer submitted successfully
+func showSubscibeView()             // opens the top-up/subscription screen (typo "Subscibe")
+```
+
+### `InteractiveViewDelegate`
+```swift
+func shrinkScreenInteractive(show: Bool, direction: Int, withXScale x: CGFloat, withYScale y: CGFloat)
+func resetLayoutInteractive()
+func preloadVideoActionBranching(url: String, timeToNext: TimeInterval)
+func nextVideoActionBranching()
+func showLayoutViewRoot()
+func hideLayoutViewRoot()
+func locationLayoutViewRoot(location: Int, width: CGFloat, height: CGFloat)  // position 0..8
+func hidePlayerControl()
+func showPlayerControl()
+func viewForPresentDialogDedution() -> UIView?   // has default = nil (optional)
+```
+
+### `FanClubDelegate`
+```swift
+func btnConfirmFanClub()            // user taps to confirm joining the fan club
+```
+
+### `InteractiveConnectDelegate`
+```swift
+func connectedSocket()
+```
+
+### `PlayerChangeListener` (pure Swift)
+```swift
+func currentPosition() -> CLong?
+```
+
+`location` in `locationLayoutViewRoot`: `0 LeftTop, 1 CenterTop, 2 RightTop, 3 LeftCenter,
+4 Center, 5 RightCenter, 6 LeftBottom, 7 CenterBottom, 8 RightBottom`.
+
+---
+
+## 4. `OverlayManagement` (protocol)
+
+```swift
+@objc public protocol OverlayManagement {
+    var isReadyToShowVodOverlay: Bool { get set }
+    func initialization(overlayView: UIOverlay)
+    func setupDataToPrepareShowVOD(timeLineList: [Timelines])
+    func prepareShowOverlayForVod(overlayList: [Overlay])
+    func showOverlayLive(overlay: Overlay, authenToken: String, mediaContentId: String,
+                         socketId: String?, bjName: String, buttonPredict: UIImageView)
+    func showOverlayVod(overlay: Overlay, authenToken: String, mediaContentId: String)
+    func stopShowOverlayPlayback()
+    func hiddenOverlay()
+    func onDestroy()
+    func removeAllView()
+    func setupDelegate(interactiveViewDelegate: InteractiveViewDelegate)
+    func setupDelegate(interactiveLoginDelegate: InteractiveLoginDelegate?)
+    func setupAnswerDelegate(interactiveAnswerDelegate: InteractiveAnswerDelegate)
+    func setupDelegate(fanClubDelegate: FanClubDelegate)
+    func resizeVideoView(width: CGFloat, height: CGFloat)
+    func webviewPublic() -> WKWebView?
+    func killDelegate()
+    func recallOverlay(timelineId: String)
+}
+```
+
+The app mainly uses the `setupDelegate*` functions; `recallOverlay` is called internally by the SDK.
+
+---
+
+## 5. `SocketIOManagement` (protocol) — informational
+
+The app typically does not call this directly; the SDK coordinates it.
+
+```swift
+func connection(url: String, authenToken: String?)
+func addCallback(callBack: @escaping (String, Any) -> ())
+func joinRoom(data: JoinRoomData)
+func leaveRoom(data: JoinRoomData)
+func ckstRoom(data: CkstData)
+func sendEmitAck(trackingId: String, event: String, stage: String, clientContext: [String: Any])
+func isConnected() -> Bool
+func getSocketId() -> String
+func disconnection()
+func onDestroy()
+```
+
+---
+
+## 6. Socket.IO events
+
+### 6.1. Server → SDK (listened to)
+
+| Wire name | Constant | Handling |
+|---|---|---|
+| `overlay` | `SocketEvents.OVERLAY` | Real-time overlay |
+| `ex-overlay` | `SocketEvents.EX_OVERLAY` | Compensatory overlay |
+| `overlay-recall` | `SocketEvents.OVERLAY_RECALL` | Recalls an overlay by `timelineId` |
+| `predict-timeline` | `SocketEvents.PREDICT_TIMELINE` | `ACTIVE`/`INACTIVE`/`POWER`/`END` for the predict button |
+| `lucky-event` | `SocketEvents.LUCKY_EVENT` | Same, for lucky |
+| `predict-result` | `SocketEvents.PREDICT_RESULT` | `answer1`/`answer2` |
+| `update-result` | `SocketEvents.UPDATE_RESULT` | Pushed down to the web via `UPDATE_DATA_INTERACTIVE` |
+| `liveviews` | `SocketEvents.LIVE_VIEW` | Viewer count |
+| `data` | `SocketEvents.FANCLUB` | Fan club status |
+| `ckst` | `SocketEvents.CKST` | Server asks for player status |
+| `branching` | `SocketEvents.BRANCHING` | Branching video |
+
+Internal client events: `.connect` → `CONNECTED`, `.disconnect` → `DISCONNECTED`, `.reconnect` →
+`RECONNECT`, `.error` → `ERROR`.
+
+### 6.2. SDK → Server (emitted)
+
+| Name | When | Payload |
+|---|---|---|
+| `join-room` | After the socket connects | `JoinRoomData` = `{deviceId, mediaContentId, os, tenantId, versionSDK}` |
+| `leave-room` | `leaveRoom()` | Same as above |
+| `receive-message` | Overlay payload has `traceLock == true` | Binary form (ArrayBuffer) of the original payload |
+| `emit-ack` | Tracking milestones | `{trackingId, event, stage, deviceId, clientContext}` |
+| `ckst` | Reply to the `ckst` event | `CkstData` = `{action: "CHECK_PLAYER_STATUS", sessionId, os: {…Ckst}}` |
+
+### 6.3. Headers & configuration when connecting the socket
+
+| Header | Value |
+|---|---|
+| `x-tenant-id` | `KEY_X_TENANT_ID` |
+| `v` | `ApiConst.VERSION_SDK` (`"2025-05-25"`) |
+| `os` | `ApiConst.OS` (`"iphone"`) |
+| `deviceId` | `UIDevice.identifierForVendor` |
+| `Authorization` | The raw token **as-is** (the socket does not add `Bearer` itself) |
+
+Configuration: `forceWebsockets(true)`, `compress`, `reconnects(true)`, `reconnectWait(5)`,
+`randomizationFactor(0.4)`.
+
+---
+
+## 7. HTTP Endpoints
+
+Base URL is selected based on `KEY_ENABLE_PROD_ENV`:
+
+| Env | REST base | WSK base |
+|---|---|---|
+| DEV | `https://dev-api.onplay.live/` | `https://dev-wsk.onplay.live/` |
+| STG | `https://beta-api.onplay.live/` | `https://beta-wsk.onplay.live/` |
+| PROD | `https://api.onplay.live/` | `https://wsk.onplay.live/` |
+
+| Method | Path | Header | Used for |
+|---|---|---|---|
+| `GET` | `/api/ctc/scenario/v2/vod/{mediaId}/{os}` | `X-TENANT-ID` | Loads the VOD scenario |
+| `POST` | `/api/actions` | `X-TENANT-ID`, `Authorization` (Bearer if JWT) | Sends an action / answer |
+| `GET` | `/api/public/vip-status` | `X-TENANT-ID`, `Authorization` | Checks VIP status (telco) before deducting OnG |
+| `GET` | `/api/media/interactive-status/{mediaId}` | `X-TENANT-ID` | Whether the media is interactive |
+| `GET` | `/api/scenario/getActiveOverlay/{mediaId}` | — | Currently active (compensatory) overlay — the current function has a bug returning it synchronously, see [06](06-loi-thuong-gap.md) |
+
+**Request body for `/api/actions`** (the SDK adds these to the JSON sent by the web):
+
+```jsonc
+{
+  "type": "INTERACTIVE_ACTION_REPORT",
+  "deviceId": "<identifierForVendor>",   // added by SDK
+  "os": "iphone",                          // added by SDK
+  "data": {
+    "answer": ...,                         // from the template
+    "content": ...,                        // from the template
+    "media": "<mediaId>",                  // added by SDK
+    "socket_id": "<socket id>",            // added by SDK (Live only)
+    "versionSDK": "2025-05-25"             // added by SDK
+    // ...other fields sent by the template
+  }
+}
+```
+
+---
+
+## 8. JS bridge protocol
+
+Interface name: **`IOS`** (`userContentController.add(callBack, name: "IOS")`).
+
+### Web → SDK
+```javascript
+window.webkit.messageHandlers.IOS.postMessage(JSON.stringify({ type: "INTERACTIVE_ACTION_REPORT", data: {...} }));
+```
+
+| `type` (`TypeInteractive`) | Meaning |
+|---|---|
+| `INTERACTIVE_SHOW_ANALYTICS` | The overlay is displayed |
+| `INTERACTIVE_HIDE_ANALYTICS` | The overlay is closed → the WebView is removed |
+| `INTERACTIVE_ACTION_REPORT` | Reply / action (`data.action = "CLICK_ADS"` for ads, opens `urlLinkAds`) |
+| `INTERACTIVE_OPEN_ANALYTICS` / `INTERACTIVE_CLOSE_ANALYTICS` | Opens/closes the predict/lucky dialog |
+| `INTERACTIVE_PING_ANALYTICS` | Used only for filtering |
+
+### SDK → Web
+```javascript
+window.addEventListener("message", (e) => { /* e.data contains key + data */ });
+```
+
+| `key` | Content |
+|---|---|
+| `UPDATE_DATA_INTERACTIVE` | Real-time result update (from `update-result`) |
+| `UPDATE_COUTER` *(as written, sic)* | Predict figures `answer1`/`answer2` |
+| `UPDATE_NUMBER_LUCKY` | Lucky number result |
+| `UPDATE_CONFIRM` | Confirms a successful answer (bet/VIP branch) |
+
+---
+
+## 9. Query parameters attached to the template URL
+
+| Parameter | When |
+|---|---|
+| `&logged=false` / `&logged=true` | Based on login state & `allowAnonymous` |
+| `&fanclub=false` | Tenant `onlivev2`, `requiredFanClub`, and not yet a fan club member |
+| `&duration=<remaining>` | When `countdown > 0` (computed from `ts`) |
+| `&u=<userId>` | Lucky only (`typeTimeline = 5`) |
+| `timelineId`, `tenantId`, `deviceType=IOS` | VOD overlay only |
+
+---
+
+## 10. Main models
+
+### `OverlayLive` — real-time (Live) overlay
+| Field | Type | Meaning |
+|---|---|---|
+| `src` | `String` | Template URL |
+| `metadata` | `Metadata(size, pos, duration?, targets?)` | Position + size |
+| `ts` | `Int` | Timestamp (ms) used to compute the remaining duration |
+| `timelineID` (`timelineId`) | `String` | Milestone identifier (dedup / prevents re-answering) |
+| `mediaContentID` (`mediaContentId`) | `String` | The content it applies to |
+| `targets` | `String` | Platform (`iphone`, `all`…) |
+| `duration`, `frequencyLimit`, `countdown` | `Int?` | Duration / frequency limit |
+| `status` | `String?` | `ACTIVE` / `INACTIVE`… |
+| `typeTimeline` | `Int?` | `3` predict, `5` lucky, `2` (bet), the rest minigame |
+| `allowAnonymous`, `requiredFanClub`, `isPopupOverlay` | `Bool?` | Display/answer conditions |
+| `betAmount` | `Int?` | OnG amount wagered |
+| `imageNormal`, `imagePower` | `String?` | Predict/lucky button images |
+| `trackingId` (`_trackingId`), `emitTimestamp` (`_emitTimestamp`) | | Tracking metadata |
+
+### `Overlay` — overlay built for rendering
+`id, src, ttl, ts, pos: OverlayPosition, size: OverlaySize, isPopupOverlay, allowAnonymous,
+compensatory: Compensatory, userId, requiredFanClub, betAmount, typeTimeline, imageNormal,
+imagePower, countdown`, and `trackingSession` (internal).
+
+### `OverlayPosition` / `OverlaySize`
+```swift
+class OverlayPosition { var x: Int; var y: Int; var alignment: OverlayAlignment? }  // x/y ∈ {0,1,2}
+class OverlaySize { var w: Float; var h: Float }   // ratio relative to the frame
+```
+`x`: 0 left / 1 center / 2 right. `y`: 0 top / 1 middle / 2 bottom. →
+`OverlayAlignment.{LeftTop … RightBottom}`.
+
+### `Timelines` (VOD)
+`time: String` (`"SS"`/`"MM:SS"`/`"HH:MM:SS"`), `interactive: VODInteractive?`, `showStatus: String?`,
+`id` (`_id`), computed `timeShow: Int` (seconds).
+
+### `VODInteractive`
+`id, allowAnonymous, isPopupOverlay, requiredFocus, frequencyLimit, metadata: MetadataVod, betAmount,
+duration, targets, tenantId, src, timelineId, mediaContentId, ts`.
+
+### `Compensatory` — prevents repeated interaction
+`mediaId, duration, frequencyLimit, interactiveId, unlockedTime`. Stored in
+`UserDefaults(suiteName: "INTERACTIVE_<userId|DEFAULT>")` under the `mediaId` key.
+
+### `PredictResult` (socket `predict-result`)
+`tenantId, timlineId` *(as written — missing the letter e)*, `data: { answer1: Int?, answer2: Int? }`.
+
+### `FanClub` (socket `data`)
+`roomName, isFanClub?, mediaId?`; writes `KEY_FAN_CLUB` into `UserDefaults`.
+
+### `JoinRoomData` / `CkstData`
+- `JoinRoomData`: `{deviceId, mediaContentId, os, tenantId, versionSDK}`.
+- `CkstData`: `action = "CHECK_PLAYER_STATUS"`, `sessionId`, `data: Ckst` (JSON key mapped as **`os`**).
+  `Ckst`: `{deviceId, os, mediaContentId, playerStatus: Int?, tenantId}`.
+
+---
+
+## 11. Useful constants
+
+```swift
+ApiConst.TYPE_LIVE   // = 1
+ApiConst.TYPE_VOD    // = 2
+ApiConst.OS          // = "iphone"
+ApiConst.VERSION_SDK // = "2025-05-25"
+```
+
+Button image CDN:
+```swift
+PredictConst.CDN_PREDICT_IDLE   // btnpredictidle.gif (animated)
+PredictConst.CDN_PREDICT_POWER  // btnpredictpower.gif (animated)
+PredictConst.CDN_LUCKY_IDLE     // lucky-normal.png (static)
+PredictConst.CDN_LUCKY_POWER    // lucky-power.png (static)
+```
+
+---
+
+[← Activity Flow](03-luong-hoat-dong.md) · [Back to table of contents](README.md) · [Next: Tracking emit-ack →](05-tracking-emit-ack.md)

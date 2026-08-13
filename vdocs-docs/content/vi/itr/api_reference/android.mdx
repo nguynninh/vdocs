@@ -1,0 +1,348 @@
+# 04 — API Reference
+
+[← Về mục lục](README.md)
+
+Tất cả API dưới đây thuộc package gốc `vn.interactive`.
+
+---
+
+## 1. `OverlayManager`
+
+```kotlin
+class OverlayManager(
+    activity: Activity,                              // phải là FragmentActivity/AppCompatActivity
+    overlayView: OverlayView,                        // view trong layout, phủ vùng video
+    overlayData: OverlayData,                        // cấu hình môi trường + tenant
+    overlayEventListener: OverlayEventListener? = null
+) : OnOverlayListener, LifecycleOverlay
+```
+
+### 1.1. Thuộc tính công khai
+
+| Thành phần | Kiểu | Mô tả |
+|---|---|---|
+| `valueTimePlay` | `Int` (chỉ đọc) | Giây phát gần nhất mà app đã bơm vào qua `receiveTrackingTime` |
+| `receiveTrackingTime` | `(Int) -> Unit` | **Bơm thời gian phát (giây) cho luồng VOD.** Gọi như hàm: `overlayManager.receiveTrackingTime(12)` |
+
+### 1.2. Phương thức
+
+| Hàm | Mô tả | Ghi chú |
+|---|---|---|
+| `initToken(token: String, userId: String, bjName: String = "")` | Khai báo/xoá phiên đăng nhập | Gọi trước `joinRoom`. Đăng xuất: `initToken("", "")`. Nếu đang Live sẽ tự vào lại phòng |
+| `joinRoom(mediaId: String, type: Int)` | Bắt đầu phiên tương tác cho một nội dung | `type = 1` LIVE, `type = 2` VOD. Tự `cleanUp()` phiên cũ |
+| `releaseAll()` | Giải phóng toàn bộ: socket, WebView, dialog, tracking | Gọi ở `onDestroy()` hoặc khi thoát nội dung |
+| `fetchInteractiveStatus(mediaId: String, callback: (Boolean) -> Unit)` | Hỏi server nội dung này có tương tác không | Lỗi mạng → trả `false` |
+| `showChartsInteractive(mediaId: String, userId: String, backgroundColorHeader: String? = null)` | Mở bảng xếp hạng (DialogFragment toàn màn hình) | `backgroundColorHeader` là mã hex, ví dụ `"#139DED"` |
+| `hideChartsInteractive()` | Đóng bảng xếp hạng | |
+| `isDialogCharShowing(): Boolean` | Bảng xếp hạng có đang hiển thị không | |
+| `addPlayerListener(listener: PlayerChangeListener)` | Cấp trạng thái player cho SDK (phục vụ sự kiện `ckst`) | Gọi **sau** `joinRoom` để listener được gắn cả vào socket |
+| `sendAction(data: JSONObject)` | *(implement `OnOverlayListener`)* Xử lý hành động từ WebView | SDK tự gọi, app **không** cần gọi |
+| `onClickAdsOverlay(url: String)` | *(implement `OnOverlayListener`)* Mở URL quảng cáo bằng trình duyệt ngoài | SDK tự gọi |
+
+> `LifecycleOverlay` hiện là interface rỗng (các hàm `onResume/onStop/onDestroy` đã được comment
+> trong mã) — SDK **không** tự bám vòng đời Activity ngoài việc observe LiveData.
+
+---
+
+## 2. `OverlayData` + `OverlayData.Builder`
+
+```kotlin
+val overlayData = OverlayData.Builder()
+    .setEnvironment(EnvInteractive.PROD)   // mặc định PROD
+    .setTenantId("vtvlive")                // mặc định "" — nên luôn set
+    .setDebug(false)                       // mặc định false
+    .build()
+```
+
+| Thuộc tính | Kiểu | Mặc định | Ảnh hưởng |
+|---|---|---|---|
+| `envInteractive` | `EnvInteractive` | `PROD` | URL socket, URL REST, URL bảng xếp hạng |
+| `tenantId` | `String` | `""` | Header `X-TENANT-ID` (socket + REST), query BXH, luật đăng nhập của tenant `vtvlive` |
+| `debug` | `Boolean` | `false` | Cờ dự phòng, hiện chưa đổi hành vi log (log phụ thuộc `BuildConfig.DEBUG` của SDK) |
+| `mediaId`, `userId` | `String?` | `null` | Được SDK gán khi mở bảng xếp hạng |
+
+```kotlin
+enum class EnvInteractive { DEV, STG, PROD }
+```
+
+---
+
+## 3. `OverlayEventListener` / `DefaultOverlayEventListener`
+
+```kotlin
+interface OverlayEventListener {
+    fun onHandleMessage(msg: EventOverlay)
+    fun onHandleLiveViews(liveViews: Int)
+    fun onShowITR(show: Boolean)
+    fun onFocusOverlay(
+        takeControl: Boolean = false,
+        webViewError: Boolean = false,
+        overlayConfig: OverlayConfig? = null
+    )
+}
+
+interface DefaultOverlayEventListener : OverlayEventListener   // alias, không thêm hàm
+```
+
+| Callback | Khi nào được gọi | Việc app nên làm |
+|---|---|---|
+| `onHandleMessage(NEED_LOGIN)` | Người dùng thao tác với overlay yêu cầu đăng nhập | Mở màn hình đăng nhập, sau đó gọi `initToken()` |
+| `onHandleMessage(NEED_PAY_ONG)` | Server trả `PM402` (không đủ OnG) | Mở màn hình nạp |
+| `onHandleLiveViews(n)` | Socket `liveviews` | Hiển thị số người xem (**đã cộng 230**) |
+| `onShowITR(true)` | Overlay mở phần thống kê/dialog | Ẩn bớt UI của app nếu cần |
+| `onFocusOverlay(takeControl = true, …)` | WebView nạp xong (`onPageFinished`) | Điều chỉnh layout nếu overlay là popup |
+| `onFocusOverlay(webViewError = true, …)` | Lỗi tải trang / HTTP / SSL | Ghi log, có thể báo người dùng |
+| `onFocusOverlay(takeControl = false, …)` | Overlay bị gỡ (`INTERACTIVE_HIDE_ANALYTICS`) | Khôi phục layout |
+
+```kotlin
+enum class EventOverlay {
+    NEED_LOGIN,                  // SDK có phát
+    NEED_PAY_ONG,                // SDK có phát
+    TOURNAMENT_BET,              // đã khai báo, chưa dùng
+    SUCCESSFUL_REPLY_SUBMITTED,  // đã khai báo, chưa dùng
+    FAILED_REPLY_SUBMITTED,      // đã khai báo, chưa dùng
+    TAKE_FOCUS                   // đã khai báo, chưa dùng
+}
+```
+
+---
+
+## 4. `PlayerChangeListener`
+
+```kotlin
+interface PlayerChangeListener {
+    suspend fun currentPosition(): Long
+    fun onPlayerStateChanged(): Pair<Boolean, Int>   // (isPlaying, playbackState)
+}
+```
+
+`playbackState` theo quy ước ExoPlayer: `1 = IDLE`, `2 = BUFFERING`, `3 = READY`, `4 = ENDED`.
+SDK ánh xạ: `1 → "idle"`, `3 → isPlaying ? "playing" : "paused"`, còn lại → `""`.
+
+---
+
+## 5. `OverlayView`
+
+`ConstraintLayout` tuỳ biến, là **khung chứa** mọi overlay.
+
+| Thành phần công khai | Mô tả |
+|---|---|
+| `overlayList: HashMap<OverlayWebView, OverlayConfig>` | Các WebView đang gắn |
+| `addListener(eventListener, overlayListener)` | SDK tự gọi trong `OverlayManager.init` |
+| `getCurrentOrientation(): Int` | Hướng màn hình hiện tại |
+| `getLastOverlay(): OverlayWebView?` | WebView gắn gần nhất |
+| `getOverlayConfig(): OverlayConfig?` | Config của overlay dạng popup (nếu có) |
+| `removeWebView(view)`, `removeWebViews()`, `clearViews()` | Gỡ view và huỷ tracking tương ứng |
+
+App chỉ cần khai báo view này trong XML; các hàm còn lại do SDK dùng.
+
+---
+
+## 6. Model chính
+
+### `Overlay` — mô tả một overlay
+
+| Trường | Kiểu | Ý nghĩa |
+|---|---|---|
+| `src` | `String` | URL template web |
+| `metadata` | `Metadata(pos, size)` | Vị trí + kích thước theo tỉ lệ |
+| `duration` | `Long` | Thời lượng hiển thị (giây) |
+| `targets` | `String?` | Nền tảng áp dụng (`all`, `androidmobile`, `androidtv`…) |
+| `timelineId` | `String?` | Định danh mốc kịch bản (khoá chống trùng, chống trả lời lại) |
+| `mediaContentId` | `String?` | Nội dung áp dụng |
+| `typeTimeline` | `Int?` | 0/1/2 mini game, 3 predict, 4 headline, 5 lucky |
+| `isPopupOverlay` | `Boolean` | `true` → dùng ràng buộc popup theo 9 vị trí; `false` → inline trên/dưới |
+| `allowAnonymous` | `Boolean` | Cho phép người chưa đăng nhập xem/tương tác |
+| `requiredFanClub` | `Boolean?` | Bắt buộc là fanclub |
+| `startTimeShowOverlay` | `Long?` | (VOD) giây bắt đầu hiện |
+| `requiredFocus`, `frequencyLimit`, `ts`, `sendTime`, `serverTime` | | Trường phụ trợ từ server |
+
+### `Metadata` / `OverlayPosition` / `OverlaySize`
+
+```kotlin
+data class Metadata(val pos: OverlayPosition, val size: OverlaySize)
+data class OverlayPosition(val x: Int, val y: Int, var alignment: OverlayAlignment? = null)
+data class OverlaySize(val w: Float, val h: Float)   // 0..1 — tỉ lệ so với OverlayView
+```
+
+`x`: `0` trái, `1` giữa, `2` phải. `y`: `0` trên, `1` giữa, `2` dưới →
+`OverlayAlignment.{LeftTop, LeftCenter, LeftBottom, CenterTop, Center, CenterBottom, RightTop, RightCenter, RightBottom}`.
+
+### `OverlayConfig` — thông tin kèm callback `onFocusOverlay`
+
+```kotlin
+data class OverlayConfig(
+    val popupOverlay: Boolean = false,  // true nếu là overlay inline dạng dải trên/dưới
+    val alignment: String? = null,      // "top" | "bottom" | "left" | "right"
+    val ratio: Float = 0F               // tỉ lệ chiều cao so với OverlayView
+)
+```
+
+### `ActionReportResponse`
+
+```kotlin
+data class ActionReportResponse(
+    var success: Boolean = false,
+    var result: ActionResponseMessage = ActionResponseMessage(),  // message, status, description, data
+    var failureReason: String? = null,
+    var failureStep: String? = null,
+    var error: String? = null,
+)
+```
+
+---
+
+## 7. Sự kiện Socket.IO
+
+### 7.1. Server → SDK (lắng nghe)
+
+| Tên sự kiện | Hằng số | Kiểu dữ liệu | Xử lý |
+|---|---|---|---|
+| `overlay` | `Const.OVERLAY` | `JSONObject` | Overlay realtime |
+| `ex-overlay` | `Const.EX_OVERLAY` | `JSONObject` | Overlay bù (bỏ nếu `duration <= 10`) |
+| `overlay-recall` | `Const.OVERLAY_RECALL` | `JSONObject` \| `ByteArray` | Thu hồi overlay theo `timelineId` |
+| `predict-timeline` | `Const.PREDICT_TIMELINE` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `lucky-event` | `Const.LUCKY_EVENT` | `ByteArray` | `ACTIVE` / `INACTIVE` / `POWER` / `END` |
+| `predict-result` | `Const.PREDICT_RESULT` | `ByteArray` | Số liệu `answer1` / `answer2` |
+| `update-result` | `Const.UPDATE_RESULT` | `ByteArray` | Đẩy xuống web qua `UPDATE_DATA_INTERACTIVE` |
+| `liveviews` | `Const.LIVE_VIEWS` | `JSONObject` | Số người xem |
+| `data` | `Const.FAN_CLUB` | `ByteArray` | Trạng thái fanclub |
+| `ckst` | `Const.CKST` | `JSONObject` | Server hỏi trạng thái player |
+
+### 7.2. SDK → Server (emit)
+
+| Tên | Khi nào | Payload |
+|---|---|---|
+| `join-room` | Sau khi socket connect | `{deviceId, mediaContentId, os, versionSDK, tenantId, isActivelyDisconnectSocket}` |
+| `leave-room` | `leaveRoom()` | như trên |
+| `receive-message` | Payload có `traceLock = true` | Payload gốc (ByteArray UTF-8) |
+| `emit-ack` | Các mốc tracking | Xem [05 — Tracking](05-tracking-emit-ack.md) |
+| `ckst` | Trả lời sự kiện `ckst` | `{action: "CHECK_PLAYER_STATUS", sessionId, data: {deviceId, os, mediaContentId, playerStatus}}` |
+
+### 7.3. Header khi kết nối socket
+
+| Header | Giá trị |
+|---|---|
+| `X-TENANT-ID` | `tenantId` |
+| `v` | `BuildConfig.BUILD_VERSION` (ngày build SDK) |
+| `os` | `BuildConfig.DEVICE_TYPE` (`androidmobile` / `androidtv`) |
+| `deviceId` | `Settings.Secure.ANDROID_ID` |
+| `Authorization` | `Bearer <jwt>` hoặc cookie nguyên văn |
+
+Tuỳ chọn kết nối: chỉ dùng `websocket`, tự reconnect, delay 5000ms (cả `reconnectionDelay` lẫn
+`reconnectionDelayMax`), `randomizationFactor = 0.4`.
+
+---
+
+## 8. Endpoint HTTP
+
+Base URL = `Const.INTERACTIVE_URL` (suy ra từ `EnvInteractive`).
+Interceptor của `BaseRequest` tự thêm header `X-TENANT-ID`.
+
+| Method | Đường dẫn | Header | Dùng cho |
+|---|---|---|---|
+| `GET` | `/api/ctc/scenario/v2/vod/{mediaContentId}/{os}` | `Authorization` | Tải kịch bản VOD |
+| `GET` | `/api/scenario/getActiveOverlay/{mediaContentId}` | — | Lấy overlay đang hoạt động (bù) |
+| `POST` | `/api/actions` | `Authorization` | Gửi hành động / câu trả lời |
+| `GET` | `/api/public/vip-status` | `Authorization` | Kiểm tra VIP trước khi trả lời |
+| `GET` | `/api/media/interactive-status/{mediaId}` | `x-tenant-id`, `Cookie` | Nội dung có tương tác không |
+
+**Thân request `/api/actions`** (SDK bổ sung vào JSON do web gửi lên):
+
+```jsonc
+{
+  "type": "INTERACTIVE_ACTION_REPORT",
+  "deviceId": "<android-id>",      // SDK thêm
+  "os": "(os, androidmobile)",     // SDK thêm
+  "data": {
+    "timelineId": "...",
+    "typeTimeline": 1,
+    "betAmount": 0,
+    "allowAnonymous": false,
+    "requiredFanClub": false,
+    "media": "<mediaId>",          // SDK thêm
+    "socket_id": "<socket id>"     // SDK thêm (chỉ khi Live)
+    // ...các trường do template web gửi
+  }
+}
+```
+
+---
+
+## 9. Giao thức JS bridge
+
+Tên interface: **`Android`** (`Const.JS_INTERFACE_NAME`).
+
+### Web → SDK
+
+```javascript
+Android.postMessage(JSON.stringify({ key: "LOADED_OVERLAY" }));
+Android.postMessage(JSON.stringify({ type: "INTERACTIVE_ACTION_REPORT", data: {...} }));
+```
+
+| Giá trị | Hằng số | Ý nghĩa |
+|---|---|---|
+| `key = LOADED_OVERLAY` | `Const.LOADED_OVERLAY` | Template sẵn sàng nhận dữ liệu |
+| `type = INTERACTIVE_SHOW_ANALYTICS` | | Overlay hiển thị |
+| `type = INTERACTIVE_HIDE_ANALYTICS` | | Overlay đóng |
+| `type = INTERACTIVE_ACTION_REPORT` | | Trả lời / hành động (có `data.action = "CLICK_ADS"` cho quảng cáo) |
+| `type = INTERACTIVE_OPEN_ANALYTICS` | | Mở dialog predict/lucky |
+| `type = INTERACTIVE_CLOSE_ANALYTICS` | | Đóng dialog predict/lucky |
+
+### SDK → Web
+
+```javascript
+window.addEventListener("message", (e) => { /* e.data chứa key + data */ });
+```
+
+| `key` | Nội dung |
+|---|---|
+| `GET_DATA_INTERACTIVE` | Dữ liệu overlay ban đầu |
+| `UPDATE_DATA_INTERACTIVE` | Cập nhật kết quả realtime |
+| `UPDATE_CONFIRM` | Xác nhận trả lời thành công |
+| `UPDATE_COUTER` | Số liệu predict (`answer1`, `answer2`) |
+| `UPDATE_NUMBER_LUCKY` | Kết quả lucky |
+
+---
+
+## 10. Tham số query gắn vào URL template
+
+| Tham số | Khi nào được thêm |
+|---|---|
+| `os=<deviceType>` | Nếu `src` chưa có `&os` |
+| `logged=false` | Chưa đăng nhập **và** overlay không `allowAnonymous` |
+| `duration=<giây còn lại>` | Luôn (tính từ `missTime`) |
+| `fanclub=false` | Overlay yêu cầu fanclub nhưng người dùng chưa thuộc fanclub |
+| `u=<userId>` | Riêng `PredictDialog` / `LuckyDialog` |
+| `timelineId`, `tenantId`, `deviceType`, `os` | Riêng overlay VOD (dựng trong `parseTimeLineListForVOD`) |
+
+---
+
+## 11. Hằng số hữu ích cho app
+
+```kotlin
+Const.VIDEO_LIVE  // = 1
+Const.VIDEO_VOD   // = 2
+```
+
+Các biến toàn cục do SDK quản lý (app **không nên** ghi trực tiếp): `Const.USER_COOKIE`,
+`Const.USER_ID`, `Const.BJ_NAME`, `Const.IS_FAN_CLUB`, `Const.IS_VIP`, `Const.BET_AMOUNT`,
+`Const.INTERACTIVE_URL`, `Const.INTERACTIVE_SOCKET_URL`.
+
+---
+
+## 12. Dialog gợi ý (`SuggestType`) — SDK tự hiển thị
+
+| Loại | Nội dung hiển thị | Kích hoạt bởi |
+|---|---|---|
+| `SUGGEST_FAN_CLUB` | Cảnh báo cần vào fanclub (kèm `Const.BJ_NAME`) | Overlay `requiredFanClub` |
+| `SUGGEST_BET` | "Bạn có đồng ý sử dụng N OnG để trả lời không?" | `betAmount > 0` và không phải VIP |
+| `SUGGEST_ANSWER_REJECT` | `description` từ API, mặc định "Trả lời không thành công!" | API trả `success = false` |
+| `SUGGEST_ANSWER_PAYMENT_REJECT` | "Vui lòng nạp OnG!" | Mã `PM402` |
+| `SUGGEST_PREDICT_END` | "Dự đoán đã kết thúc!" | Sự kiện predict `END` |
+| `SUGGEST_LUCKY_END` | "Sự kiện đã kết thúc!" | Lucky kết thúc |
+| `SUGGEST_ANSWER_SUCCESS`, `SUGGEST_ERROR_OCCUR`, `SUGGEST_LOGIN` | Đã định nghĩa, chưa dùng trong luồng hiện tại | |
+
+---
+
+[← Luồng hoạt động](03-luong-hoat-dong.md) · [Về mục lục](README.md) · [Tiếp: Tracking emit-ack →](05-tracking-emit-ack.md)

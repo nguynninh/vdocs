@@ -1,0 +1,561 @@
+# 03 — Detailed Workflow
+
+[← Back to table of contents](README.md)
+
+This document describes **each business flow** of the SDK, along with sequence diagrams and branch
+conditions exactly as they exist in the current source code.
+
+## List of flows
+
+1. [SDK initialization](#1-sdk-initialization)
+2. [Login / logout](#2-login--logout)
+3. [Joining a LIVE room](#3-joining-a-live-room)
+4. [Receiving and routing overlays (LIVE)](#4-receiving-and-routing-overlays-live)
+5. [Rendering an overlay on screen](#5-rendering-an-overlay-on-screen)
+6. [Lifecycle of an overlay WebView](#6-lifecycle-of-an-overlay-webview)
+7. [Answering a question (mini game)](#7-answering-a-question-mini-game)
+8. [Predict (`typeTimeline = 3`)](#8-predict-typetimeline--3)
+9. [Lucky spin (`typeTimeline = 5`)](#9-lucky-spin-typetimeline--5)
+10. [Headline (`typeTimeline = 4`)](#10-headline-typetimeline--4)
+11. [Overlay recall — overlay-recall](#11-overlay-recall--overlay-recall)
+12. [Auxiliary events: liveviews, fan-club, ckst](#12-auxiliary-events-liveviews-fan-club-ckst)
+13. [VOD flow](#13-vod-flow)
+14. [Disconnection and recovery](#14-disconnection-and-recovery)
+15. [Resource release](#15-resource-release)
+
+---
+
+## 1. SDK initialization
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant U as Utils (JNI)
+    participant BR as BaseRequest
+    participant OV as OverlayView
+    participant SP as NPreferenceUtils
+
+    APP->>OM: new OverlayManager(activity, overlayView, overlayData, listener)
+    OM->>OM: deviceId = Settings.Secure.ANDROID_ID
+    OM->>OM: versionSDK = VERSION_NAME + "." + VERSION_CODE
+    OM->>U: splitEnvironmentSocket(env)
+    U-->>OM: Const.INTERACTIVE_SOCKET_URL
+    OM->>U: splitInteractive(env)
+    U-->>OM: Const.INTERACTIVE_URL
+    OM->>BR: setTenantId(overlayData.tenantId)
+    OM->>OV: addListener(overlayEventListener, this)
+    OM->>SP: init(activity)
+    Note over OM: Does NOT open the socket, does NOT call any API
+```
+
+After this step, the SDK is in the **Idle** state: it knows the environment and tenant, and has a
+place to render — but is not yet attached to any content.
+
+---
+
+## 2. Login / logout
+
+```mermaid
+flowchart TD
+    A["initToken(token, userId, bjName)"] --> B["Const.USER_COOKIE = token<br/>Const.USER_ID = userId<br/>Const.BJ_NAME = bjName"]
+    B --> C{"currentOverlay != null?<br/>(has joinRoom been called yet)"}
+    C -->|"not yet"| D["Done — the token will be used on the next joinRoom"]
+    C -->|"yes"| E["currentOverlay.userToken = token<br/>currentOverlay.userId = userId"]
+    E --> F{"currently LIVE and has mediaId?"}
+    F -->|"yes"| G["joinRoom(mediaId, 1) — rejoin the room<br/>so the socket carries the new token"]
+    F -->|"no"| D
+```
+
+Practical meaning:
+
+- **Logging in while watching Live** → the SDK automatically reconnects; the currently displayed
+  overlay is cleaned up (`cleanUp()` inside `joinRoom`).
+- **Logout** = `initToken("", "")`; if currently Live, it will also rejoin the room in an anonymous
+  state.
+- `Authorization` header: if the token starts with `"ey"` (JWT) → `"Bearer <token>"`, otherwise sent
+  as-is.
+
+---
+
+## 3. Joining a LIVE room
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant WVM as OverlayWebViewManagement
+    participant SIO as SocketIOManagement
+    participant WS as Socket.IO server
+
+    APP->>OM: joinRoom(mediaId, type = 1)
+    OM->>OM: cleanUp() — clean up the previous session
+    OM->>OM: currentOverlay = CurrentOverlay(mediaId, USER_COOKIE, USER_ID, isLive = true)
+    OM->>SIO: new SocketIOManagement(activity, currentOverlay, deviceId, tenantId)
+    OM->>WVM: setEmitAckTrackingManager(sio.emitAckTrackingManager)
+    OM->>OM: connectSocket() — observe LiveData according to the LifecycleOwner
+    OM->>SIO: joinRoom(room)
+    SIO->>SIO: disconnection() (ensure a clean state)
+    SIO->>SIO: IO.Options: headers X-TENANT-ID, v, os, deviceId, Authorization
+    Note over SIO: transports = [websocket], reconnection = true,<br/>delay 5000ms, max 5000ms, randomization 0.4
+    SIO->>WS: connect()
+    SIO->>SIO: addEvents() — register handlers
+    WS-->>SIO: EVENT_CONNECT
+    SIO-->>OM: SocketIOState.Connected
+    OM->>SIO: emitJoinRoom(room)
+    SIO->>WS: emit("join-room", {deviceId, mediaContentId, os, versionSDK, tenantId})
+    SIO-->>OM: SocketIOState.JoinRoomSuccess
+    OM->>WVM: temporaryUnlock() — isVisible = true, loadCaches()
+    OM->>OM: overlayView.visible()
+```
+
+Key points to remember:
+
+- The `emit("join-room")` command **only happens after the socket has connected successfully**, not
+  immediately when `joinRoom()` is called.
+- Before `Connected`, `OverlayWebViewManagement.isVisible = false` → any overlay arriving early is
+  **put into the cache** instead of being displayed.
+- `overlayView` is only made `visible()` inside `temporaryUnlock()`.
+
+---
+
+## 4. Receiving and routing overlays (LIVE)
+
+### 4.1. Socket-layer pre-filtering
+
+```mermaid
+flowchart TD
+    A["on('overlay') or on('ex-overlay')"] --> B["emitAckTrackingManager.normalizeAndIngest()<br/>→ extract _trackingId, _emitTimestamp<br/>→ emit-ack stage 'received'"]
+    B --> C{"has mediaContentId<br/>and timelineId?"}
+    C -->|"no"| X1["cancel(trackingId, 'invalid_payload')"]
+    C -->|"yes"| D{"traceLock == true?"}
+    D -->|"yes"| E["emit('receive-message', payload)"]
+    D -->|"no"| F
+    E --> F{"is the event ex-overlay<br/>and has 'duration'?"}
+    F -->|"yes, duration <= 10"| X2["cancel(trackingId, 'short_duration')"]
+    F -->|"otherwise"| G["store missTime_&lt;timelineId&gt; = current time (seconds)"]
+    G --> H["postValue(SocketIOState.Overlay(json, trackingId))"]
+```
+
+### 4.2. `OverlayManager` business-logic layer
+
+```mermaid
+flowchart TD
+    A["SocketIOState.Overlay"] --> B{"parse JSON → Overlay succeeded?"}
+    B -->|"no"| X1["cancel 'invalid_payload'"]
+    B -->|"yes"| C{"tenant = 'vtvlive'<br/>not logged in<br/>and !allowAnonymous?"}
+    C -->|"true"| X2["cancel 'login_required'"]
+    C -->|"false"| D{"is the socket still connected?"}
+    D -->|"no"| X3["cancel 'socket_not_connected'"]
+    D -->|"yes"| E{"has timelineId?"}
+    E -->|"no"| X4["cancel 'missing_timeline_id'"]
+    E -->|"yes"| F{"typeTimeline"}
+
+    F -->|"3"| P{"does predictOverlay already exist?"}
+    P -->|"same timelineId"| P1["update predict data<br/>cancel 'duplicate_overlay'"]
+    P -->|"different timelineId"| P2["clearPredictStuff() then create a new one"]
+    P -->|"not yet"| P3["registerAnswerTrackingSession()<br/>generatePredictStuff()<br/>show PredictBtnView"]
+
+    F -->|"4"| H{"is a miniGame open<br/>or does the headline share the same timelineId?"}
+    H -->|"true"| H1["cancel 'duplicate_overlay'"]
+    H -->|"false"| H2["headlineData = data<br/>handleMiniGameOverlay()"]
+
+    F -->|"5"| L{"does luckyData already exist?"}
+    L -->|"same timelineId"| L1["cancel 'duplicate_overlay'"]
+    L -->|"different"| L2["clearLuckyStuff() then create a new one"]
+    L -->|"not yet"| L3["registerAnswerTrackingSession()<br/>genLuckyStuff() → open LuckyDialog"]
+
+    F -->|"0, 1, 2"| M{"miniGame has the same timelineId?"}
+    M -->|"true"| M1["cancel 'duplicate_overlay'"]
+    M -->|"false"| N{"already answered?<br/>(pref ex_&lt;userId|deviceId&gt; == timelineId)"}
+    N -->|"true"| N1["cancel 'already_answered'"]
+    N -->|"false"| N2["registerAnswerTrackingSession()<br/>turnOffPredict() + turnOffLucky()<br/>miniGameData = data<br/>handleMiniGameOverlay()"]
+```
+
+> The `ex_...` key uses `userId` when logged in; if not logged in but the overlay allows anonymous
+> access, it uses `deviceId` instead.
+
+---
+
+## 5. Rendering an overlay on screen
+
+```mermaid
+flowchart TD
+    A["showOverlay(overlay, trackingId)"] --> B{"Utils.isValidTargets(targets)?<br/>targets contains 'all' or contains the current os"}
+    B -->|"no"| X1["cancel 'target_mismatch'"]
+    B -->|"yes"| C["setupAlignment(): pos.x/pos.y → OverlayAlignment"]
+    C --> D{"isVisible == true?"}
+    D -->|"no"| CACHE["caches.add(PendingOverlay) — wait for temporaryUnlock()"]
+    D -->|"yes"| E{"alignment != null?"}
+    E -->|"no"| X2["cancel 'invalid_layout'"]
+    E -->|"yes"| F["Build the URL:<br/>+ &os=... (if not already present)<br/>+ &logged=false (not logged in and !allowAnonymous)"]
+    F --> G["remainingTime = duration - (now - missTime)"]
+    G --> H{"missTime > 0 and remainingTime <= 0?"}
+    H -->|"yes"| X3["cancel 'expired_duration'"]
+    H -->|"no"| I["+ &duration=remainingTime<br/>+ &fanclub=false (if requiredFanClub and not yet a fanclub member)"]
+    I --> J{"isPopupOverlay?"}
+    J -->|"false → inline"| K["alignmentPopupOverlay = pos.y == 0 ? 'top' : 'bottom'<br/>addViewCommonCasePopupOverlayTracked()"]
+    J -->|"true → popup"| L["addViewCommonTracked(size, alignment, ...)"]
+    K --> M["overlayByTimelineId[timelineId] = webView"]
+    L --> M
+```
+
+**Geometric constraints** in `OverlayView`:
+
+- `addViewCommonTracked`: width/height as a percentage (`constrainPercentWidth/Height`), anchored at
+  one of 9 positions (`LeftTop` … `RightBottom`) derived from `metadata.pos`.
+- `addViewCommonCasePopupOverlayTracked`: width `WRAP_CONTENT`, height as a percentage, anchored
+  top/bottom/left/right according to `alignmentPopupOverlay`.
+- Both call `clearViews()` before adding → **at any given moment there is only one overlay
+  WebView**.
+
+---
+
+## 6. Lifecycle of an overlay WebView
+
+```mermaid
+sequenceDiagram
+    participant OV as OverlayView
+    participant WV as OverlayWebView
+    participant WEB as Template (CDN)
+    participant CB as OverlayWebViewCallBack
+    participant OM as OverlayManager
+    participant TRK as Tracking
+
+    OV->>TRK: renderTracker.attach() (schedule a timeout)
+    OV->>WV: createWebView(): enable JS, transparent background,<br/>addJavascriptInterface(callback, "Android")
+    OV->>TRK: renderTracker.renderStart()
+    OV->>WEB: loadUrl(src)
+    WEB-->>WV: onPageFinished
+    WV->>TRK: pageFinished() → seal 'rendered' (legacy profile)
+    WV-->>OM: onFocusOverlay(takeControl = true, overlayConfig)
+    WEB->>CB: Android.postMessage({key: "LOADED_OVERLAY"})
+    CB->>TRK: readyReceived() → seal 'rendered'
+    CB->>OM: handleWebViewCallBack(json, overlay)
+    OM->>WV: loadData(templateData) — window.postMessage(GET_DATA_INTERACTIVE)
+
+    Note over WEB: user interaction
+    WEB->>CB: Android.postMessage({type: "INTERACTIVE_ACTION_REPORT", data: {...}})
+    CB->>OM: sendAction(json)
+
+    WEB->>CB: Android.postMessage({type: "INTERACTIVE_HIDE_ANALYTICS"})
+    CB->>OV: removeWebView() + onFocusOverlay(takeControl = false)
+```
+
+Page-load errors (`onReceivedError`, `onReceivedHttpError`, `onReceivedSslError`) all result in:
+`renderTracker.failed(...)` → hide the WebView → `onFocusOverlay(webViewError = true)`.
+
+---
+
+## 7. Answering a question (mini game)
+
+This is the most complex flow, with 4 layers of checks before the API is called.
+
+```mermaid
+flowchart TD
+    A["Web: INTERACTIVE_ACTION_REPORT"] --> B["OverlayManager.sendAction(data)"]
+    B --> C["handleMiniGameOverlay(data) — update realtimeOverLay"]
+    C --> D{"does the overlay require login?<br/>(!allowAnonymous)"}
+    D -->|"not logged in"| X1["onHandleMessage(NEED_LOGIN) → stop"]
+    D -->|"passed"| E{"requiredFanClub and<br/>Const.IS_FAN_CLUB != true?"}
+    E -->|"yes"| X2["signalAnswerFailed('fanclub_required')<br/>SuggestDialog SUGGEST_FAN_CLUB → stop"]
+    E -->|"no"| F["refreshVipStatusThen()<br/>GET /api/public/vip-status"]
+    F --> G{"Const.IS_VIP == true?"}
+    G -->|"yes"| I["send the answer"]
+    G -->|"no"| H{"betAmount > 0?"}
+    H -->|"no"| I
+    H -->|"yes"| J["SuggestDialog SUGGEST_BET<br/>'Do you agree to use N OnG…'"]
+    J -->|"user agrees"| I
+    J -->|"cancelled"| X3["stop"]
+    I --> K["actionReportHandler(data, trackAnswer = true)"]
+```
+
+### 7.1. `actionReportHandler` — sending the API request
+
+```mermaid
+sequenceDiagram
+    participant OM as OverlayManager
+    participant TRK as Tracking
+    participant API as POST /api/actions
+    participant WV as OverlayWebView
+    participant SP as SharedPreferences
+
+    OM->>OM: data += deviceId, os
+    OM->>OM: data.data += media = mediaId
+    OM->>OM: if Live: data.data += socket_id = socket.id
+    OM->>TRK: signalAnswerAttempt() → emit-ack stage 'answer'
+    OM->>API: POST (Authorization: Bearer <token>) body = data
+    alt success = true
+        API-->>OM: {success: true, result: {...}}
+        OM->>TRK: signalAnswerSucceeded() → stage 'answer-succeeded'
+        OM->>SP: ex_<userId|deviceId> = timelineId (prevent answering again)
+        Note over OM,WV: only on the VIP / betting branch:<br/>triggerUpdateConfirm() → window.postMessage(UPDATE_CONFIRM)
+        OM->>WV: triggerUpdateConfirm()
+    else success = false or a network error
+        API-->>OM: error / {success: false, result: {message}}
+        OM->>TRK: signalAnswerFailed(reason, step) → stage 'answer-failed'
+        alt result.message == "PM402"
+            OM->>OM: SuggestDialog SUGGEST_ANSWER_PAYMENT_REJECT<br/>→ onHandleMessage(NEED_PAY_ONG)
+        else other
+            OM->>OM: SuggestDialog SUGGEST_ANSWER_REJECT (with a description)
+        end
+    end
+```
+
+Error code → `failureReason` mapping in tracking (`AnswerTrackingMapper`):
+
+| `result.message` | `failureReason` | `failureStep` |
+|---|---|---|
+| `EX400` | `api_EX400` | `api_response` |
+| `TL404` | `api_TL404` | `api_response` |
+| `PM402` | `api_PM402` | `api_response` |
+| other, `success = false` | `api_false` | `api_response` |
+| network error | `network_error` | `network` |
+| empty body / cannot be parsed | `unknown_response` | `unknown_response` |
+
+### 7.2. Other `type` values in `sendAction`
+
+| `type` | Behavior |
+|---|---|
+| `INTERACTIVE_SHOW_ANALYTICS` | `onShowITR(true)` + record the action via `/api/actions` |
+| `INTERACTIVE_HIDE_ANALYTICS` | Record it, clear `overlay`/`miniGameData`, **re-enable** predict and lucky |
+| `INTERACTIVE_OPEN_ANALYTICS` | `onShowITR(true)` + record (predict/lucky) |
+| `INTERACTIVE_CLOSE_ANALYTICS` | Record (predict/lucky) |
+| `action = CLICK_ADS` + has `url` | No API call, opens an external browser via `onClickAdsOverlay(url)` |
+
+---
+
+## 8. Predict (`typeTimeline = 3`)
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant OM as OverlayManager
+    participant BTN as PredictBtnView
+    participant DLG as PredictDialog
+    participant API as /api/actions
+
+    WS-->>OM: overlay (typeTimeline = 3)
+    OM->>BTN: create the floating button (normal/power images from the payload,<br/>fallback to a default image on the CDN)
+    OM->>DLG: PredictDialog.getInstance(payload)
+    OM->>BTN: onAttach() — show the button, after 5s reduce alpha to 0.5
+
+    Note over WS,OM: realtime control event "predict-timeline"
+    WS-->>OM: {type: "ACTIVE"} → activePredict() → show the button
+    WS-->>OM: {type: "INACTIVE"} → inactivePredict() → hide the button, close the dialog
+    WS-->>OM: {type: "POWER"} → button switches to the power image for 5 seconds
+    WS-->>OM: {type: "END"} → SuggestDialog "Prediction has ended" + clean up everything
+
+    BTN->>OM: user taps the button
+    alt not logged in
+        OM-->>OM: onHandleMessage(NEED_LOGIN), show the button again
+    else logged in
+        OM->>DLG: show() (full screen, transparent background)
+        DLG->>DLG: WebView loads src + &u=<userId> (+ &logged=false if not logged in)
+        DLG-->>OM: LOADED_OVERLAY → loadData()
+        DLG->>OM: INTERACTIVE_ACTION_REPORT → answer flow (section 7)
+        OM->>API: POST /api/actions
+        API-->>OM: success → updateConfirm(); failure → SuggestDialog
+    end
+
+    WS-->>OM: "predict-result" → update answer1/answer2 → DLG.updateResult()
+```
+
+Status flags controlling button visibility:
+
+| Flag | Meaning | Who changes it |
+|---|---|---|
+| `isPredictOn` | Whether it is allowed to be shown (turned off when a mini game occupies the screen) | `turnOnPredict()` / `turnOffPredict()` |
+| `isPredictActive` | Whether the server allows interaction | `ACTIVE` / `INACTIVE` events |
+| `isPredictDialogOn` | Whether the dialog is open | `showPredictDialog()` / `hidePredictDialog()` |
+
+The button is only shown when `isPredictOn && isPredictActive`.
+
+---
+
+## 9. Lucky spin (`typeTimeline = 5`)
+
+Structurally similar to Predict (`LuckyBtnView` + `LuckyDialog`, socket event `lucky-event` with
+`ACTIVE/INACTIVE/POWER/END`), with **one important difference**:
+
+```kotlin
+// OverlayManager.genLuckyStuff() — last line
+showLuckyDialog()
+```
+
+→ The lucky overlay **opens its dialog automatically as soon as it is received**, without waiting
+for the user to tap a button.
+
+The result returned from the API is pushed down to the web via `UPDATE_NUMBER_LUCKY`:
+
+```mermaid
+sequenceDiagram
+    participant DLG as LuckyDialog
+    participant OM as OverlayManager
+    participant API as /api/actions
+    DLG->>OM: INTERACTIVE_ACTION_REPORT
+    OM->>OM: check login → fanclub → VIP/bet
+    OM->>API: POST
+    API-->>OM: {success: true, result: {data: "..."}}
+    OM->>DLG: updateResult(data) → window.postMessage(UPDATE_NUMBER_LUCKY)
+    OM->>DLG: disable() — lock the WebView against repeated taps
+```
+
+---
+
+## 10. Headline (`typeTimeline = 4`)
+
+- Shares the same rendering path as mini game (`handleMiniGameOverlay`).
+- Skipped if **a mini game is currently open** (`miniGameData != null`) or if it shares the same
+  `timelineId` with the current headline.
+- Only accepts two behavior `type` values: `INTERACTIVE_SHOW_ANALYTICS` and
+  `INTERACTIVE_HIDE_ANALYTICS` (no answer flow).
+
+---
+
+## 11. Overlay recall — overlay-recall
+
+```mermaid
+sequenceDiagram
+    participant WS as Socket
+    participant SIO as SocketIOManagement
+    participant OM as OverlayManager
+    participant WVM as OverlayWebViewManagement
+    participant OV as OverlayView
+
+    WS-->>SIO: on("overlay-recall", {timelineId})  %% ByteArray or JSONObject
+    SIO-->>OM: SocketIOState.OverlayRecall(timelineId)
+    OM->>WVM: removeByTimelineId(timelineId)
+    WVM->>OV: removeWebView(webView) — cancel tracking with 'removed'
+    WVM->>WVM: overlayByTimelineId.remove(timelineId)
+```
+
+Used when an editor removes an overlay that is currently being broadcast system-wide.
+
+---
+
+## 12. Auxiliary events: liveviews, fan-club, ckst
+
+| Socket event | Handling |
+|---|---|
+| `liveviews` | Parse `OverlayLiveViews.count`, **add 230**, call `onHandleLiveViews(count)` |
+| `data` (fan-club) | If `mediaId` matches the media currently being watched (comparing the part before the `_`) → update `Const.IS_FAN_CLUB`; otherwise set it to `false` |
+| `ckst` | The server asks for the player state → the SDK re-emits `ckst` with `{action: "CHECK_PLAYER_STATUS", sessionId, data: {deviceId, os, mediaContentId, playerStatus}}` |
+| `update-result` | `OverlayWebView.updateResult(data)` → `window.postMessage(UPDATE_DATA_INTERACTIVE)` |
+| `predict-result` | Update `answer1`/`answer2` in `predictOverlay`, call `PredictDialog.updateResult()` |
+
+> Adding 230 to `liveViews` is intentional behavior in the current source code
+> ([OverlayManager.kt:435](../interactive/src/main/java/vn/interactive/OverlayManager.kt:435)) —
+> if the app needs the raw number, it must subtract it back out on its side.
+
+`playerStatus` is only non-empty once the app has called `addPlayerListener(...)`.
+
+---
+
+## 13. VOD flow
+
+```mermaid
+sequenceDiagram
+    participant APP as Activity
+    participant OM as OverlayManager
+    participant API as GET /api/ctc/scenario/v2/vod/{mediaId}/{os}
+    participant WVM as OverlayWebViewManagement
+    participant OV as OverlayView
+
+    APP->>OM: joinRoom(mediaId, type = 2)
+    OM->>OM: cleanUp(); isLive = false
+    OM->>WVM: isVisible = true
+    OM->>API: GetScenarioRequest(token = USER_COOKIE, mediaId, os)
+    API-->>OM: ScenarioDTO {data.timelines[]}
+    OM->>WVM: parseTimeLineListForVOD(timelines)
+    WVM->>WVM: for each Timeline.interactive → Overlay:<br/>src + ?timelineId&tenantId&deviceType&os<br/>startTimeShowOverlay = time("mm:ss") → seconds
+
+    loop every second (driven by the app)
+        APP->>OM: receiveTrackingTime(seconds)
+        OM->>WVM: checkShowQuestion(seconds, userToken)
+        WVM->>WVM: find the overlay with the smallest startTimeShowOverlay that is still >= seconds
+        alt startTimeShowOverlay == seconds
+            WVM->>WVM: if !allowAnonymous and not logged in → skip
+            WVM->>WVM: store missTime_<timelineId>
+            WVM->>OV: showOverlay() on the Main thread
+            WVM->>WVM: remove overlays sharing the same time mark from the list
+        end
+    end
+```
+
+Differences compared to LIVE:
+
+| | LIVE | VOD |
+|---|---|---|
+| Overlay source | Pushed via Socket.IO | The entire scenario is loaded upfront via REST |
+| Display trigger | Realtime event | `receiveTrackingTime(seconds)` fed by the app |
+| `socketIOManagement` | Present | **null** (all socket calls are safely ignored) |
+| `socket_id` in the action | Present | Absent |
+| Emit-ack tracking | Present | Absent (no socket to emit through) |
+| Predict / Lucky / liveviews | Present | Absent |
+
+---
+
+## 14. Disconnection and recovery
+
+```mermaid
+stateDiagram-v2
+    [*] --> Connected
+    Connected --> Disconnected: EVENT_DISCONNECT
+    Disconnected --> Connected: auto-reconnect (every 5s)
+
+    state Disconnected {
+        [*] --> CleanUp
+        CleanUp: emitAckTrackingManager.cancelAll("socket_disconnected") + finishAll()
+        CleanUp --> Lock
+        Lock: clearAllStuff() + temporaryLock()<br/>isVisible = false, overlayView.invisible()
+    }
+
+    state Connected {
+        [*] --> Unlock
+        Unlock: temporaryUnlock() → isVisible = true, loadCaches()
+        Unlock --> JoinRoom
+        JoinRoom: emitJoinRoom(room)
+    }
+```
+
+- **Overlay cache**: when `isVisible = false`, new overlays go into the `caches`. Once unlocked,
+  `loadCaches()` only displays **the last item**; earlier items have their tracking cancelled with
+  the reason `superseded_cache`.
+- **`missTime`**: thanks to the stored timestamp, an overlay that reappears after a disconnection
+  has its `duration` reduced by the elapsed time; if it has expired it is discarded
+  (`expired_duration`).
+- The `EVENT_CONNECT_ERROR` event → `SocketIOState.Error` → `clearAllStuff()`.
+
+---
+
+## 15. Resource release
+
+```mermaid
+flowchart TD
+    A["releaseAll() — or a new joinRoom()"] --> B["cleanUp()"]
+    B --> C["clearAllStuff()"]
+    C --> C1["clearLuckyStuff(): destroy the lucky button + dialog"]
+    C --> C2["clearPredictStuff(): destroy the predict button + dialog"]
+    C --> C3["hideChartsInteractive()"]
+    C --> C4["clear overlay, miniGameData, headlineData, activeAnswerTrackingIds"]
+    C --> C5["overlayView.clearViews()"]
+    C --> C6["overlayWebViewManagement.clearOverlayViews()"]
+    C --> C7["socketIOManagement.cancelAllTracking('clear_all')"]
+    B --> D["overlayWebViewManagement.onDestroy()<br/>isVisible = false, clear the cache and VOD list"]
+    B --> E["overlayView.clearViews()"]
+    B --> F{"currently LIVE?"}
+    F -->|"yes"| G["socketIOManagement.disconnection()<br/>cancel tracking, remove handlers, close the socket"]
+    F -->|"no"| H["calledScenario = false"]
+```
+
+`releaseAll()` is called in:
+
+- `onDestroy()` of the Activity containing the player,
+- when the user exits the content (closes the player, goes back to a list),
+- before switching to a different `mediaId` **if** `joinRoom()` is not called immediately after
+  (since `joinRoom` already cleans up on its own).
+
+---
+
+[← Installation & Integration](02-cai-dat-va-tich-hop.md) · [Back to table of contents](README.md) · [Next: API Reference →](04-api-reference.md)

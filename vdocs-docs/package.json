@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack --port 3100",
     "build": "next build --webpack",
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind",
     "start": "next start",
     "lint": "eslint"
   },
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "pagefind": "^1.5.2",
     "typescript": "^5"
   }
 }

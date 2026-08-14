@@ -3,6 +3,7 @@ const meta = {
     title: "Overview",
     theme: {
       pagination: false,
+      breadcrumb: false,
     },
   },
   error_code_be: {

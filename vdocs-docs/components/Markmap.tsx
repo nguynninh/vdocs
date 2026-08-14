@@ -33,6 +33,7 @@ export function Markmap({ content }: { content: string }) {
     <Bleed full>
       <svg
         ref={svgRef}
+        className="vdocs-markmap"
         style={{
           width: "100%",
           height: "900px",

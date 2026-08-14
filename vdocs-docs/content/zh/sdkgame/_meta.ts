@@ -3,6 +3,7 @@ const meta = {
     title: "总览",
     theme: {
       pagination: false,
+      breadcrumb: false,
     },
   },
   error_code_be: {

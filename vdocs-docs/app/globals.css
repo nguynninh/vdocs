@@ -1787,3 +1787,21 @@ html.dark .game-flow__steps div {
     grid-template-columns: 1fr;
   }
 }
+
+.vdocs-markmap .markmap-node > circle {
+  fill: var(--background);
+  stroke-width: 2px;
+}
+
+.vdocs-markmap .markmap-node > text {
+  fill: var(--foreground);
+}
+
+.vdocs-markmap .markmap-foreign,
+.vdocs-markmap .markmap-foreign div {
+  color: var(--foreground) !important;
+}
+
+.vdocs-markmap .markmap-link {
+  fill: none;
+}

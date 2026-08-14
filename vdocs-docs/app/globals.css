@@ -649,6 +649,80 @@ html.dark main table {
   overflow: visible !important;
 }
 
+.docs-code-frame,
+.nextra-code {
+  border-radius: 6px;
+}
+
+.docs-code-frame {
+  overflow: hidden;
+  border: 1px solid #d5dbe3;
+  background: #f8fafc;
+}
+
+.docs-code-title,
+.nextra-code > div:first-child:has(span.x\:truncate) {
+  height: 40px !important;
+  padding: 0 14px !important;
+  border-bottom: 1px solid #d5dbe3 !important;
+  background: #f3f6fa !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 40px !important;
+}
+
+.docs-code-frame .nextra-code {
+  margin-top: 0 !important;
+}
+
+.docs-code-frame pre,
+.nextra-code pre {
+  border-radius: 6px !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-inset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-inset-ring-shadow: 0 0 #0000 !important;
+}
+
+.docs-code-frame pre {
+  border-radius: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+.nextra-code:has(> div:first-child) pre {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.docs-code-frame code,
+.nextra-code pre code {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit;
+}
+
+html.dark .docs-code-frame {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: #0b1020;
+}
+
+html.dark .docs-code-title,
+html.dark .nextra-code > div:first-child:has(span.x\:truncate) {
+  border-bottom-color: rgba(148, 163, 184, 0.22) !important;
+  background: #111827 !important;
+  color: #aeb8cc !important;
+}
+
+html.dark .docs-code-frame pre,
+html.dark .nextra-code pre {
+  background: #0b1020 !important;
+}
+
 .nextra-code > div:first-child:has(span.x\:truncate) {
   position: sticky;
   top: var(--nextra-navbar-height);

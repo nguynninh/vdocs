@@ -12,6 +12,12 @@ const meta = {
   "chung-toi": {
     title: "About Us",
     type: "page",
+    theme: {
+      sidebar: false,
+      toc: false,
+      pagination: false,
+      copyPage: false,
+    },
   },
   versions: {
     title: "3.8.1",

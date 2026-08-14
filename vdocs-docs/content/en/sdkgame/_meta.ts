@@ -1,4 +1,10 @@
 const meta = {
+  index: {
+    title: "Overview",
+    theme: {
+      pagination: false,
+    },
+  },
   error_code_be: {
     title: "Backend Error Codes",
     theme: {

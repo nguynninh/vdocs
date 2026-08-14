@@ -1,4 +1,10 @@
 const meta = {
+  index: {
+    title: "总览",
+    theme: {
+      pagination: false,
+    },
+  },
   error_code_be: {
     title: "后端错误代码",
     theme: {

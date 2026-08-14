@@ -2,17 +2,85 @@
 title: About Us
 ---
 
-# Entertainment Platform Mobile Game
+<section className="game-landing">
+  <div className="game-landing__copy">
+    <h1>{"Entertainment platform for "}<span>{"Mobile Games"}</span></h1>
+    <p>{"Official developer documentation for partners. Everything you need to integrate, build, and operate games on the VTV Live ecosystem."}</p>
+    <div className="game-landing__actions">
+      <a className="game-landing__primary" href="/sdkgame">{"Get Started"}</a>
+      <a className="game-landing__secondary" href="/sdkgame/sdk_features">{"Browse SDK"}</a>
+    </div>
+    <dl className="game-landing__stats">
+      <div>
+        <dt>24/7</dt>
+        <dd>operation support</dd>
+      </div>
+      <div>
+        <dt>1 SDK</dt>
+        <dd>for game workflows</dd>
+      </div>
+      <div>
+        <dt>Realtime</dt>
+        <dd>event tracking</dd>
+      </div>
+    </dl>
+    <ul className="game-landing__features">
+      <li>{"Game ecosystem"}</li>
+      <li>{"Fast integration"}</li>
+      <li>{"Optimal security"}</li>
+      <li>{"24/7 support"}</li>
+    </ul>
+  </div>
+  <div className="game-landing__art">
+    <img src="/icons/ic_start1.png" alt="VTV Live Mobile Game" />
+  </div>
+</section>
 
-## Leading in Vietnam
+<section className="game-showcase">
+  <div className="game-section-head">
+    <h2>{"Everything important in one documentation flow"}</h2>
+  </div>
+  <div className="game-card-grid">
+    <a href="/sdkgame/integrate" className="game-info-card">
+      <span>01</span>
+      <h3>{"SDK Integration"}</h3>
+      <p>{"Install, configure the project, and initialize the SDK for production."}</p>
+    </a>
+    <a href="/sdkgame/sdk_features" className="game-info-card">
+      <span>02</span>
+      <h3>{"SDK Features"}</h3>
+      <p>{"Login, payments, tracking, and the essentials for live operations."}</p>
+    </a>
+    <a href="/sdkgame/event_doc" className="game-info-card">
+      <span>03</span>
+      <h3>{"Event Tracking"}</h3>
+      <p>{"Standardize player behavior data for analytics and game optimization."}</p>
+    </a>
+    <a href="/sdkgame/error_code_be" className="game-info-card">
+      <span>04</span>
+      <h3>{"Backend Errors"}</h3>
+      <p>{"Quickly look up system responses while debugging or handling incidents."}</p>
+    </a>
+  </div>
+</section>
 
-The official developer documentation for partners. Everything you need to integrate, build, and operate games on the VTV Live ecosystem.
-
-[Get Started](/sdkgame) · [Browse the API](/sdkgame)
-
-- Game ecosystem
-- Fast integration
-- Optimal security
-- 24/7 support
-
-![VTV Live](/icons/ic_start1.png)
+<section className="game-flow">
+  <div className="game-section-head">
+    <p>{"Integration flow"}</p>
+    <h2>{"From setup to go-live"}</h2>
+  </div>
+  <div className="game-flow__steps">
+    <div>
+      <strong>{"Prepare the game"}</strong>
+      <p>{"Register game information, receive config, and verify the dev environment."}</p>
+    </div>
+    <div>
+      <strong>{"Connect the SDK"}</strong>
+      <p>{"Integrate the package, map callbacks, and validate the main flows."}</p>
+    </div>
+    <div>
+      <strong>{"Operate"}</strong>
+      <p>{"Monitor events, handle errors, and update versions with a checklist."}</p>
+    </div>
+  </div>
+</section>

@@ -2,17 +2,85 @@
 title: 关于我们
 ---
 
-# 娱乐平台手机游戏
+<section className="game-landing">
+  <div className="game-landing__copy">
+    <h1>{"娱乐平台 "}<span>{"Mobile Game"}</span></h1>
+    <p>{"面向合作伙伴的官方开发者文档。整合、开发和运营 VTV Live 生态游戏所需的一切。"}</p>
+    <div className="game-landing__actions">
+      <a className="game-landing__primary" href="/sdkgame">{"立即开始"}</a>
+      <a className="game-landing__secondary" href="/sdkgame/sdk_features">{"快速查看 SDK"}</a>
+    </div>
+    <dl className="game-landing__stats">
+      <div>
+        <dt>24/7</dt>
+        <dd>运营支持</dd>
+      </div>
+      <div>
+        <dt>1 SDK</dt>
+        <dd>覆盖游戏流程</dd>
+      </div>
+      <div>
+        <dt>Realtime</dt>
+        <dd>事件追踪</dd>
+      </div>
+    </dl>
+    <ul className="game-landing__features">
+      <li>{"游戏生态系统"}</li>
+      <li>{"快速集成"}</li>
+      <li>{"安全保障"}</li>
+      <li>{"24/7 支持"}</li>
+    </ul>
+  </div>
+  <div className="game-landing__art">
+    <img src="/icons/ic_start1.png" alt="VTV Live Mobile Game" />
+  </div>
+</section>
 
-## 越南领先品牌
+<section className="game-showcase">
+  <div className="game-section-head">
+    <h2>{"重要文档集中在同一条集成路径"}</h2>
+  </div>
+  <div className="game-card-grid">
+    <a href="/sdkgame/integrate" className="game-info-card">
+      <span>01</span>
+      <h3>{"SDK 集成"}</h3>
+      <p>{"安装、配置项目，并为生产环境初始化 SDK。"}</p>
+    </a>
+    <a href="/sdkgame/sdk_features" className="game-info-card">
+      <span>02</span>
+      <h3>{"SDK 功能"}</h3>
+      <p>{"登录、支付、追踪，以及线上运营所需的核心能力。"}</p>
+    </a>
+    <a href="/sdkgame/event_doc" className="game-info-card">
+      <span>03</span>
+      <h3>{"事件追踪"}</h3>
+      <p>{"标准化玩家行为数据，用于分析和游戏优化。"}</p>
+    </a>
+    <a href="/sdkgame/error_code_be" className="game-info-card">
+      <span>04</span>
+      <h3>{"Backend 错误码"}</h3>
+      <p>{"调试或处理问题时快速查询系统响应。"}</p>
+    </a>
+  </div>
+</section>
 
-面向合作伙伴的官方开发者文档。整合、开发和运营 VTV Live 生态游戏所需的一切。
-
-[立即开始](/sdkgame) · [快速查看 API](/sdkgame)
-
-- 游戏生态系统
-- 快速集成
-- 安全保障
-- 24/7 支持
-
-![VTV Live](/icons/ic_start1.png)
+<section className="game-flow">
+  <div className="game-section-head">
+    <p>{"Integration flow"}</p>
+    <h2>{"从配置到上线"}</h2>
+  </div>
+  <div className="game-flow__steps">
+    <div>
+      <strong>{"准备游戏"}</strong>
+      <p>{"注册游戏信息，获取配置，并检查开发环境。"}</p>
+    </div>
+    <div>
+      <strong>{"连接 SDK"}</strong>
+      <p>{"集成 package，映射 callback，并验证核心流程。"}</p>
+    </div>
+    <div>
+      <strong>{"运营"}</strong>
+      <p>{"跟踪 event、处理错误，并按 checklist 更新版本。"}</p>
+    </div>
+  </div>
+</section>

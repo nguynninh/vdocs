@@ -166,7 +166,9 @@ classDiagram
 
 ## 4. Hai chế độ hoạt động
 
-### 4.1. LIVE (`type = 1`) — điều khiển bởi server
+### 4.1. LIVE
+
+(`type = 1`) — điều khiển bởi server
 
 Server chủ động đẩy overlay theo thời gian thực. Điều kiện hiển thị (thời lượng còn lại, đã trả lời
 chưa, có trong fanclub không…) được kiểm tra ngay tại client.
@@ -181,7 +183,9 @@ graph LR
     R -->|"5"| L["LuckyBtnView + LuckyDialog"]
 ```
 
-### 4.2. VOD (`type = 2`) — điều khiển bởi tiến độ phát
+### 4.2. VOD
+
+(`type = 2`) — điều khiển bởi tiến độ phát
 
 Không có socket. SDK tải trước toàn bộ kịch bản, sau đó **app phải bơm thời gian phát** vào SDK mỗi giây:
 

@@ -723,6 +723,29 @@ html.dark .nextra-code pre {
   background: #0b1020 !important;
 }
 
+main div:has(> svg[id^="mermaid-"]) {
+  overflow-x: auto;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid #d8dee7;
+  border-radius: 6px;
+  background: #fff;
+}
+
+main div:has(> svg[id^="mermaid-"]) > svg {
+  display: block;
+  width: auto !important;
+  min-width: max(1600px, 100%) !important;
+  max-width: none !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+html.dark main div:has(> svg[id^="mermaid-"]) {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: #0b1020;
+}
+
 .nextra-code > div:first-child:has(span.x\:truncate) {
   position: sticky;
   top: var(--nextra-navbar-height);

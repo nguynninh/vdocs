@@ -1,10 +1,10 @@
 const meta = {
-  index: {
-    title: "Tổng quan",
-    theme: {
-      pagination: false,
+    index: {
+      title: "Tổng quan",
+      theme: {
+        pagination: false,
+      },
     },
-  },
   error_code_be: {
     title: "Mã lỗi Backend",
     theme: {

@@ -1,49 +1,49 @@
-# VTV Live Android Game SDK guides for developers\.
+# Hướng dẫn dành cho nhà phát triển VTV Live Android Game SDK.
 
-# Required update notes
+# Lưu ý cập nhật bắt buộc
 
 
 
-1. Google Play 16 KB Compatibility Requirement:
-Starting August 31, 2026, all new apps and updates to existing apps submitted to Google Play that target      Android 16 \(or higher\) must support 16 KB page size on 64\-bit devices\.
+1. Yêu cầu tương thích Google Play 16 KB:
+Kể từ ngày 31 tháng 8 năm 2026, tất cả ứng dụng mới và các bản cập nhật cho ứng dụng hiện có gửi lên Google Play nhắm đến Android 16 (hoặc cao hơn) phải hỗ trợ kích thước trang 16 KB trên các thiết bị 64-bit.
 
-For more details, see: 
-     [https://developer\.android\.google\.cn/guide/practices/page\-sizes?hl=zh\_cn\#compile\-16\-kb\-alignment](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh_cn#compile-16-kb-alignment)
+Để biết thêm chi tiết, xem: 
+     [https://developer.android.google.cn/guide/practices/page-sizes?hl=zh_cn#compile-16-kb-alignment](https://developer.android.google.cn/guide/practices/page-sizes?hl=zh_cn#compile-16-kb-alignment)
 
-2. All URLs/links used within the application must comply with the HTTPS standard in accordance with VTV Live’s policy\.
+2. Tất cả URL/liên kết được sử dụng trong ứng dụng phải tuân thủ chuẩn HTTPS theo chính sách của VTV Live.
 
-3. If your development version of unity is 2017\.1 or later please read\.
-https://discussions\.unity\.com/t/unity\-platform\-protection\-take\-immediate\-action\-to\-protect\-your\-games\-and\-apps/1688031
+3. Nếu phiên bản Unity bạn đang phát triển là 2017.1 trở lên, vui lòng đọc.
+https://discussions.unity.com/t/unity-platform-protection-take-immediate-action-to-protect-your-games-and-apps/1688031
 
-# List of SDK configuration files
+# Danh sách các file cấu hình SDK
 
-Note:  If you do not receive those files or have any question about it, please let us know, contact with VTV Live Team\. 
+Lưu ý: Nếu bạn không nhận được các file này hoặc có bất kỳ thắc mắc nào, vui lòng liên hệ với đội ngũ VTV Live. 
 
-1. Folder inside res :
+1. Thư mục bên trong res :
 
-a\. xml/vtvlive\_config\_sdk\_game\_defaults\.xml
+1. xml/vtvlive_config_sdk_game_defaults.xml
 
-b\. drawable\-hdpi, drawable\-mdpi,drawable\-xhdpi,drawable\-xxhdpi,drawable\-xxxhdpi
+2. drawable-hdpi, drawable-mdpi,drawable-xhdpi,drawable-xxhdpi,drawable-xxxhdpi
 
-2. strings\.xml
+2. strings.xml
 
-3. keysdk\.txt
+3. keysdk.txt
 
-4. Folder iconapp
+4. Thư mục iconapp
 
-5. Folder keystore
+5. Thư mục keystore
 
-6. google\-services\.json
+6. google-services.json
 
-7. Folder game\-example
+7. Thư mục game-example
 
-8. Pricelist
+8. Bảng giá (Pricelist)
 
-# Install SDK
+# Cài đặt SDK
 
-SDK information:
+Thông tin SDK:
 
-- AGP 8\.9\.1
+- AGP 8.9.1
 
 - JDK build 17
 
@@ -53,11 +53,11 @@ SDK information:
 
 - targetSdk 36
 
-Final stable version : 1\.6\.2
+Phiên bản ổn định cuối cùng: 1.6.2
 
-## Install Gradle
+## Cài đặt Gradle
 
-In the Project `setting.gradle` file, declare the `maven`repository:
+Trong file `setting.gradle` của Project, khai báo repository `maven`:
 
 ```java
 dependencyResolutionManagement {
@@ -80,7 +80,7 @@ dependencyResolutionManagement {
 
 
 
-In the Project `build.gradle (Project)` file:
+Trong file `build.gradle (Project)` của Project:
 
 ```java
 plugins {
@@ -93,7 +93,7 @@ plugins {
 }
 ```
 
-Or
+Hoặc
 
 ```java
 buildscript {
@@ -117,7 +117,7 @@ buildscript {
 
 
 
-In the Project `build.gradle (App)` file:
+Trong file `build.gradle (App)` của Project:
 
 ```java
 plugins {
@@ -129,7 +129,7 @@ plugins {
 }
 ```
 
-## Add dependencies
+## Thêm dependencies
 
 ```java
 dependencies {
@@ -137,9 +137,9 @@ dependencies {
   }
 ```
 
-## Add AndroidX from gradle\.properties
+## Thêm AndroidX từ gradle.properties
 
-```XML
+```xml
 # Project-wide Gradle settings.
 # IDE (e.g. Android Studio) users:
 # Gradle settings configured through the IDE will override
@@ -168,15 +168,15 @@ android.defaults.buildfeatures.buildconfig=true
 android.nonFinalResIds=false
 ```
 
-## Add config file to project
+## Thêm file cấu hình vào project
 
-1. Extract the `res.zip` file, then copy and overwrite it into the project's `res` folder
+1. Giải nén file `res.zip`, sau đó sao chép và ghi đè vào thư mục `res` của project
 
-![guide\.gif](/images/sdkgame/guide.gif)
+![guide.gif](/images/sdkgame/guide.gif)
 
-2. Copy the parameters from the `string.xml` file into your project's `string.xml` file\.
-For example : 
-Note: Change app\_name to the name of the application
+2. Sao chép các tham số từ file `string.xml` vào file `string.xml` của project bạn.
+Ví dụ : 
+Lưu ý: Đổi app_name thành tên của ứng dụng
 
 ```xml
 <string name="app_name">App Name</string>
@@ -185,13 +185,13 @@ Note: Change app\_name to the name of the application
 <string name="facebook_client_token">55050b3d27795a5cf45bd0d9314b2009</string>
 ```
 
-3. Copy google\-services\.json to into the app module root of your Android project
+3. Sao chép google-services.json vào thư mục gốc của module app trong project Android của bạn
 
-![image\.png](/images/sdkgame/image-9.png)
+![image.png](/images/sdkgame/image-9.png)
 
-## Proguard requirements
+## Yêu cầu Proguard
 
-REQUIRED for Android apps with Proguard\. To avoid obfuscating the SDK when using Proguard, ensure that the following configurations are added:
+BẮT BUỘC đối với ứng dụng Android có sử dụng Proguard. Để tránh làm rối (obfuscate) SDK khi sử dụng Proguard, hãy đảm bảo cấu hình sau được thêm vào:
 
 
 
@@ -200,20 +200,20 @@ REQUIRED for Android apps with Proguard\. To avoid obfuscating the SDK when usin
 
 ```
 
-## Check the version before building the APK\. \(Optional\)
+## Kiểm tra phiên bản trước khi build APK. (Tùy chọn)
 
-This feature will help check the Version code, Version Name, and Version SDK before building the APK to reduce duplicate builds when uploading to the store\.
-You can disable it in build\.gradle \(App\) or disable the customization within build\-check\-version\.
+Tính năng này sẽ giúp kiểm tra Version code, Version Name và Version SDK trước khi build APK nhằm giảm thiểu việc build trùng lặp khi tải lên store.
+Bạn có thể tắt tính năng này trong build.gradle (App) hoặc tắt tùy chỉnh bên trong build-check-version.
 
-Copy this file to into the app module root of your Android project : 
+Sao chép file này vào thư mục gốc của module app trong project Android của bạn: 
 
 
 
-[build\-check\-version\.gradle](/files/sdkgame/build-check-version.gradle)
+[build-check-version.gradle](/files/sdkgame/build-check-version.gradle)
 
-![image\.png](/images/sdkgame/image-2.png)
+![image.png](/images/sdkgame/image-2.png)
 
-In the Project `build.gradle (App)` file: 
+Trong file `build.gradle (App)` của Project: 
 
 ```java
 plugins {
@@ -227,15 +227,15 @@ plugins {
 apply from: 'build-check-version.gradle'
 ```
 
-# Integrate SDK
+# Tích hợp SDK
 
-## Initialize the SDK \(Required\)
+## Khởi tạo SDK (Bắt buộc)
 
-implements callback AuthenticationListener, PaymentListener into your activity
+Triển khai (implement) callback AuthenticationListener, PaymentListener vào activity của bạn
 
-Change environment variables : 
-Dev  \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.Development\);
-Prod \-\> vLiveSdkGame\.setEnvironment\(EnvironmentSdk\.Production\);
+Thay đổi biến môi trường : 
+Dev  -> vLiveSdkGame.setEnvironment(EnvironmentSdk.Development);
+Prod -> vLiveSdkGame.setEnvironment(EnvironmentSdk.Production);
 
 ```java
 public class MainActivity extends Activity implements AuthenticationListener, PaymentListener {
@@ -278,7 +278,7 @@ public class MainActivity extends Activity implements AuthenticationListener, Pa
 }
 ```
 
-2. Configuration when rotating screen
+2. Cấu hình khi xoay màn hình
 
 ```java
 @Override
@@ -289,7 +289,7 @@ public void onConfigurationChanged(@NotNull Configuration newConfig) {
 }
 ```
 
-3. The result of sdk initialization is returned to the function\.
+3. Kết quả khởi tạo sdk được trả về qua hàm sau.
 
 ```java
 vLiveSdkGame.setActivity(this);
@@ -305,33 +305,33 @@ vLiveSdkGame.setInitStatusListener(isCreated -> {
 });
 ```
 
-## SDK function
+## Chức năng SDK
 
-### Authentication \(Required\)
+### Xác thực (Bắt buộc)
 
-#### Login 
+#### Đăng nhập 
 
-Function of the function:
+Chức năng của hàm:
 
-- Open the login interface when not logged in
+- Mở giao diện đăng nhập khi chưa đăng nhập
 
-- Log in when the user reopens the application
+- Đăng nhập khi người dùng mở lại ứng dụng
 
-- Log out when the login session ends\.
+- Đăng xuất khi phiên đăng nhập kết thúc.
 
-You should call this function when clicking the game's start button\.
+Bạn nên gọi hàm này khi nhấn nút bắt đầu (start) của game.
 
 ```java
 VLiveSdkGame.getInstance().login(); 
 ```
 
-Successful login will call onLoginSuccessful
+Đăng nhập thành công sẽ gọi onLoginSuccessful
 
 
 
-#### Logout
+#### Đăng xuất
 
-Successful logout will call onLogoutSuccessful
+Đăng xuất thành công sẽ gọi onLogoutSuccessful
 
 ```java
 VLiveSdkGame.getInstance().logout();
@@ -339,16 +339,16 @@ VLiveSdkGame.getInstance().logout();
 
 
 
-### Payment \(Required\)
+### Thanh toán (Bắt buộc)
 
-Note: You cannot test payments unless your app is installed via Google Play's internal testing track\.
+Lưu ý: Bạn không thể kiểm thử thanh toán trừ khi ứng dụng của bạn được cài đặt qua kênh internal testing track của Google Play.
 
-To perform payment testing, we require the AAB \(Android App Bundle\) version\.
+Để thực hiện kiểm thử thanh toán, chúng tôi yêu cầu phiên bản AAB (Android App Bundle).
 
-#### List of In\-App Purchase \(IAP\) Game Packages \( Optional \)
+#### Danh sách các gói mua trong ứng dụng (IAP) (Tùy chọn)
 
-This function will return a list of top\-up packages similar to the Pricelist\.xlsx file\.
-Note: This is an optional function that can be called if needed\.
+Hàm này sẽ trả về danh sách các gói nạp tương tự như file Pricelist.xlsx.
+Lưu ý: Đây là hàm tùy chọn, có thể gọi nếu cần.
 
 ```java
 List<ProductInfo> listProduct = VLiveSdkGame.getInstance().getListProduct();
@@ -363,11 +363,11 @@ String productName = productInfo.getProductName(); // 20 Ngân Phiếu
 
 
 
-#### Buy Packages \(Required\)
+#### Mua gói (Bắt buộc)
 
-If you want to buy an item, please call this function:
+Nếu bạn muốn mua một sản phẩm, vui lòng gọi hàm sau:
 
-The input parameters can be taken from the list above or entered manually\.
+Các tham số đầu vào có thể lấy từ danh sách ở trên hoặc nhập thủ công.
 
 ```java
 String productId = "vn.vplay.game.t001a.029"; 
@@ -378,19 +378,19 @@ VLiveSdkGame.getInstance().payProduct(productId,characterId,serverId);
 
 
 
-### Tracking Event \(Required\)
+### Tracking sự kiện (Bắt buộc)
 
-Note: Tracking functions intended for marketing purposes should be used strictly according to the defined flow\. 
+Lưu ý: Các hàm tracking phục vụ mục đích marketing cần được sử dụng đúng theo quy trình đã định. 
 
-#### These events are required to be integrated\.
+#### Các sự kiện sau bắt buộc phải được tích hợp.
 
 
 
-#### Event Parameter Details
+#### Chi tiết tham số sự kiện
 
-1. Tracking Patch Start \(Required\)
-Description: Should be called when the resource download starts\.
-Event Name: af\_patch\_start
+1. Tracking Patch Start (Bắt buộc)
+Mô tả: Nên được gọi khi bắt đầu quá trình tải tài nguyên (resource).
+Tên sự kiện: af_patch_start
 
 ```java
 String patchVersion = "1.1.23"; // or empty
@@ -400,9 +400,9 @@ VLiveSdkGame.getInstance().trackingPatchStart(patchVersion,patchSizeMb);
 
 
 
-2. Tracking Patch Error \(Required\)
-Description: Should be called when an error occurs during resource download\.
-Event Name: af\_patch\_error
+2. Tracking Patch Error (Bắt buộc)
+Mô tả: Nên được gọi khi xảy ra lỗi trong quá trình tải tài nguyên.
+Tên sự kiện: af_patch_error
 
 ```java
 String cdnIp = "122.56.12.188"; // or empty
@@ -413,9 +413,9 @@ VLiveSdkGame.getInstance().trackingPatchError(cdnIp, errorCode,failedUrl);
 
 
 
-3. Tracking Patch Success \(Required\)
-Description: Should be called after all resources have been successfully downloaded\.
-Event Name: af\_patch\_success
+3. Tracking Patch Success (Bắt buộc)
+Mô tả: Nên được gọi sau khi tất cả tài nguyên đã được tải thành công.
+Tên sự kiện: af_patch_success
 
 ```java
 int timeDownloadSecond = 32; // or 0
@@ -426,9 +426,9 @@ VLiveSdkGame.getInstance().trackingPatchSuccess(timeDownloadSecond,cdnIp,patchSi
 
 
 
-4. Tracking Extract Start \(Required\)
-Description: Should be called when the resource extraction process starts\.
-Event Name: af\_extract\_started
+4. Tracking Extract Start (Bắt buộc)
+Mô tả: Nên được gọi khi bắt đầu quá trình giải nén tài nguyên.
+Tên sự kiện: af_extract_started
 
 ```java
 int totalFiles = 400;// or 0
@@ -438,9 +438,9 @@ VLiveSdkGame.getInstance().trackingExtractStart(totalFiles,totalSizeMb);
 
 
 
-5. Tracking Extract Finished \(Required\)
-Description: Should be called after all resources have been successfully extracted\.
-Event Name: af\_extract\_finished
+5. Tracking Extract Finished (Bắt buộc)
+Mô tả: Nên được gọi sau khi tất cả tài nguyên đã được giải nén thành công.
+Tên sự kiện: af_extract_finished
 
 ```java
 int timeExtractSecond = 32; // or 0
@@ -448,17 +448,17 @@ String resultCode = "success" // or Errror String (ex: out_of_storage)
 VLiveSdkGame.getInstance().trackingExtractFinished(timeExtractSecond,resultCode);
 ```
 
-6. Tracking Show Start Game \( Required\)
-Description: Should be called after the game start screen is displayed\.
-Event Name: af\_show\_start\_game
+6. Tracking Show Start Game (Bắt buộc)
+Mô tả: Nên được gọi sau khi màn hình bắt đầu game được hiển thị.
+Tên sự kiện: af_show_start_game
 
 ```java
 VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_SHOW_START_GAME);
 ```
 
-7. Tracking Server Selected \( Required\)
-Description: Called after the user confirms a server selection and enters the game flow\.
-Event Name: af\_server\_select
+7. Tracking Server Selected (Bắt buộc)
+Mô tả: Được gọi sau khi người dùng xác nhận chọn server và bắt đầu vào luồng game.
+Tên sự kiện: af_server_select
 
 ```java
 String serverName = "ServerName"; // Required Not empty, Not Null 
@@ -466,9 +466,9 @@ String serverId = "23232"; // Required Not empty, Not Null
 VLiveSdkGame.getInstance().trackingServerSelected(serverName,serverId);
 ```
 
-8. Tracking Character Creation Start \( Required\)
-Description: Should be called when the character creation screen becomes visible to the user\.
-Event Name: af\_char\_create\_start
+8. Tracking Character Creation Start (Bắt buộc)
+Mô tả: Nên được gọi khi màn hình tạo nhân vật hiển thị cho người dùng.
+Tên sự kiện: af_char_create_start
 
 ```java
 VLiveSdkGame.getInstance().trackingCharacterCreationStart();
@@ -476,9 +476,9 @@ VLiveSdkGame.getInstance().trackingCharacterCreationStart();
 
 
 
-9. Tracking Character Creation Error \( Required\)
-Description: Should be called when an error occurs during character creation\.
-Event Name: af\_char\_create\_error
+9. Tracking Character Creation Error (Bắt buộc)
+Mô tả: Nên được gọi khi xảy ra lỗi trong quá trình tạo nhân vật.
+Tên sự kiện: af_char_create_error
 
 ```java
 String characterNameError = "Hao Thien"; // or empty
@@ -488,9 +488,9 @@ VLiveSdkGame.getInstance().trackingCharacterCreateError(characterNameError, erro
 
 
 
-10. Tracking Character Creation Complete \( Required\)
-Description: Should be called after the character creation process is completed successfully\.
-Event Name: af\_char\_create\_success
+10. Tracking Character Creation Complete (Bắt buộc)
+Mô tả: Nên được gọi sau khi quá trình tạo nhân vật hoàn tất thành công.
+Tên sự kiện: af_char_create_success
 
 ```java
 String characterName = "CharacterName"; // Required Not empty, Not Null 
@@ -500,9 +500,9 @@ VLiveSdkGame.getInstance().trackingCharacterCreationComplete(characterName,chara
 
 
 
-11. Tracking Character Selected \( Required\)
-Description: Should be called after the user selects an existing character and enters the game\.
-Event Name: af\_char\_select
+11. Tracking Character Selected (Bắt buộc)
+Mô tả: Nên được gọi sau khi người dùng chọn một nhân vật đã có sẵn và vào game.
+Tên sự kiện: af_char_select
 
 ```java
 String characterName = "CharacterName"; // Required Not empty, Not Null 
@@ -513,9 +513,9 @@ VLiveSdkGame.getInstance().trackingCharacterSelected(characterName,characterId,c
 
 
 
-12. Tracking Enter Game \( Required\)
-Description: Should be called after the user has selected a character and started entering the game\.
-Event Name: af\_enter\_gameplay
+12. Tracking Enter Game (Bắt buộc)
+Mô tả: Nên được gọi sau khi người dùng đã chọn nhân vật và bắt đầu vào game.
+Tên sự kiện: af_enter_gameplay
 
 
 
@@ -525,9 +525,9 @@ VLiveSdkGame.getInstance().trackingEvent(EventGameTracking.EVENT_GAME_ENTER);
 
 
 
-13. Map User \( Required\)
-Description: Should be called after the user has selected a character and started entering the game\.
-Event Name: af\_level\_achievement
+13. Map User (Bắt buộc)
+Mô tả: Nên được gọi sau khi người dùng đã chọn nhân vật và bắt đầu vào game.
+Tên sự kiện: af_level_achievement
 
 ```java
 String characterName = "CharacterName"; // or empty
@@ -540,10 +540,10 @@ VLiveSdkGame.getInstance().mapUser(characterName, characterId, characterLevel, s
 
 
 
-14. Character Level Up \( Required\)
-Description: Should be called when the user successfully levels up\.
-Event Name: af\_level\_achievement
-Event Name: af\_vip\_achievement
+14. Character Level Up (Bắt buộc)
+Mô tả: Nên được gọi khi người dùng lên cấp (level up) thành công.
+Tên sự kiện: af_level_achievement
+Tên sự kiện: af_vip_achievement
 
 ```java
 String characterName = "CharacterName"; // or empty
@@ -557,8 +557,8 @@ VLiveSdkGame.getInstance().levelUpUser(characterName, characterId, characterLeve
 
 
 
-15. Tracking Load Map Game \( Required\)
-Description: Should be called after the map has been fully loaded\.
+15. Tracking Load Map Game (Bắt buộc)
+Mô tả: Nên được gọi sau khi bản đồ (map) đã được tải xong hoàn toàn.
 
 ```java
 String mapId = "newbie_village"; // or empty
@@ -567,8 +567,8 @@ int fpsAtStart = 60; // or 0
 VLiveSdkGame.getInstance().trackingMapLoad(mapId, timeLoadSecond, fpsAtStart);
 ```
 
-16. Custom Events
-Description: Use for other custom events
+16. Sự kiện tùy chỉnh (Custom Events)
+Mô tả: Dùng cho các sự kiện tùy chỉnh khác
 
 ```java
 String eventName = "Event_Name";
@@ -582,9 +582,9 @@ jsonObject.addProperty("intValue", 42);
 VLiveSdkGame.getInstance().trackingEvent(eventName,jsonObject);
 ```
 
-### Multilingual \( Optional \)
+### Đa ngôn ngữ (Tùy chọn)
 
-#### Add `build.gradle (App)`
+#### Thêm vào `build.gradle (App)`
 
 ```java
 android {
@@ -606,7 +606,7 @@ String languageId = LanguageSdk.CHINESE.getIdLanguage(); // zh
 
 
 
-#### Listen for language returned from sdk
+#### Lắng nghe ngôn ngữ trả về từ sdk
 
 ```java
 VLiveSdkGame.getInstance().setLanguageListener(new LanguageListener() {
@@ -624,7 +624,7 @@ VLiveSdkGame.getInstance().setLanguageListener(new LanguageListener() {
 
 
 
-#### Set language for sdk from game
+#### Thiết lập ngôn ngữ cho sdk từ game
 
 
 
@@ -632,41 +632,41 @@ VLiveSdkGame.getInstance().setLanguageListener(new LanguageListener() {
 VLiveSdkGame.getInstance().setLanguage(LanguageSdk.CHINESE);
 ```
 
-The result of selecting the language from the game will return the function: onGameLanguageChangeCompleted
+Kết quả của việc chọn ngôn ngữ từ game sẽ trả về qua hàm: onGameLanguageChangeCompleted
 
 
 
-#### Set language from sdk
+#### Thiết lập ngôn ngữ từ sdk
 
-When the user selects a language from the login interface
+Khi người dùng chọn ngôn ngữ từ giao diện đăng nhập
 
-![image\.png](/images/sdkgame/image-10.png)
+![image.png](/images/sdkgame/image-10.png)
 
-The language will return the function : onChangeLanguage
+Ngôn ngữ sẽ được trả về qua hàm : onChangeLanguage
 
 
 
-### Update your gift redemption information\. \(Required\) 
+### Cập nhật thông tin nhận quà của bạn. (Bắt buộc) 
 
-To display the gift redemption interface, call
+Để hiển thị giao diện đổi quà, gọi
 
-Note:This function should only be used after successful login\.
+Lưu ý: Hàm này chỉ nên được sử dụng sau khi đăng nhập thành công.
 
 ```java
 VLiveSdkGame.getInstance().openUpdateInfoEvent();
 ```
 
-![image\.png](/images/sdkgame/image-11.png)
+![image.png](/images/sdkgame/image-11.png)
 
 
 
 
 
-### Optional function 
+### Chức năng tùy chọn 
 
-#### Turn on/off feature Floating Button
+#### Bật/tắt tính năng Floating Button
 
-Call it when initializing the sdk, default is true\. Pass false if you want to hide it
+Gọi khi khởi tạo sdk, mặc định là true. Truyền false nếu bạn muốn ẩn nó
 
 ```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.getInstance();
@@ -681,13 +681,13 @@ vLiveSdkGame.setPaymentListener(this);
 
 
 
-![image\.png](/images/sdkgame/image-01.png)
+![image.png](/images/sdkgame/image-01.png)
 
 
 
-#### Show/hide Logo
+#### Hiện/ẩn Logo
 
-Call it when initializing the sdk, default is true\. Pass false if you want to hide it
+Gọi khi khởi tạo sdk, mặc định là true. Truyền false nếu bạn muốn ẩn nó
 
 ```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.getInstance();
@@ -699,15 +699,15 @@ vLiveSdkGame.setPaymentListener(this);
 vLiveSdkGame.setShowLogo(false);
 ```
 
-![image\.png](/images/sdkgame/image-8.png)
+![image.png](/images/sdkgame/image-8.png)
 
 
 
 
 
-#### Show/hide BtnClose
+#### Hiện/ẩn BtnClose
 
-Call it when initializing the sdk, default is true\. Pass false if you want to hide it
+Gọi khi khởi tạo sdk, mặc định là true. Truyền false nếu bạn muốn ẩn nó
 
 ```java
 VLiveSdkGame vLiveSdkGame = VLiveSdkGame.getInstance();
@@ -719,11 +719,11 @@ vLiveSdkGame.setPaymentListener(this);
 vLiveSdkGame.setShowBtnClose(false);
 ```
 
-![image\.png](/images/sdkgame/image-7.png)
+![image.png](/images/sdkgame/image-7.png)
 
 
 
-#### Show Review Google Play
+#### Hiện đánh giá Google Play
 
 ```java
 VLiveSdkGame.getInstance().reviewGooglePlay(null);
@@ -731,25 +731,27 @@ VLiveSdkGame.getInstance().reviewGooglePlay(null);
 
 
 
-#### Show user information interface
+#### Hiện giao diện thông tin người dùng
 
 ```java
 VLiveSdkGame.getInstance().openUserInfo();
 ```
 
-![image\.png](/images/sdkgame/image-4.png)
+![image.png](/images/sdkgame/image-4.png)
 
-# Other instructions
 
-### Change application notification icon
 
-Link: https://romannurik\.github\.io/AndroidAssetStudio/index\.html
-Extract the `ic_stat_ic_notification.zip` file, then copy and overwrite it into the project's `res` folder
+# Hướng dẫn khác
 
-![image\.png](/images/sdkgame/image-6.png)
+### Thay đổi icon thông báo ứng dụng
 
-![image\.png](/images/sdkgame/image-5.png)
+Link: https://romannurik.github.io/AndroidAssetStudio/index.html
+Giải nén file `ic_stat_ic_notification.zip`, sau đó sao chép và ghi đè vào thư mục `res` của project
 
-![image\.png](/images/sdkgame/image-3.png)
+![image.png](/images/sdkgame/image-6.png)
 
-![image\.png](/images/sdkgame/image.png)
+![image.png](/images/sdkgame/image-5.png)
+
+![image.png](/images/sdkgame/image-3.png)
+
+![image.png](/images/sdkgame/image.png)

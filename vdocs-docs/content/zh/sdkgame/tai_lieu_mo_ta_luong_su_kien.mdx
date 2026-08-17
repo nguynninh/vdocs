@@ -1,0 +1,54 @@
+---
+title: 事件流程说明文档
+---
+
+# 事件流程说明文档
+
+| **事件名称** | **位置** | **流程说明** | **MKT 用于广告优化的事件备注** |
+| --- | --- | --- | --- |
+| af_click_login | SDK Game | 点击登录 | |
+| af_complete_registration | BackEnd | 完成注册 | |
+| af_error_api | SDK Game | API 错误 | |
+| af_error_purchase | SDK Game | 充值错误 | |
+| af_logout | SDK Game | 登出 | |
+| af_open_login | SDK Game | 打开登录面板 | 测量从打开应用到资源加载完成的流失率 |
+| af_play_time | SDK Game | 游戏时长 (30s, 1分钟, 3分钟, 5分钟, 15分钟, 30分钟, 1小时, 2小时, 3小时... +1小时) | 测量用户质量 |
+| af_cancel_purchase | SDK Game | 取消 IAP 购买 | |
+| af_app_launch | SDK Game | 启动游戏 | 用于测量 NRU 比率的参数 |
+| af_purchase_point | BackEnd | | |
+| af_purchase_point_web | BackEnd | 在 App 上创建账户 -> 创建角色 -> 前往网页将 OnG 兑换为游戏内货币 | |
+| af_server_web_purchase | BackEnd | | |
+| af_purchase_point_iap | BackEnd | 在移动设备的游戏内充值将触发此事件 | |
+| af_server_iap_purchase | BackEnd | 通过 App 购买 | |
+| af_purchase | BackEnd | 购买 | 测量广告收入 |
+| af_registration | BackEnd | 使用新账户登录进入游戏 | 测量 NRU |
+| af_server_registration | BackEnd | | 测量 NRU |
+| af_payment_success | SDK Game | 游戏内支付成功 | |
+| af_open_payment_screen | SDK Game | 打开游戏内支付界面 | |
+| af_login | SDK Game | 游戏内登录 | 测量 NRU |
+| af_vip_achievement | SDK Game, 合作方 | VIP 等级提升 | |
+| af_level_achievement | SDK Game, 合作方 | 角色等级提升 | |
+| af_first_launch | SDK Game | 首次启动游戏 | |
+| af_pay_firstgift_1 | SDK Game, 合作方 | | 测量首充用户比例 |
+| af_pay_firstgift_100 | SDK Game, 合作方 | | |
+| af_pay_firstgift_1000 | SDK Game, 合作方 | 按条件购买礼包 | |
+| af_pay_weekgift | SDK Game, 合作方 | | |
+| af_nonpay_monthgift | SDK Game, 合作方 | | |
+| af_complete_tutorial | SDK Game, 合作方 | 完成新手引导 | 测量完成新手引导的玩家比例 |
+| af_start_tutorial | SDK Game, 合作方 | 开始新手引导 | |
+| af_character_creation_started | SDK Game, 合作方 | 开始创建角色 | |
+| af_character_creation_finished | SDK Game, 合作方 | 完成创建角色 | 测量成功进入游戏的比例（已创建角色） |
+| af_resource_started | SDK Game, 合作方 | 开始下载资源 | 测量资源下载过程中的流失率 |
+| af_resource_finished | SDK Game, 合作方 | 完成下载资源 | 测量资源下载过程中的流失率 |
+| af_enter_gameplay | SDK Game, 合作方 | 进入游戏 | |
+| af_extract_finished | SDK Game, 合作方 | 开始解压资源 | |
+| af_extract_started | SDK Game, 合作方 | 完成解压资源 | |
+| af_show_start_game | SDK Game, 合作方 | 游戏开始画面 | |
+| af_retention_d1 | BackEnd | 玩家按天回归游戏 | 测量 RR |
+| af_retention_d3 | BackEnd | | 测量 RR |
+| af_server_retention_d1 | BackEnd | | |
+| af_server_retention_d3 | BackEnd | | |
+| af_server_login_tracking | BackEnd | 创建新 access token 时 | |
+| af_server_select | SDK Game, 合作方 | 玩家点击进入游戏时所在的服务器 | |
+| af_character_selected | SDK Game, 合作方 | 账户已有角色，玩家选择角色进行游戏 | |
+| af_upgrade_version_success | SDK Game | 用户更新游戏 | |

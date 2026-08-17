@@ -4,15 +4,15 @@
 
 1. 通过邮件获取配置信息
 
-![image.png](/images/sdkgame/dev_config/image-4.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-4.png)
 
 2. 从后端获取已在 hub 上配置的信息
 
-![image.png](/images/sdkgame/dev_config/image-3.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-3.png)
 
 3. 从主管处获取完整配置信息
 
-![image.png](/images/sdkgame/dev_config/image-2.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-2.png)
 
 ## 配置流程
 
@@ -20,7 +20,7 @@
 
     在 hub 上配置成功后，通过将该数据复制到 sdk 中检查各字段是否正确，然后像其他游戏一样将其配置到 firebase remote config 上。
 
-![image.png](/images/sdkgame/dev_config/image-8.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-8.png)
 
     1. Global
 
@@ -30,13 +30,13 @@
 
         适用于所有 package（包括 iOS），参数取自 appId
 
-![image.png](/images/sdkgame/dev_config/image-6.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-6.png)
 
     1. Package
 
         仅适用于单一 package，取自 packageId
 
-![image.png](/images/sdkgame/dev_config/image-10.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-10.png)
 
     2. 列表配置参数
 
@@ -72,7 +72,7 @@
 
         需要主管更新这两个参数，新事件才能发送到 firebase
 
-![image.png](/images/sdkgame/dev_config/image-5.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-5.png)
 
     4. 根据发送的充值列表配置充值套餐。此处务必谨慎，否则需要赔偿
 
@@ -88,7 +88,7 @@
 
         需与图中一致
 
-![image.png](/images/sdkgame/dev_config/image.png)
+![image.png](/images/sdkgame/android/java/dev_config/image.png)
 
     2. 配置来自服务器的通知
 
@@ -100,11 +100,11 @@
 
         为 Android 和 iOS 在 Hub 上都配置完成后，再重新测试 hub 上该 package 配置的通知
 
-![image.png](/images/sdkgame/dev_config/image-7.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-7.png)
 
         在 hub 上进行设置
 
-![image.png](/images/sdkgame/dev_config/image-9.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-9.png)
 
 3. 在 Facebook 上配置
 
@@ -120,7 +120,7 @@
 
         类名：MainActivity
 
-![image.png](/images/sdkgame/dev_config/image-1.png)
+![image.png](/images/sdkgame/android/java/dev_config/image-1.png)
 
 4. 配置示例项目
 
@@ -195,7 +195,7 @@
 
     完成示例项目后，按以下路径创建文件
 
-![store-register.png](/images/sdkgame/dev_config/store-register.png)
+![store-register.png](/images/sdkgame/android/java/dev_config/store-register.png)
 
     该代码是在 store 上注册 package name 时获取的
 

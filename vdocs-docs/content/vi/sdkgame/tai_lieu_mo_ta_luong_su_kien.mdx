@@ -1,0 +1,54 @@
+---
+title: Tài liệu mô tả luồng sự kiện
+---
+
+# Tài liệu mô tả luồng sự kiện
+
+| **Tên Sự Kiện** | **Vị Trí** | **Mô Tả Luồng** | **Note event MKT đang dùng để tối ưu quảng cáo** |
+| --- | --- | --- | --- |
+| af_click_login | SDK Game | Click vào đăng nhập | |
+| af_complete_registration | BackEnd | Hoàn tất đăng ký | |
+| af_error_api | SDK Game | Lỗi API | |
+| af_error_purchase | SDK Game | Lỗi nạp tiền | |
+| af_logout | SDK Game | Đăng xuất | |
+| af_open_login | SDK Game | Mở bảng đăng nhập | Đo tỉ lệ rớt từ open app đến hết tài tài nguyên |
+| af_play_time | SDK Game | Thời gian chơi game (30s, 1p, 3p, 5p, 15p, 30p, 1h, 2h, 3h... +1h) | Đo chất lượng user |
+| af_cancel_purchase | SDK Game | Hủy mua IAP | |
+| af_app_launch | SDK Game | Khởi động game | Tham số đo tỉ lệ NRU |
+| af_purchase_point | BackEnd | | |
+| af_purchase_point_web | BackEnd | Tạo tài khoản trên app -> tạo nhân vật -> vào web đổi OnG sang tiền in Game | |
+| af_server_web_purchase | BackEnd | | |
+| af_purchase_point_iap | BackEnd | Nạp ở game trên thiết bị di động là sẽ lên | |
+| af_server_iap_purchase | BackEnd | Mua hàng qua app | |
+| af_purchase | BackEnd | Mua hàng | Đo doanh thu Qc |
+| af_registration | BackEnd | Đăng nhập tài khoản mới vào game chơi | Đo NRU |
+| af_server_registration | BackEnd | | Đo NRU |
+| af_payment_success | SDK Game | Thanh toán thành công trong game | |
+| af_open_payment_screen | SDK Game | Mở màn hình thanh toán trong game | |
+| af_login | SDK Game | Đăng nhập trong game | Đo NRU |
+| af_vip_achievement | SDK Game, Đối tác | Lên cấp vip | |
+| af_level_achievement | SDK Game, Đối tác | Lên cấp nhân vật | |
+| af_first_launch | SDK Game | Mở game lần đầu | |
+| af_pay_firstgift_1 | SDK Game, Đối tác | | Đo tỉ lệ người mua gói nạp đầu |
+| af_pay_firstgift_100 | SDK Game, Đối tác | | |
+| af_pay_firstgift_1000 | SDK Game, Đối tác | Mua gói theo điều kiện | |
+| af_pay_weekgift | SDK Game, Đối tác | | |
+| af_nonpay_monthgift | SDK Game, Đối tác | | |
+| af_complete_tutorial | SDK Game, Đối tác | Hoàn thành hướng dẫn người mới | Đo tỉ lệ người chơi hoàn thành tân thủ |
+| af_start_tutorial | SDK Game, Đối tác | Bắt đầu hướng dẫn | |
+| af_character_creation_started | SDK Game, Đối tác | Bắt đầu tạo nhân vật | |
+| af_character_creation_finished | SDK Game, Đối tác | Kết thúc tạo nhân vật | Đo tỉ lệ vào game thành công (đã tạo nhân vật) |
+| af_resource_started | SDK Game, Đối tác | Bắt đầu tải tài nguyên | Đo tỉ lệ rớt khi tải tài nguyên |
+| af_resource_finished | SDK Game, Đối tác | Kết thúc tải tài nguyên | Đo tỉ lệ rớt khi tải tài nguyên |
+| af_enter_gameplay | SDK Game, Đối tác | Vào game | |
+| af_extract_finished | SDK Game, Đối tác | Bắt đầu giải nén tài nguyên | |
+| af_extract_started | SDK Game, Đối tác | Kết thúc giải nén tài nguyên | |
+| af_show_start_game | SDK Game, Đối tác | Màn hình bắt đầu game | |
+| af_retention_d1 | BackEnd | Người chơi vào lại game theo ngày | Đo RR |
+| af_retention_d3 | BackEnd | | Đo RR |
+| af_server_retention_d1 | BackEnd | | |
+| af_server_retention_d3 | BackEnd | | |
+| af_server_login_tracking | BackEnd | Khi tạo access token mới | |
+| af_server_select | SDK Game, Đối tác | Server mà người chơi chơi khi ấn vào game | |
+| af_character_selected | SDK Game, Đối tác | Tài khoản đã có nhân vật. Người chơi chọn nhân vật để chơi | |
+| af_upgrade_version_success | SDK Game | Người dùng cập nhật game | |

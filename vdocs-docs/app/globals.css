@@ -904,9 +904,18 @@ html.dark main div:has(> svg[id^="mermaid-"]) {
   position: absolute;
   right: 18px;
   bottom: 18px;
-  content: ">";
-  color: #7c3cff;
-  font-weight: 900;
+  width: 14px;
+  height: 14px;
+  content: "";
+  background-color: #7c3cff;
+  mask-image: url("/svgs/ic_chevron_right.svg");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: url("/svgs/ic_chevron_right.svg");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 
 .doc-hub__grid a:hover {

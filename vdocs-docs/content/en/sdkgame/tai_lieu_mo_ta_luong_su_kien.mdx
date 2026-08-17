@@ -1,0 +1,54 @@
+---
+title: Event Flow Description
+---
+
+# Event Flow Description
+
+| **Event Name** | **Location** | **Flow Description** | **Note: event used by MKT for ad optimization** |
+| --- | --- | --- | --- |
+| af_click_login | SDK Game | Click on login | |
+| af_complete_registration | BackEnd | Registration completed | |
+| af_error_api | SDK Game | API error | |
+| af_error_purchase | SDK Game | Top-up error | |
+| af_logout | SDK Game | Logout | |
+| af_open_login | SDK Game | Open login panel | Measures drop-off rate from app open to resource loading completion |
+| af_play_time | SDK Game | Game play time (30s, 1m, 3m, 5m, 15m, 30m, 1h, 2h, 3h... +1h) | Measures user quality |
+| af_cancel_purchase | SDK Game | Cancel IAP purchase | |
+| af_app_launch | SDK Game | Game launch | Parameter for measuring NRU rate |
+| af_purchase_point | BackEnd | | |
+| af_purchase_point_web | BackEnd | Create account on app -> create character -> go to web to exchange OnG for in-game currency | |
+| af_server_web_purchase | BackEnd | | |
+| af_purchase_point_iap | BackEnd | Top-up in-game on mobile device triggers this | |
+| af_server_iap_purchase | BackEnd | Purchase via app | |
+| af_purchase | BackEnd | Purchase | Measures ad revenue |
+| af_registration | BackEnd | Log in with a new account into the game | Measures NRU |
+| af_server_registration | BackEnd | | Measures NRU |
+| af_payment_success | SDK Game | Payment successful in game | |
+| af_open_payment_screen | SDK Game | Open payment screen in game | |
+| af_login | SDK Game | Login in game | Measures NRU |
+| af_vip_achievement | SDK Game, Partner | VIP level up | |
+| af_level_achievement | SDK Game, Partner | Character level up | |
+| af_first_launch | SDK Game | First game launch | |
+| af_pay_firstgift_1 | SDK Game, Partner | | Measures rate of first top-up purchasers |
+| af_pay_firstgift_100 | SDK Game, Partner | | |
+| af_pay_firstgift_1000 | SDK Game, Partner | Purchase package based on condition | |
+| af_pay_weekgift | SDK Game, Partner | | |
+| af_nonpay_monthgift | SDK Game, Partner | | |
+| af_complete_tutorial | SDK Game, Partner | Completed new player tutorial | Measures rate of players completing the tutorial |
+| af_start_tutorial | SDK Game, Partner | Started tutorial | |
+| af_character_creation_started | SDK Game, Partner | Started character creation | |
+| af_character_creation_finished | SDK Game, Partner | Finished character creation | Measures successful game-entry rate (character created) |
+| af_resource_started | SDK Game, Partner | Started resource download | Measures drop-off rate during resource download |
+| af_resource_finished | SDK Game, Partner | Finished resource download | Measures drop-off rate during resource download |
+| af_enter_gameplay | SDK Game, Partner | Entered game | |
+| af_extract_finished | SDK Game, Partner | Started extracting resources | |
+| af_extract_started | SDK Game, Partner | Finished extracting resources | |
+| af_show_start_game | SDK Game, Partner | Game start screen | |
+| af_retention_d1 | BackEnd | Player returns to the game by day | Measures RR |
+| af_retention_d3 | BackEnd | | Measures RR |
+| af_server_retention_d1 | BackEnd | | |
+| af_server_retention_d3 | BackEnd | | |
+| af_server_login_tracking | BackEnd | When a new access token is created | |
+| af_server_select | SDK Game, Partner | Server the player plays on when entering the game | |
+| af_character_selected | SDK Game, Partner | Account already has a character. Player selects a character to play | |
+| af_upgrade_version_success | SDK Game | User updates the game | |

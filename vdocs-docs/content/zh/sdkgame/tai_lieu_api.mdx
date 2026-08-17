@@ -1,0 +1,43 @@
+---
+title: API 文档
+---
+
+# API 文档
+
+## SDK OIDC V2 中使用的 IAP 接口列表
+
+| **Domain** | **Path** | **Bearer** | **Parameter body** | **Purpose** |
+| --- | --- | --- | --- | --- |
+| https://dev-app-config.vplay.vn/ | v1/remote-config/sdk-config | null | packageId | |
+| hub.vplay.vn | sdk-api/service/app-config | null | packageId | 注册通知并获取登录方式的开关状态 |
+| | sdk-api/service/hotlink | null | packageId | 获取主页信息、粉丝页链接、群组链接、聊天链接、客服热线 |
+| | sdk-api/news/posts | idToken | packageId, page, size | 获取新闻详情与新闻列表 |
+| | sdk-api/payment/GetIapProduct | idToken | packageId, platformOS | 获取充值套餐列表 |
+| | sdk-api/service-account-character/on-selected | idToken | packageId, platformOS, device, server, characterId, characterName, characterLevel, serverName | mappingUser |
+| | sdk-api/auth/retention-day | idToken | packageId, platformOS, appsflyerId, firebaseId | 追踪留存天数 |
+| | sdk-api/auth/af-tracking | idToken | packageId, platformOS, eventname, firebaseId, userID, eventvalue | 追踪游戏时长 |
+| | sdk-api/auth/add-push-id | idToken | packageId, updatePushId, platformOS | 更新 Push Id |
+| | sdk-api/auth/authenticate | idToken | packageId, platformOS, deviceName, appsflyerId, firebaseId, conversionType, mediaSource, campaign, adset, channel, adid | 登录成功后进行 AuthenGame |
+| id.vplay.vn | api-core/v2/oidc-service/accounts/update/password | accessToken | accessToken, oldPass, newPass, deviceId, os, osVersion, ip | 修改密码 |
+| | api-core/v2/oidc-service/accounts/otp/phone | accessToken | accessToken, email, type, deviceId, os, osVersion, ip | 发送手机验证码 |
+| | api-core/v2/oidc-service/accounts/deactivate | accessToken | accessToken, ip, os, osVersion, ip | 停用账户 |
+| | api-core/v2/oidc-service/oauth2/token | | Provider, grant_type, scope, client_id, client_secret, deviceId, os, osVersion, ip | 用于快速登录、Google 登录、普通登录、刷新 Token |
+| | api-core/v2/oidc-service/auth/forgot-password | | reCaptCharVer, tokenRecaptcha, email, deviceId, os, osVersion, ip | 忘记密码 |
+| | api-core/v2/oidc-service/auth/forgot-password/send-otp | | tokenRecaptcha, username, pass, pass2, deviceId, os, osVersion, ip | |
+| | api-core/v1/authen-service/infos/getclientip | | | 获取 IP V4 地址 |
+| | api-core/v1/authen-service/infos/getservertime | | | 获取服务器时间 |
+| | api-core/v2/oidc-service/auth/register | | reCaptCharVer, tokenRecaptcha, password, rePassword, client_id, username, deviceId, os, osVersion, ip | 注册 |
+| | api-core/v2/oidc-service/oauth2/token/revocation | | accessToken or refreshToken, typeToken, client_id, client_secret | 登出 |
+| | api-core/v2/oidc-service/accounts/update/username | accessToken | accessToken, username, pass, pass2, deviceId, os, osVersion, ip | 将快速登录账户切换为 vtvlive 账户 |
+| | api-core/v2/oidc-service/accounts/update/passport | accessToken | accessToken, passport, ip, os, osVersion, ip | 更新 passport |
+| | api-core/v2/oidc-service/accounts/update/profile | accessToken | accessToken, username, gender, birthday, address, deviceId, os, osVersion, ip | 更新资料 |
+| | api-core/v2/oidc-service/oauth2/me | accessToken | | 获取用户信息 |
+| | api-core/v2/oidc-service/accounts/otp/phone/confirm | accessToken | accessToken, phone, otp, deviceId, os, osVersion, ip | 确认手机验证码 |
+| | api-core/v1/payment-service/gate/api/iap/confirm_oidc | accessToken | jwt-accessToken, platformOS, transId - paymentOrderId, cid - clientId, clientId - clientId, bank_code - PurchaseToken, characterId - characterId, serverId - serverId, makercode - purchase.getSkus | 确认支付 |
+| | api-core/v1/payment-service/gate/api/iap/initorder_oidc | accessToken | jwt-accessToken, makercode - productId, cid - clientId, clientId - clientId, characterId - characterId, serverId - serverId | 发起交易 |
+
+## Postman
+
+1. Android:
+
+2. IOS:

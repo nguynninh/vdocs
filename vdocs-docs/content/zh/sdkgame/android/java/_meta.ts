@@ -12,12 +12,6 @@ const meta = {
       pagination: false,
     },
   },
-  sdk_features: {
-    title: "SDK 功能",
-    theme: {
-      pagination: false,
-    },
-  },
   integrate: {
     title: "SDK 集成",
     theme: {
@@ -32,6 +26,12 @@ const meta = {
   },
   event_doc: {
     title: "埋点事件文档",
+    theme: {
+      pagination: false,
+    },
+  },
+  sdk_features: {
+    title: "SDK 功能",
     theme: {
       pagination: false,
     },

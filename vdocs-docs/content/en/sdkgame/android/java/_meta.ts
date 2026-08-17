@@ -12,12 +12,6 @@ const meta = {
       pagination: false,
     },
   },
-  sdk_features: {
-    title: "SDK Features",
-    theme: {
-      pagination: false,
-    },
-  },
   integrate: {
     title: "SDK Integration",
     theme: {
@@ -32,6 +26,12 @@ const meta = {
   },
   event_doc: {
     title: "Tracking Event Doc",
+    theme: {
+      pagination: false,
+    },
+  },
+  sdk_features: {
+    title: "SDK Features",
     theme: {
       pagination: false,
     },

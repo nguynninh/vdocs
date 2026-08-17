@@ -1,0 +1,43 @@
+---
+title: API Documentation
+---
+
+# API Documentation
+
+## List of IAP endpoints used in SDK OIDC V2
+
+| **Domain** | **Path** | **Bearer** | **Parameter body** | **Purpose** |
+| --- | --- | --- | --- | --- |
+| https://dev-app-config.vplay.vn/ | v1/remote-config/sdk-config | null | packageId | |
+| hub.vplay.vn | sdk-api/service/app-config | null | packageId | Register notifications and get enabled/disabled login types |
+| | sdk-api/service/hotlink | null | packageId | Get HomePage info, fanpage link, group link, chat link, hotline |
+| | sdk-api/news/posts | idToken | packageId, page, size | Get news details and news list |
+| | sdk-api/payment/GetIapProduct | idToken | packageId, platformOS | Get top-up package list |
+| | sdk-api/service-account-character/on-selected | idToken | packageId, platformOS, device, server, characterId, characterName, characterLevel, serverName | mappingUser |
+| | sdk-api/auth/retention-day | idToken | packageId, platformOS, appsflyerId, firebaseId | Tracking retention day |
+| | sdk-api/auth/af-tracking | idToken | packageId, platformOS, eventname, firebaseId, userID, eventvalue | Tracking play time |
+| | sdk-api/auth/add-push-id | idToken | packageId, updatePushId, platformOS | Update Push Id |
+| | sdk-api/auth/authenticate | idToken | packageId, platformOS, deviceName, appsflyerId, firebaseId, conversionType, mediaSource, campaign, adset, channel, adid | AuthenGame after successful login |
+| id.vplay.vn | api-core/v2/oidc-service/accounts/update/password | accessToken | accessToken, oldPass, newPass, deviceId, os, osVersion, ip | Change password |
+| | api-core/v2/oidc-service/accounts/otp/phone | accessToken | accessToken, email, type, deviceId, os, osVersion, ip | Send otp phone |
+| | api-core/v2/oidc-service/accounts/deactivate | accessToken | accessToken, ip, os, osVersion, ip | Deactivate account |
+| | api-core/v2/oidc-service/oauth2/token | | Provider, grant_type, scope, client_id, client_secret, deviceId, os, osVersion, ip | Used for quick login, Google, normal login, refreshToken |
+| | api-core/v2/oidc-service/auth/forgot-password | | reCaptCharVer, tokenRecaptcha, email, deviceId, os, osVersion, ip | Forgot password |
+| | api-core/v2/oidc-service/auth/forgot-password/send-otp | | tokenRecaptcha, username, pass, pass2, deviceId, os, osVersion, ip | |
+| | api-core/v1/authen-service/infos/getclientip | | | Get IP V4 address |
+| | api-core/v1/authen-service/infos/getservertime | | | Get server time |
+| | api-core/v2/oidc-service/auth/register | | reCaptCharVer, tokenRecaptcha, password, rePassword, client_id, username, deviceId, os, osVersion, ip | Register |
+| | api-core/v2/oidc-service/oauth2/token/revocation | | accessToken or refreshToken, typeToken, client_id, client_secret | Logout |
+| | api-core/v2/oidc-service/accounts/update/username | accessToken | accessToken, username, pass, pass2, deviceId, os, osVersion, ip | Change quick-login account to vtvlive |
+| | api-core/v2/oidc-service/accounts/update/passport | accessToken | accessToken, passport, ip, os, osVersion, ip | Update passport |
+| | api-core/v2/oidc-service/accounts/update/profile | accessToken | accessToken, username, gender, birthday, address, deviceId, os, osVersion, ip | Update profile |
+| | api-core/v2/oidc-service/oauth2/me | accessToken | | Get user info |
+| | api-core/v2/oidc-service/accounts/otp/phone/confirm | accessToken | accessToken, phone, otp, deviceId, os, osVersion, ip | Confirm otp phone |
+| | api-core/v1/payment-service/gate/api/iap/confirm_oidc | accessToken | jwt-accessToken, platformOS, transId - paymentOrderId, cid - clientId, clientId - clientId, bank_code - PurchaseToken, characterId - characterId, serverId - serverId, makercode - purchase.getSkus | Confirm payment |
+| | api-core/v1/payment-service/gate/api/iap/initorder_oidc | accessToken | jwt-accessToken, makercode - productId, cid - clientId, clientId - clientId, characterId - characterId, serverId - serverId | Initialize transaction |
+
+## Postman
+
+1. Android:
+
+2. IOS:

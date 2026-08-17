@@ -1,0 +1,115 @@
+# Tracking game hub
+
+1. 事件名称与参数
+
+| 序号 | AF 事件名称 | 触发位置 | 事件描述 | 参数及参数说明 |
+| --- | --- | --- | --- | --- |
+| 1 | `af_first_launch` | Sdk | 首次安装 app 时触发。还... | install_source：安装来源 install_tim... |
+| 2 | `af_app_launch` | Sdk | 首次初始化 sdk（打开游戏）时 | install_id：appsFlyer Id launch_season：P... |
+| 3 | `af_require_update` | Sdk | 检查当前版本与最新版... | install_id：appsFlyer Id launch_season：P... |
+| 4 | `af_upgrade_version_success` | Sdk | 检查当前版本是否与... 不同 | 无参数 |
+| 5 | `af_patch_start` | Game | 开始下载更新资源之前... | install_id：appsFlyer Id launch_season：P... |
+| 6 | `af_patch_error` | Game | 资源更新下载过程中出错 | install_id：appsFlyer Id launch_season：P... |
+| 7 | `af_patch_success` | Game | 资源下载成功 | install_id：appsFlyer Id launch_season：P... |
+| 8 | `af_extract_started` | Game | 开始解压已下载的资源 | install_id：appsFlyer Id launch_season：P... |
+| 9 | `af_extract_finished` | Game | 资源解压结束 | install_id：appsFlyer Id launch_season：P... |
+| 10 | `af_show_start_game` | Game | 显示游戏欢迎界面时... | |
+| 11 | `af_login_view` | Sdk | 登录界面显示时 | install_id：appsFlyer Id launch_season：P... |
+| 12 | `af_login_start` | Sdk | 用户点击登录时 | install_id：appsFlyer Id launch_season：P... |
+| 13 | `af_login_error` | Sdk | 登录出错 | install_id：appsFlyer Id launch_season：P... |
+| 14 | `af_login_success` | Sdk | 登录成功 | install_id：appsFlyer Id launch_season：P... |
+| 15 | `af_register_start` | Sdk | 用户在登录界面点击注册，跳转... | install_id：appsFlyer Id launch_season：P... |
+| 16 | `af_login_forgotpassword` | Sdk | 用户点击忘记密码时 | 需确认补充事件 |
+| 17 | `af_register_success` | Sdk | 注册成功 | install_id：appsFlyer Id launch_season：P... |
+| 18 | `af_login_close` | Sdk | 用户点击关闭登录界面按钮时... | 需确认补充事件 |
+| 19 | `af_server_select` | Game | 用户登录成功后 | install_id：appsFlyer Id launch_season：P... |
+| 20 | `af_char_create_start` | Game | 用户进入创建角色界面时 | install_id：appsFlyer Id launch_season：P... |
+| 21 | `af_char_create_error` | Game | 用户创建角色失败时 | install_id：appsFlyer Id launch_season：P... |
+| 22 | `af_char_create_success` | Game | 用户创建角色成功时 | install_id：appsFlyer Id launch_season：P... |
+| 23 | `af_char_select` | Game | 用户已有角色并选择时 | install_id：appsFlyer Id launch_season：P... |
+| 24 | `af_enter_gameplay` | Game | 用户开始游戏时 | |
+| 25 | `af_level_achievement` | Game | 用户升级时 | |
+| 26 | `af_vip_achievement` | Game | 用户升级 VIP 等级时（按...升级） | |
+| 27 | `af_logout` | Sdk | 用户从游戏或从...登出时 | |
+| 28 | `af_open_payment_screen` | Sdk | 打开 store 的支付界面 | af_content_id：礼包 Id |
+| 29 | `af_payment_success` | Sdk | 支付成功后 | af_content_id：礼包 id |
+| 30 | `af_purchase` | Sdk | 支付成功后 | af_content_id：礼包 Id af_receipt_id：Ode... |
+| 31 | `af_cancel_purchase` | Sdk | 用户取消支付但未... | af_content_type |
+| 32 | `af_error_purchase` | Sdk | store 支付出错，或...出错 | af_content_id |
+| 33 | `af_play_time` | Sdk | 追踪游玩时长 | af_customer_id：用户 Id |
+| 34 | `af_level_achieved_at` | Sdk | 达到 hub 上设置的里程碑时 | |
+| 35 | `af_vip_achieved_at` | Sdk | 达到 hub 上设置的里程碑时 | |
+| 36 | `af_complete_tutorial` | Game | 用户完成新手引导...时 | |
+| 37 | `af_retention_d1` | Sdk | 用户登录 sdk 后，将会... | |
+| 38 | `af_server_retention_d1` | Sdk | 用户登录 sdk 后，将会... | |
+| 39 | `af_registration` | Sdk | 用户登录 sdk 后，将会... | |
+| 40 | `af_server_registration` | Sever | 该事件由服务器自行触发 | |
+
+目前发送到 Vlive 的事件根据 [Hub Logs Collection](https://vtvlivevn.sg.larksuite.com/docx/Dni9d8xqNo6wEjxVNMQuWBk7sFf) 文档，没有参数或参数很少。
+尚未应用的新事件需要补充并统一。
+
+发送事件到 vlive tracking game SDK 时的默认参数：
+
+`deviceId`：设备标识 ID
+
+`deviceModel`：设备型号名称
+
+`deviceBrand`：设备品牌
+
+`deviceFullInfoJson`：JSON 格式的完整设备信息
+
+`deviceOs`：设备操作系统名称（例如：Android、iOS）
+
+`deviceOsVersion`：设备操作系统版本
+
+`appClientId`：应用客户端 ID
+
+`appId`：应用 ID
+
+`appName`：应用名称
+
+`appCode`：应用代码
+
+`appPackage`：应用包名（例如：`com.example.app`）
+
+`appVersion`：应用版本
+
+`appSdkVersion`：应用 SDK 版本
+
+`deviceFullInfoJson` 包含以下参数：
+
+`width`：屏幕宽度（px）
+
+`height`：屏幕高度（px）
+
+`density_dpi`：屏幕像素密度（DPI）
+
+`density`：屏幕缩放比例（例如：2.0、3.0）
+
+`serial`：设备序列号
+
+`model`：设备型号名称（例如：Pixel 8、SM-A525F）
+
+`id`：操作系统构建版本 ID
+
+`manufacture`：设备制造商（Samsung、Xiaomi、Oppo……）
+
+`brand`：设备品牌
+
+`type`：操作系统构建类型（`user`、`userdebug`、`eng`）
+
+`user`：用于构建操作系统的用户名
+
+`base`：首个 Android 平台版本代码（通常为 1）
+
+`incremental`：操作系统的递增构建编号
+
+`sdk`：Android API Level（例如：34）
+
+`board`：设备主板/硬件名称
+
+`host`：用于构建操作系统的主机名
+
+`fingerprint`：设备/ROM 版本的唯一标识字符串
+
+`version_code`：向用户显示的 Android 版本（例如：14）

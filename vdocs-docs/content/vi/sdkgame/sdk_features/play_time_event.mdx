@@ -1,0 +1,15 @@
+# Cập nhật logic gọi sự kiện play_time
+
+## Mục đích
+
+## Yêu cầu
+
+1. Sau khi login thành công định kỳ 30s, 1p, 3p, 5p, 15p, 30p, 1 giờ , 1 giờ định kỳ sau đó.
+
+2. Nếu nhân vật được tạo thành công thì reset play time = 0 và tính lại theo (1).
+
+3. Nếu user chơi qua ngày thì đến 0h:00 UTC +7 sẽ tự động reset play time = 0 và tính lại theo (1).
+
+4. Trường hợp user về màn hình home -> Pause play_time -> User quay trở lại game mà không bị logout -> Tiếp tục đếm playtime bắt đầu từ thời điểm pause.
+
+5. Trường hợp về home, sau đó vào lại game mà user bị logout thì đếm lại từ (1).

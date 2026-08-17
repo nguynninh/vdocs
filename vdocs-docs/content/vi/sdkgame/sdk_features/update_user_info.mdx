@@ -1,0 +1,50 @@
+# Yêu cầu cập nhật thông tin người dùng khi vào game
+
+## Đặt vấn đề
+
+Để đảm bảo các game của công ty tuân thủ quy định thông tin cá nhân người chơi khi tạo tài khoản sử dụng vụ trò chơi điện tử G1, TT VplayHN1 đề xuất update SDK và trang ID thêm các chức năng:
+
+
+
+1. **Các thông tin cá nhân khách hàng cung cấp gồm:**
+
+Phần này đã có, tuy nhiên TT vẫn đề xuất ghép tab Bảo mật và Tài khoản trên trang ID thành một để khách hàng thuận tiện khi cập nhật thông tin\.
+
+
+
+2. **Popup chặn login SDK khi tài khoản chưa điền thông tin cá nhân**
+
+Với khách hàng khi đăng nhập SDK, nếu tài khoản chưa cập nhật các thông tin cá nhân bắt buộc phải cung cấp \(Đánh dấu \* ở bên trên thì sẽ hiện popup cảnh báo\)\. Popup cảnh báo có 3 mức độ có thể bật tắt từ CMS cho SDK từng dịch vụ
+
+- Mức độ 1: Không bật popup \(bỏ qua quá trình kiểm tra tài khoản đã cập nhật thông tin hay chưa, vào thẳng game\)\.
+
+- Mức độ 2: Cho phép đóng popup \(hiện popup ở mỗi lần đăng nhập, khách hàng có thể tắt popup và tiếp tục chơi game\)\.
+
+- Mức độ 3: Không cho phép đóng popup \(hiện ở mỗi lần đăng nhập, bắt buộc tài khoản phải lên web [id\.vplay\.vn](http://id.vplay.vn/) hoặc [id\.onlive\.vn](http://id.onlive.vn/) để cập nhật thông tin\)\.
+
+
+
+
+
+3. **Popup guide cập nhật thông tin trên trang id và trang nạp**
+
+Với khách hàng khi đăng nhập trên trang ID, nếu tài khoản chưa cập nhật các thông tin cá nhân bặt buộc sẽ hiện popup guide hướng dẫn khách hàng cập nhật thông tin\. Popup guide có 3 mức độ có thể bật tắt từ CMS
+
+- Mức độ 1: Không bật popup
+
+- Mức độ 2: Hiện các popup guide nhưng có thể bỏ qua
+
+- Mức độ 3: Hiện popup guide và bắt buộc cập nhật thông tin cá nhân mới có thể thực hiện các hành động giao dịch
+
+## Yêu cầu
+
+- Tài liệu nghiệp vụ: [TLNV\_Nâng cấp VplayID \(Pop up Yêu cầu update thông tin user\)](https://vtvlivevn.larksuite.com/docx/QrPidasukob68Exk74Ou920jsQb?from=from_copylink)
+
+- Luồng: [Flowchart \- Popup update thông tin ](https://vtvlivevn.larksuite.com/docx/UHWMdTt4uoyhloxFSviuw5P6sce?from=from_copylink)
+
+- Figma: [https://www\.figma\.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup\-Vplay?node\-id=0\-1\&t=0sgmRdfR6W4UIQvZ\-1](https://www.figma.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup-Vplay?node-id=0-1&t=0sgmRdfR6W4UIQvZ-1)
+
+## Tài liệu API
+
+https://documenter.getpostman.com/view/18060251/2s93XzxNbZ#b83e9ce6-9ec8-41c6-8fef-ee7dac8c07cb
+

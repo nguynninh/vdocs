@@ -1,0 +1,20 @@
+# Update SDK fixbug Notification
+
+1. Update iTapSdk 5.1.0
+
+2. Please add the following code snippet to your AppDelegate.
+
+```Plain Text
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    [FIRMessaging messaging].APNSToken = deviceToken;
+}
+
+- (void)messaging:(FIRMessaging *)messaging didReceiveRegistrationToken:(NSString *)fcmToken {
+    
+}
+-(void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+    completionHandler(UIBackgroundFetchResultNewData);
+}
+```
+
+![Screenshot 2025-12-31 at 14.17.52.png](/images/sdkgame/ios/objective_c/update_sdk_fixbug_notification/Screenshot-2025-12-31-at-14.17.52.png)

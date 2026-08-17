@@ -1,0 +1,41 @@
+# Request to update user information when entering the game
+
+## Problem statement
+
+To ensure the company's games comply with personal data regulations for players creating accounts to use the G1 online game service, the VplayHN1 Center proposes updating the SDK and the ID site with the following features:
+
+1. **Personal information provided by customers includes:**
+
+This section already exists; however, the Center still proposes merging the Security tab and the Account tab on the ID site into one, so customers can update their information more conveniently.
+
+2. **Popup blocking SDK login when the account has not filled in personal information**
+
+When a customer logs into the SDK, if the account has not updated the required personal information (marked with \* above), a warning popup will be displayed. The warning popup has 3 levels that can be turned on/off from the CMS for each service's SDK:
+
+- Level 1: Popup disabled (skip the check of whether the account has updated its information, go straight into the game).
+
+- Level 2: Allow closing the popup (shown at every login, the customer can close the popup and continue playing).
+
+- Level 3: Do not allow closing the popup (shown at every login, the account must go to [id.vplay.vn](http://id.vplay.vn/) or [id.onlive.vn](http://id.onlive.vn/) to update information).
+
+3. **Guide popup for updating information on the ID site and the top-up site**
+
+When a customer logs in on the ID site, if the account has not updated the required personal information, a guide popup will be shown to instruct the customer on how to update their information. The guide popup has 3 levels that can be turned on/off from the CMS:
+
+- Level 1: Popup disabled
+
+- Level 2: Show guide popups, but they can be skipped
+
+- Level 3: Show the guide popup and require the personal information to be updated before any transaction actions can be performed
+
+## Requirements
+
+- Business document: [TLNV_Upgrade VplayID (Popup requesting user info update)](https://vtvlivevn.larksuite.com/docx/QrPidasukob68Exk74Ou920jsQb?from=from_copylink)
+
+- Flow: [Flowchart - Popup update information](https://vtvlivevn.larksuite.com/docx/UHWMdTt4uoyhloxFSviuw5P6sce?from=from_copylink)
+
+- Figma: [https://www.figma.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup-Vplay?node-id=0-1&t=0sgmRdfR6W4UIQvZ-1](https://www.figma.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup-Vplay?node-id=0-1&t=0sgmRdfR6W4UIQvZ-1)
+
+## API Documentation
+
+https://documenter.getpostman.com/view/18060251/2s93XzxNbZ#b83e9ce6-9ec8-41c6-8fef-ee7dac8c07cb

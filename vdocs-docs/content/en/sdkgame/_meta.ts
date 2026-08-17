@@ -6,9 +6,6 @@ const meta = {
       breadcrumb: false,
     },
   },
-  android: {
-    title: "Android",
-  },
   tai_lieu_tich_hop: {
     title: "Integration Documents",
     theme: {
@@ -32,6 +29,12 @@ const meta = {
     theme: {
       pagination: false,
     },
+  },
+  android: {
+    title: "Android",
+  },
+  ios: {
+    title: "iOS",
   },
 };
 

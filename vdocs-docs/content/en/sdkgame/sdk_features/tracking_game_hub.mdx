@@ -1,0 +1,115 @@
+# Tracking game hub
+
+1. Event names and parameters
+
+| No. | AF event name | Fired at | Event description | Parameters and description |
+| --- | --- | --- | --- | --- |
+| 1 | `af_first_launch` | Sdk | Fired the first time the app is installed. Als... | install_source: install source install_tim... |
+| 2 | `af_app_launch` | Sdk | The first time the sdk is initialized (game opens) | install_id: appsFlyer Id launch_season: P... |
+| 3 | `af_require_update` | Sdk | Checks the current version against the l... | install_id: appsFlyer Id launch_season: P... |
+| 4 | `af_upgrade_version_success` | Sdk | Checks if the current version differs fro... | No parameters |
+| 5 | `af_patch_start` | Game | Before starting the resource update dow... | install_id: appsFlyer Id launch_season: P... |
+| 6 | `af_patch_error` | Game | Error during resource update download | install_id: appsFlyer Id launch_season: P... |
+| 7 | `af_patch_success` | Game | Resource download succeeded | install_id: appsFlyer Id launch_season: P... |
+| 8 | `af_extract_started` | Game | Starts extracting the downloaded resources | install_id: appsFlyer Id launch_season: P... |
+| 9 | `af_extract_finished` | Game | Finishes extracting resources | install_id: appsFlyer Id launch_season: P... |
+| 10 | `af_show_start_game` | Game | When the game's welcome screen is show... | |
+| 11 | `af_login_view` | Sdk | When the login screen is displayed | install_id: appsFlyer Id launch_season: P... |
+| 12 | `af_login_start` | Sdk | When the user taps login | install_id: appsFlyer Id launch_season: P... |
+| 13 | `af_login_error` | Sdk | Login error | install_id: appsFlyer Id launch_season: P... |
+| 14 | `af_login_success` | Sdk | Login success | install_id: appsFlyer Id launch_season: P... |
+| 15 | `af_register_start` | Sdk | When the user taps register on the login screen, redi... | install_id: appsFlyer Id launch_season: P... |
+| 16 | `af_login_forgotpassword` | Sdk | When the user taps forgot password | Needs to be confirmed/added |
+| 17 | `af_register_success` | Sdk | Registration success | install_id: appsFlyer Id launch_season: P... |
+| 18 | `af_login_close` | Sdk | When the user taps the close button on the login screen... | Needs to be confirmed/added |
+| 19 | `af_server_select` | Game | After the user logs in successfully | install_id: appsFlyer Id launch_season: P... |
+| 20 | `af_char_create_start` | Game | When the user goes to the character creation screen | install_id: appsFlyer Id launch_season: P... |
+| 21 | `af_char_create_error` | Game | When character creation fails | install_id: appsFlyer Id launch_season: P... |
+| 22 | `af_char_create_success` | Game | When character creation succeeds | install_id: appsFlyer Id launch_season: P... |
+| 23 | `af_char_select` | Game | When the user already has a character and selects... | install_id: appsFlyer Id launch_season: P... |
+| 24 | `af_enter_gameplay` | Game | When the user starts playing the game | |
+| 25 | `af_level_achievement` | Game | When the user levels up | |
+| 26 | `af_vip_achievement` | Game | When the user reaches a VIP level (leveled up according to...) | |
+| 27 | `af_logout` | Sdk | When the user logs out from the game or from... | |
+| 28 | `af_open_payment_screen` | Sdk | Opens the store's payment screen | af_content_id: package Id |
+| 29 | `af_payment_success` | Sdk | After payment succeeds | af_content_id: package id |
+| 30 | `af_purchase` | Sdk | After payment succeeds | af_content_id: package Id af_receipt_id: Ode... |
+| 31 | `af_cancel_purchase` | Sdk | When the user cancels a payment not... | af_content_type |
+| 32 | `af_error_purchase` | Sdk | When the store has a payment error, or an error... | af_content_id |
+| 33 | `af_play_time` | Sdk | Tracks playtime | af_customer_id: user Id |
+| 34 | `af_level_achieved_at` | Sdk | When a milestone configured on the hub is reached | |
+| 35 | `af_vip_achieved_at` | Sdk | When a milestone configured on the hub is reached | |
+| 36 | `af_complete_tutorial` | Game | When the user finishes the tutorial... | |
+| 37 | `af_retention_d1` | Sdk | After the user logs into the sdk, will be s... | |
+| 38 | `af_server_retention_d1` | Sdk | After the user logs into the sdk, will be s... | |
+| 39 | `af_registration` | Sdk | After the user logs into the sdk, will be s... | |
+| 40 | `af_server_registration` | Sever | This event is fired by the server itself | |
+
+Currently, the events sent to Vlive have no parameters or very few, per the [Hub Logs Collection](https://vtvlivevn.sg.larksuite.com/docx/Dni9d8xqNo6wEjxVNMQuWBk7sFf) document.
+New events that have not yet been applied need to be added and standardized.
+
+Default parameters sent when an event is sent to the vlive tracking game SDK:
+
+`deviceId`: Device identifier ID
+
+`deviceModel`: Device model name
+
+`deviceBrand`: Device brand
+
+`deviceFullInfoJson`: Full device information in JSON format
+
+`deviceOs`: Device OS name (e.g. Android, iOS)
+
+`deviceOsVersion`: Device OS version
+
+`appClientId`: App client ID
+
+`appId`: App ID
+
+`appName`: App name
+
+`appCode`: App code
+
+`appPackage`: App package name (e.g. `com.example.app`)
+
+`appVersion`: App version
+
+`appSdkVersion`: App SDK version
+
+`deviceFullInfoJson` includes the following parameters:
+
+`width`: Screen width (px)
+
+`height`: Screen height (px)
+
+`density_dpi`: Screen pixel density (DPI)
+
+`density`: Screen scale ratio (e.g. 2.0, 3.0)
+
+`serial`: Device serial number
+
+`model`: Device model name (e.g. Pixel 8, SM-A525F)
+
+`id`: OS build ID
+
+`manufacture`: Device manufacturer (Samsung, Xiaomi, Oppo...)
+
+`brand`: Device brand
+
+`type`: OS build type (`user`, `userdebug`, `eng`)
+
+`user`: User name used to build the OS
+
+`base`: First Android platform version code (usually 1)
+
+`incremental`: OS incremental build number
+
+`sdk`: Android API Level (e.g. 34)
+
+`board`: Device board/hardware name
+
+`host`: Host name used to build the OS
+
+`fingerprint`: Unique identifier string of the device/ROM build
+
+`version_code`: Android version shown to the user (e.g. 14)

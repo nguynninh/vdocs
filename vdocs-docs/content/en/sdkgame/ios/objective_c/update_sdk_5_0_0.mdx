@@ -1,0 +1,105 @@
+# Update SDK 5.0.0
+
+Change history:
+
+- Update platform ios 15
+
+- Update FireBase 12.0.0
+
+- Update AppsFlyerFramework 6.17.2
+
+- Update tracking
+
+- Add FirebaseCrashlytics 12.0.0
+
+1. PodFile
+
+```Swift
+platform :ios, '15.0'
+target 'SdkExample' do
+  use_frameworks!
+  pod 'GoogleSignIn', '7.1.0'
+  pod 'Firebase', '12.0.0'
+  pod 'FirebaseMessaging', '12.0.0'
+  pod 'FirebaseRemoteConfig', '12.0.0'
+  pod 'AppsFlyerFramework', '6.17.7'
+  pod 'JWT', '2.2.0'
+  pod 'TikTokBusinessSDK', '1.5.0'
+  pod 'FirebaseRemoteConfig', '12.0.0'
+end
+target 'FirebaseNotificationServiceExtension' do
+ use_frameworks!
+ pod 'Firebase', '12.0.0'
+ pod 'FirebaseMessaging', '12.0.0'
+
+end
+post_install do |lib|
+    lib.pods_project.targets.each do |target|
+        if target.name == 'GoogleSignIn' || target.name == 'Firebase' || target.name == 'FirebaseRemoteConfig' || target.name == 'FirebaseMessaging' || target.name == 'AppsFlyerFramework' ||  target.name == 'JWT' ||  target.name == 'TikTokBusinessSDK'
+            target.build_configurations.each do |config|
+                config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+            end
+        end
+        
+        target.build_configurations.each do |config|
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+        end
+    end
+end
+```
+
+2. Config lib
+
+![Screenshot 2025-11-24 at 14.05.32.png](/images/sdkgame/ios/objective_c/update_sdk_5_0_0/Screenshot-2025-11-24-at-14.05.32.png)
+
+3. Update AppDelegate
+
+```Swift
+
+@import Firebase;
+
+
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    [[Sdk sharedInstance] initWithDelegate:self application:application launchOptions:launchOptions isProdEnv:TRUE];
+    [[Sdk sharedInstance] setLocationFloatingButton:20 with:100];
+    [[Sdk sharedInstance] setGrantEnv:NO];
+    return YES;
+}
+
+-(void) getLangaugeSdk: (NSString *) langauge {
+    // print  Langauge
+}
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    [FIRMessaging messaging].APNSToken = deviceToken;
+}
+
+- (void)messaging:(FIRMessaging *)messaging didReceiveRegistrationToken:(NSString *)fcmToken {
+}
+```
+
+4. Update log
+
+When you call **logStartedCharacterCreation** or **logFinishedCharacterCreation**, you need to include additional parameters:
+
+- For **logStartedCharacterCreation**, please provide **serverId** and **serverName**.
+
+- For **logFinishedCharacterCreation**, please provide **characterId** and **characterName**.
+
+```Swift
+-(void) logStartedCharacterCreation:(NSString *) serverId withSeverName: (NSString *) serverName;
+-(void) logFinishedCharacterCreation:(NSString *) characterId characterName :(NSString*)characterName;
+```
+
+5. Firebase Crashlytics
+
+After the .ipa builds successfully, click "Show in Finder."
+
+![image.png](/images/sdkgame/ios/objective_c/update_sdk_5_0_0/image.png)
+
+![image.png](/images/sdkgame/ios/objective_c/update_sdk_5_0_0/image-2.png)
+
+![image.png](/images/sdkgame/ios/objective_c/update_sdk_5_0_0/image-1.png)
+
+Please send me your dSYM files and the .ipa.

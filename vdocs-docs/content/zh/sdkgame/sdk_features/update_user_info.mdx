@@ -1,0 +1,41 @@
+# 进入游戏时要求更新用户信息
+
+## 问题背景
+
+为确保公司游戏在玩家使用 G1 网络游戏服务创建账号时符合个人信息相关规定，VplayHN1 中心提议对 SDK 和 ID 网站进行升级，新增以下功能：
+
+1. **客户提供的个人信息包括：**
+
+该部分功能已存在，但中心仍建议将 ID 网站上的“安全”标签与“账户”标签合并为一个，方便客户更新信息。
+
+2. **账号未填写个人信息时，弹窗阻止 SDK 登录**
+
+客户登录 SDK 时，如果账号尚未更新上述标记为 \* 的必填个人信息，将弹出警告弹窗。该警告弹窗有 3 个级别，可在 CMS 中针对各服务的 SDK 单独启用/禁用：
+
+- 级别 1：不启用弹窗（跳过账号信息是否已更新的检查，直接进入游戏）。
+
+- 级别 2：允许关闭弹窗（每次登录时显示，客户可以关闭弹窗并继续游戏）。
+
+- 级别 3：不允许关闭弹窗（每次登录时显示，账号必须前往 [id.vplay.vn](http://id.vplay.vn/) 或 [id.onlive.vn](http://id.onlive.vn/) 更新信息）。
+
+3. **ID 网站和充值网站上的信息更新引导弹窗**
+
+客户在 ID 网站登录时，如果账号尚未更新必填的个人信息，将显示引导弹窗，指导客户更新信息。该引导弹窗有 3 个级别，可在 CMS 中启用/禁用：
+
+- 级别 1：不启用弹窗
+
+- 级别 2：显示引导弹窗，但可以跳过
+
+- 级别 3：显示引导弹窗，且必须先更新个人信息才能进行交易操作
+
+## 需求
+
+- 业务文档：[TLNV_VplayID 升级（要求更新用户信息的弹窗）](https://vtvlivevn.larksuite.com/docx/QrPidasukob68Exk74Ou920jsQb?from=from_copylink)
+
+- 流程图：[Flowchart - 信息更新弹窗](https://vtvlivevn.larksuite.com/docx/UHWMdTt4uoyhloxFSviuw5P6sce?from=from_copylink)
+
+- Figma: [https://www.figma.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup-Vplay?node-id=0-1&t=0sgmRdfR6W4UIQvZ-1](https://www.figma.com/design/Vi8KLZrexEt9lq9VrxQyp3/popup-Vplay?node-id=0-1&t=0sgmRdfR6W4UIQvZ-1)
+
+## API 文档
+
+https://documenter.getpostman.com/view/18060251/2s93XzxNbZ#b83e9ce6-9ec8-41c6-8fef-ee7dac8c07cb
